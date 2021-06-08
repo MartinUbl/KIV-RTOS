@@ -61,6 +61,54 @@ namespace hal
 		GPPUDCLK0 = 38,
 		GPPUDCLK1 = 39
 	};
+
+	// baze pro memory-mapped I/O pro AUX funkce
+	constexpr unsigned long AUX_Base = Peripheral_Base + 0x00215000UL;
+
+	enum class AUX_Reg
+	{
+		// registr pro priznaky cekajicich preruseni
+		IRQ	= 0,
+		// registr pro povolovani AUX periferie (zapina a vypina cely HW subsystem)
+		ENABLES = 1,
+
+		// mini UART registry
+
+		MU_IO = 16,
+		MU_IER = 17,
+		MU_IIR = 18,
+		MU_LCR = 19,
+		MU_MCR = 20,
+		MU_LSR = 21,
+		MU_MSR = 22,
+		MU_SCRATCH = 23,
+		MU_CNTL = 24,
+		MU_STAT = 25,
+		MU_BAUD = 26,
+
+		// SPI0 master registry
+
+		SPI0_CNTL0 = 32,
+		SPI0_CNTL1 = 33,
+		SPI0_STAT = 34,
+		SPI0_IO = 36,
+		SPI0_PEEK = 37,
+
+		// SPI1 master registry
+
+		SPI1_CNTL0 = 48,
+		SPI1_CNTL1 = 49,
+		SPI1_STAT = 50,
+		SPI1_IO = 52,
+		SPI1_PEEK = 53,
+	};
+
+	enum class AUX_Peripherals
+	{
+		MiniUART    = 0,
+		SPI1        = 1,
+		SPI2        = 2,
+	};
 }
 
 #endif
