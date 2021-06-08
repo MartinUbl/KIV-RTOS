@@ -8,6 +8,8 @@ SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -T ${LINKER_SCRIPT}")
 
 INCLUDE_DIRECTORIES("${CMAKE_CURRENT_SOURCE_DIR}/kernel/include/")
 
+INCLUDE_DIRECTORIES("${CMAKE_CURRENT_SOURCE_DIR}/stdlib/include/")
+
 # budeme vyvijet jen pro RPi0, takze tady proste natvrdo napiseme cesty k hlavickam a pridame define
 INCLUDE_DIRECTORIES("${CMAKE_CURRENT_SOURCE_DIR}/kernel/include/board/rpi0/")
 ADD_DEFINITIONS(-DRPI0)
@@ -15,8 +17,11 @@ ADD_DEFINITIONS(-DRPI0)
 # rekurzivne pridame vsechny zdrojaky z kernel podslozky
 FILE(GLOB_RECURSE kernel_src "kernel/*.cpp" "kernel/*.c" "kernel/*.h" "kernel/*.hpp" "kernel/*.s")
 
+# pridame standardni knihovnu (nas minimalni stub knihovny)
+FILE(GLOB_RECURSE stdlib_src "stdlib/*.cpp" "stdlib/*.c" "stdlib/*.h" "stdlib/*.hpp" "stdlib/*.s")
+
 # pridame cil - sestavujeme jen kernel
-ADD_EXECUTABLE(kernel ${kernel_src})
+ADD_EXECUTABLE(kernel ${kernel_src} ${stdlib_src})
 
 # po dokonceni sestaveni musime jeste zkonvertovat vystupy
 # 1) zkompilovany ELF soubor na surovou binarni mapu pro RPi bootloader (kernel.img)

@@ -36,6 +36,8 @@ class CUART
 
         void Write(char c);
         void Write(const char* str);
+        void Write(unsigned int num);
+        void Write_Hex(unsigned int num);
 };
 
 extern CUART sUART0;

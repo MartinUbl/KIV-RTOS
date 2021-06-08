@@ -1,5 +1,8 @@
 #include <drivers/uart.h>
 #include <drivers/bcm_aux.h>
+#include <drivers/gpio.h>
+
+#include <stdstring.h>
 
 CUART sUART0(sAUX);
 
@@ -11,6 +14,10 @@ CUART::CUART(CAUX& aux)
     mAUX.Set_Register(hal::AUX_Reg::MU_IER, 0);
     mAUX.Set_Register(hal::AUX_Reg::MU_MCR, 0);
     mAUX.Set_Register(hal::AUX_Reg::MU_CNTL, 3); // RX and TX enabled
+
+    // nastavime GPIO 14 a 15 na jejich alt funkci 5, coz je UART kanal 1
+    sGPIO.Set_GPIO_Function(14, NGPIO_Function::Alt_5);
+    sGPIO.Set_GPIO_Function(15, NGPIO_Function::Alt_5);
 }
 
 void CUART::Set_Char_Length(NUART_Char_Length len)
@@ -44,4 +51,20 @@ void CUART::Write(const char* str)
 
     for (i = 0; str[i] != '\0'; i++)
         Write(str[i]);
+}
+
+void CUART::Write(unsigned int num)
+{
+    static char buf[16];
+
+    itoa(num, buf, 10);
+    Write(buf);
+}
+
+void CUART::Write_Hex(unsigned int num)
+{
+    static char buf[16];
+
+    itoa(num, buf, 16);
+    Write(buf);
 }

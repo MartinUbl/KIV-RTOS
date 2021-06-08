@@ -1,8 +1,6 @@
 #include <hal/intdef.h>
 #include <hal/peripherals.h>
 
-#include <drivers/uart.h>
-
 #include <interrupt_controller.h>
 #include <drivers/timer.h>
 
@@ -17,7 +15,7 @@ extern "C" void __attribute__((interrupt("SWI"))) software_interrupt_handler()
     // tady nekdy v budoucnu definujeme obsluhu volani sluzeb jadra z uzivatelskeho procesu
 }
 
-extern "C" void __attribute__((interrupt("IRQ"))) irq_handler()
+extern "C" void _internal_irq_handler()
 {
     // jelikoz ARM nerozlisuje zdroje IRQ implicitne, ani nezarucuje, ze se navzajen nemaskuji, musime
     // projit vsechny mozne zdroje a podivat se (poll), zda nebylo vyvolano preruseni

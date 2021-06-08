@@ -41,14 +41,13 @@ _fast_interrupt_ptr:
 .equ    CPSR_MODE_FIQ,          0x11
 .equ    CPSR_MODE_IRQ,          0x12
 .equ    CPSR_MODE_SVR,          0x13
+.equ    CPSR_MODE_SYS,          0x1F
 .equ    CPSR_IRQ_INHIBIT,       0x80
 .equ    CPSR_FIQ_INHIBIT,       0x40
 
 
 ;@ kernel reset vektor - tento kod se vykona pri kazdem resetu zarizeni (i prvnim spusteni)
 _reset:
-	mov sp, #0x8000			;@ nastavime stack pointer na spodek zasobniku
-
 	;@ nacteni tabulky vektoru preruseni do pameti
 	mov r0, #0x8000			;@ adresa 0x8000 (_start) do r0
     mov r1, #0x0000			;@ adresa 0x0000 (pocatek RAM) do r1 - tam budeme vkladat tabulku vektoru preruseni
@@ -60,20 +59,33 @@ _reset:
     ldmia r0!,{r2, r3, r4, r5, r6, r7, r8, r9}
     stmia r1!,{r2, r3, r4, r5, r6, r7, r8, r9}
 
+	;@ baze pro systemove zasobniky
+	mov r4, #0x80000000
+
+	;@ nejdrive supervisor mod a jeho stack
+    mov r0, #(CPSR_MODE_SVR | CPSR_IRQ_INHIBIT | CPSR_FIQ_INHIBIT)
+    msr cpsr_c, r0
+	add sp, r4, #0x8000
+
 	;@ na moment se prepneme do IRQ rezimu, nastavime mu stack pointer
 	mov r0, #(CPSR_MODE_IRQ | CPSR_IRQ_INHIBIT | CPSR_FIQ_INHIBIT)
     msr cpsr_c, r0
-    mov sp, #0x7000
+	add sp, r4, #0x7000
 
 	;@ na moment se prepneme do FIQ rezimu, nastavime mu stack pointer
 	mov r0, #(CPSR_MODE_FIQ | CPSR_IRQ_INHIBIT | CPSR_FIQ_INHIBIT)
     msr cpsr_c, r0
-    mov sp, #0x6000
+	add sp, r4, #0x6000
 
-	;@ a vracime se zpet do supervisor modu, SP si nastavime zpet na nasi hodnotu
-    mov r0, #(CPSR_MODE_SVR | CPSR_IRQ_INHIBIT | CPSR_FIQ_INHIBIT)
+	;@ nakonec system mod a stack
+    mov r0, #(CPSR_MODE_SYS | CPSR_IRQ_INHIBIT | CPSR_FIQ_INHIBIT)
     msr cpsr_c, r0
-    mov sp, #0x8000
+	add sp, r4, #0x5000
+
+	;@ zapneme nezarovnany pristup do pameti (nemusi byt zadouci, ale pro nase potreby je to v poradku)
+	mrc p15, #0, r4, c1, c0, #0
+	orr r4, #0x400000
+	mcr p15, #0, r4, c1, c0, #0
 
 	bl _c_startup			;@ C startup kod (inicializace prostredi)
 	bl _cpp_startup			;@ C++ startup kod (volani globalnich konstruktoru, ...)
@@ -95,6 +107,23 @@ enable_irq:
 
 undefined_instruction_handler:
 	b hang
+
+.global _internal_irq_handler
+irq_handler:
+	sub lr, lr, #4
+	srsdb #CPSR_MODE_SYS!		;@ ekvivalent k push lr a msr+push spsr
+	cpsid if, #CPSR_MODE_SYS	;@ prechod do SYS modu + zakazeme preruseni
+	push {r0-r4, r12, lr}		;@ ulozime callee-saved registry
+
+	and r4, sp, #7
+	sub sp, sp, r4
+
+	bl _internal_irq_handler	;@ zavolame handler IRQ
+
+	add sp, sp, r4
+
+	pop {r0-r4, r12, lr}		;@ obnovime callee-saved registry
+	rfeia sp!					;@ vracime se do puvodniho stavu (ktery ulozila instrukce srsdb)
 
 prefetch_abort_handler:
 	;@ tady pak muzeme osetrit, kdyz program zasahne do mista, ktere nema mapovane ve svem virtualnim adr. prostoru

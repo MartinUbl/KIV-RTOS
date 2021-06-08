@@ -14,7 +14,8 @@ bool CGPIO_Handler::Get_GPFSEL_Location(uint32_t pin, uint32_t& reg, uint32_t& b
 	if (pin > hal::GPIO_Pin_Count)
 		return false;
 	
-	switch (pin / 10)
+	reg = pin / 10;
+	/*switch (pin / 10)
 	{
 		case 0: reg = static_cast<uint32_t>(hal::GPIO_Reg::GPFSEL0); break;
 		case 1: reg = static_cast<uint32_t>(hal::GPIO_Reg::GPFSEL1); break;
@@ -22,7 +23,7 @@ bool CGPIO_Handler::Get_GPFSEL_Location(uint32_t pin, uint32_t& reg, uint32_t& b
 		case 3: reg = static_cast<uint32_t>(hal::GPIO_Reg::GPFSEL3); break;
 		case 4: reg = static_cast<uint32_t>(hal::GPIO_Reg::GPFSEL4); break;
 		case 5: reg = static_cast<uint32_t>(hal::GPIO_Reg::GPFSEL5); break;
-	}
+	}*/
 	
 	bit_idx = (pin % 10) * 3;
 	
@@ -67,9 +68,14 @@ void CGPIO_Handler::Set_GPIO_Function(uint32_t pin, NGPIO_Function func)
 	uint32_t reg, bit;
 	if (!Get_GPFSEL_Location(pin, reg, bit))
 		return;
+
+	unsigned int mode = static_cast<unsigned int>(func);
+
+	unsigned int rd = mGPIO[reg];
+	rd &= ~(7 << bit);
+	rd |= (mode << bit);
 	
-	mGPIO[reg] = (mGPIO[reg] & (~static_cast<unsigned int>(7 << bit)) )
-				| (static_cast<unsigned int>(func) << bit);
+	mGPIO[reg] = rd;
 }
 
 NGPIO_Function CGPIO_Handler::Get_GPIO_Function(uint32_t pin) const
@@ -88,4 +94,13 @@ void CGPIO_Handler::Set_Output(uint32_t pin, bool set)
 		return;
 	
 	mGPIO[reg] = (1 << bit);
+}
+
+bool CGPIO_Handler::Get_Input(uint32_t pin)
+{
+	uint32_t reg, bit;
+	if (!Get_GPLEV_Location(pin, reg, bit))
+		return false;
+	
+	return (mGPIO[reg] >> bit) & 0x1;
 }
