@@ -6,6 +6,8 @@
 
 namespace hal
 {
+	constexpr unsigned int Default_Clock_Rate = 250000000; // taktovaci frekvence hlavniho jadra
+
 	// baze pro memory-mapped I/O
 	constexpr unsigned long Peripheral_Base = 0x20000000UL;
 
@@ -108,6 +110,72 @@ namespace hal
 		MiniUART    = 0,
 		SPI1        = 1,
 		SPI2        = 2,
+	};
+
+	constexpr unsigned long Interrupt_Controller_Base = Peripheral_Base + 0x0000B200UL;
+
+	enum class Interrupt_Controller_Reg
+	{
+		IRQ_Basic_Pending	= 0,
+		IRQ_Pending_1		= 1,
+		IRQ_Pending_2		= 2,
+		FIQ_Control			= 3,
+		IRQ_Enable_1		= 4,
+		IRQ_Enable_2		= 5,
+		IRQ_Basic_Enable	= 6,
+		IRQ_Disable_1		= 7,
+		IRQ_Disable_2		= 8,
+		IRQ_Basic_Disable	= 9,
+	};
+
+	enum class IRQ_Basic_Source
+	{
+		Timer				= 0,
+		Mailbox				= 1,
+		Doorbell_0 			= 2,
+		Doorbell_1			= 3,
+		GPU0_Halt			= 4,
+		GPU1_Halt			= 5,
+		Illegal_Access_1	= 6,
+		Illegal_Access_2	= 7,
+	};
+
+	enum class IRQ_Source
+	{
+		// 0-28 - vyhrazeno pro GPU
+		AUX					= 29,
+		// 30-42 - vyhrazeno pro GPU
+		I2C_SPI_SLAVE_INIT	= 43,
+		// 44 - vyhrazeno pro GPU
+		PWA_0				= 45,
+		PWA_1				= 46,
+		// 47 - vyhrazeno pro GPU
+		SMI					= 48,
+		GPIO_0				= 49,
+		GPIO_1				= 50,
+		GPIO_2				= 51,
+		GPIO_3				= 52,
+		I2C					= 53,
+		SPI					= 54,
+		PCM					= 55,
+		// 56 - vyhrazeno pro GPU
+		UART				= 57,
+		// 58-63 - vyhrazeno pro GPU
+	};
+
+	constexpr unsigned long Timer_Base = Peripheral_Base + 0x0000B400UL;
+
+	enum class Timer_Reg
+	{
+		Load			= 0,
+		Value			= 1,
+		Control			= 2,
+		IRQ_Clear		= 3,
+		IRQ_Raw			= 4,
+		IRQ_Masked		= 5,
+		Reload			= 6,
+		Pre_Divider 	= 7,
+		Free_Running	= 8,
 	};
 }
 
