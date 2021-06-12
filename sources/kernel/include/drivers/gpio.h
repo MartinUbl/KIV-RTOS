@@ -1,6 +1,7 @@
 #pragma once
 
 #include <hal/intdef.h>
+#include <hal/peripherals.h>
 
 // funkce GPIO pinu
 enum class NGPIO_Function : unsigned int
@@ -28,6 +29,11 @@ class CGPIO_Handler
 	private:
 		// bazova adresa memory-mapped IO, inicializuje konstruktor
 		volatile unsigned int* const mGPIO;
+
+		// rezervace pinu pro cteni
+		uint32_t mPin_Reservations_Read[1 + (hal::GPIO_Pin_Count / 32)];
+		// rezervace pinu pro zapis
+		uint32_t mPin_Reservations_Write[1 + (hal::GPIO_Pin_Count / 32)];
 		
 	protected:
 		// vybira GPFSEL registr a pozici bitu pro dany pin
@@ -52,6 +58,11 @@ class CGPIO_Handler
 
 		// zjisti hodnotu na vstupu GPIO
 		bool Get_Input(uint32_t pin);
+
+		// rezervuje pin pro exkluzivni vyuziti
+		bool Reserve_Pin(uint32_t pin, bool read, bool write);
+		// zrusi rezervaci na pin
+		bool Free_Pin(uint32_t pin, bool read, bool write);
 };
 
 // globalni instance pro hlavni GPIO port

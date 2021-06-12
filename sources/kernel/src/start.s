@@ -108,6 +108,21 @@ enable_irq:
 undefined_instruction_handler:
 	b hang
 
+.global _internal_software_interrupt_handler
+software_interrupt_handler:
+	stmfd sp!,{r2-r12,lr}		;@ ulozime na zasobnik stav
+
+	;@ tady budeme mozna chtit prepinat do SYS rezimu v budoucnu
+
+	ldr r3,[lr,#-4]				;@ do registru r3 nacteme instrukci, ktera vyvolala preruseni (lr = navratova adresa, -4 proto, ze ukazuje na nasledujici instrukci)
+    bic r3,r3,#0xff000000		;@ vymaskujeme parametr (dolnich 24 bitu) a nechame ho v r3
+	bl _internal_software_interrupt_handler		;@ zavolame nas interni handler
+	mov r2, r0					;@ ten vraci pointer na result kontejner v r0, presuneme do r2 - potrebujeme obsah dostat do r0 a r1
+	ldr r0, [r2, #0]			;@ nacteme navratove hodnoty do registru
+	ldr r1, [r2, #4]
+	ldmfd sp!, {r2-r12,pc}^		;@ obnovime ze zasobniku stav (jen puvodni lr nacteme do pc)
+
+
 .global _internal_irq_handler
 irq_handler:
 	sub lr, lr, #4

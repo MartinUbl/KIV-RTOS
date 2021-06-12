@@ -34,3 +34,39 @@ class CKernel_Heap_Manager
 };
 
 extern CKernel_Heap_Manager sKernelMem;
+
+// pomocne implementace pro kernel heap - tento soubor je includovat vyhradne z kernel-only implementaci, a tak proste jen presmerujeme
+// vsechna volani new/delete na tyto implementace, ktere alokuji a uvolnuji pamet z haldy jadra
+
+inline void* operator new(uint32_t size)
+{
+    return sKernelMem.Alloc(size);
+}
+
+inline void *operator new(uint32_t, void *p)
+{
+    return p;
+}
+
+inline void *operator new[](uint32_t, void *p)
+{
+    return p;
+}
+
+inline void operator delete(void* p)
+{
+    sKernelMem.Free(p);
+}
+
+inline void operator delete(void* p, uint32_t)
+{
+    sKernelMem.Free(p);
+}
+
+inline void  operator delete  (void *, void *)
+{
+}
+
+inline void  operator delete[](void *, void *)
+{
+}

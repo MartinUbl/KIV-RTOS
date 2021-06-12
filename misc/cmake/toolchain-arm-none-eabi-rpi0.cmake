@@ -57,6 +57,8 @@ set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mfloat-abi=hard" )
 set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mfpu=vfp" )
 set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=armv6zk" )
 set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mtune=arm1176jzf-s" )
+set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions" )
+set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti" )
 
 set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS}" CACHE STRING "" )
 set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}" CACHE STRING "" )

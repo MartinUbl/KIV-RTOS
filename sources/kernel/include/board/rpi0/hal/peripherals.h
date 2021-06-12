@@ -1,7 +1,5 @@
 #pragma once
 
-#ifdef RPI0
-
 #include "intdef.h"
 
 namespace hal
@@ -178,5 +176,3 @@ namespace hal
 		Free_Running	= 8,
 	};
 }
-
-#endif

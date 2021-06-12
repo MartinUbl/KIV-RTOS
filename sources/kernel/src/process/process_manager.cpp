@@ -4,6 +4,8 @@
 #include <memory/pages.h>
 #include <memory/memmap.h>
 
+#include <fs/filesystem.h>
+
 #include <drivers/uart.h>
 
 // "importovane" funkce z asm
@@ -44,6 +46,9 @@ void CProcess_Manager::Create_Main_Process()
     task->sched_counter = task->sched_static_priority;
     task->state = NTask_State::Running;
 
+    for (uint32_t i = 0; i < Max_Process_Opened_Files; i++)
+        task->opened_files[i] = nullptr;
+
     mCurrent_Task_Node = mProcess_List_Head;
 }
 
@@ -68,6 +73,9 @@ uint32_t CProcess_Manager::Create_Process(unsigned long funcptr)
     task->cpu_context.lr = funcptr;
     task->cpu_context.pc = reinterpret_cast<unsigned long>(&process_bootstrap);
     task->cpu_context.sp = static_cast<unsigned long>(sPage_Manager.Alloc_Page()) + mem::PageSize;
+
+    for (uint32_t i = 0; i < Max_Process_Opened_Files; i++)
+        task->opened_files[i] = nullptr;
 
     return task->pid;
 }
@@ -138,4 +146,121 @@ void CProcess_Manager::Switch_To(CProcess_List_Node* node)
         context_switch_first(&node->task->cpu_context, old);
     else
         context_switch(&node->task->cpu_context, old);
+}
+
+uint32_t CProcess_Manager::Map_File_To_Current(IFile* file)
+{
+    // TODO: zamek
+
+    TTask_Struct* current = Get_Current_Process();
+    if (!current)
+        return Invalid_Handle;
+
+    // najdeme volny slot, pokud je
+    for (uint32_t i = 0; i < Max_Process_Opened_Files; i++)
+    {
+        // volny slot - namapujeme soubor a vracime handle (index do tabulky)
+        if (current->opened_files[i] == nullptr)
+        {
+            current->opened_files[i] = file;
+            return i;
+        }
+    }
+
+    // nenasli jsme - vracime neplatny handle (vnejsi kod nejspis bude chtit soubor zase zavrit)
+    return Invalid_Handle;
+}
+
+bool CProcess_Manager::Unmap_File_Current(uint32_t handle)
+{
+    TTask_Struct* current = Get_Current_Process();
+    if (!current || handle >= Max_Process_Opened_Files)
+        return false;
+
+    if (!current->opened_files[handle])
+        return false;
+
+    current->opened_files[handle] = nullptr;
+    return true;
+}
+
+void CProcess_Manager::Handle_Process_SWI(NSWI_Process_Service svc_idx, uint32_t r0, uint32_t r1, uint32_t r2, TSWI_Result& target)
+{
+    // TODO: signalizace chyby
+    if (!mCurrent_Task_Node)
+        return;
+
+    switch (svc_idx)
+    {
+        case NSWI_Process_Service::Get_PID:
+            target.r0 = mCurrent_Task_Node->task->pid;
+            break;
+    }
+}
+
+void CProcess_Manager::Handle_Filesystem_SWI(NSWI_Filesystem_Service svc_idx, uint32_t r0, uint32_t r1, uint32_t r2, TSWI_Result& target)
+{
+    // TODO: signalizace chyby
+    if (!mCurrent_Task_Node)
+        return;
+
+    switch (svc_idx)
+    {
+        case NSWI_Filesystem_Service::Open:
+        {
+            target.r0 = Invalid_Handle;
+
+            IFile* f = sFilesystem.Open(reinterpret_cast<const char*>(r0), static_cast<NFile_Open_Mode>(r1));
+            if (!f)
+                return;
+
+            target.r0 = Map_File_To_Current(f);
+
+            // nepodarilo se namapovat, napr. proto, ze jsme dosahli limitu otevrenych souboru
+            if (target.r0 == Invalid_Handle)
+            {
+                f->Close();
+                delete f;
+            }
+            break;
+        }
+        case NSWI_Filesystem_Service::Read:
+        {
+            target.r0 = 0;
+
+            if (r0 > Max_Process_Opened_Files || !mCurrent_Task_Node->task->opened_files[r0])
+                return;
+
+            target.r0 = mCurrent_Task_Node->task->opened_files[r0]->Read(reinterpret_cast<char*>(r1), r2);
+            break;
+        }
+        case NSWI_Filesystem_Service::Write:
+        {
+            target.r0 = 0;
+
+            if (r0 > Max_Process_Opened_Files || !mCurrent_Task_Node->task->opened_files[r0])
+                return;
+
+            target.r0 = mCurrent_Task_Node->task->opened_files[r0]->Write(reinterpret_cast<const char*>(r1), r2);
+            break;
+        }
+        case NSWI_Filesystem_Service::Close:
+        {
+            if (r0 > Max_Process_Opened_Files || !mCurrent_Task_Node->task->opened_files[r0])
+                return;
+
+            target.r0 = mCurrent_Task_Node->task->opened_files[r0]->Close();
+            Unmap_File_Current(r0);
+
+            break;
+        }
+        case NSWI_Filesystem_Service::IOCtl:
+        {
+            if (r0 > Max_Process_Opened_Files || !mCurrent_Task_Node->task->opened_files[r0])
+                return;
+
+            target.r0 = mCurrent_Task_Node->task->opened_files[r0]->IOCtl(static_cast<NIOCtl_Operation>(r1), reinterpret_cast<void*>(r2));
+            break;
+        }
+    }
 }

@@ -1,12 +1,15 @@
 #include <hal/peripherals.h>
 #include <drivers/gpio.h>
 
+#include <stdstring.h>
+
 CGPIO_Handler sGPIO(hal::GPIO_Base);
 
 CGPIO_Handler::CGPIO_Handler(unsigned int gpio_base_addr)
 	: mGPIO(reinterpret_cast<unsigned int*>(gpio_base_addr))
 {
-	//
+	bzero(&mPin_Reservations_Read, sizeof(mPin_Reservations_Read));
+	bzero(&mPin_Reservations_Write, sizeof(mPin_Reservations_Write));
 }
 
 bool CGPIO_Handler::Get_GPFSEL_Location(uint32_t pin, uint32_t& reg, uint32_t& bit_idx) const
@@ -103,4 +106,46 @@ bool CGPIO_Handler::Get_Input(uint32_t pin)
 		return false;
 	
 	return (mGPIO[reg] >> bit) & 0x1;
+}
+
+bool CGPIO_Handler::Reserve_Pin(uint32_t pin, bool read, bool write)
+{
+	// TODO: zamek, tady by se neco mohlo sejit
+
+	uint32_t bank_idx = pin / 32;
+	uint32_t bit_idx = pin % 32;
+
+	if (read && (mPin_Reservations_Read[bank_idx] >> bit_idx) & 0x1)
+		return false;
+
+	if (write && (mPin_Reservations_Write[bank_idx] >> bit_idx) & 0x1)
+		return false;
+
+	if (read)
+		mPin_Reservations_Read[bank_idx] |= 1ULL << bit_idx;
+
+	if (write)
+		mPin_Reservations_Write[bank_idx] |= 1ULL << bit_idx;
+
+	return true;
+}
+
+bool CGPIO_Handler::Free_Pin(uint32_t pin, bool read, bool write)
+{
+	uint32_t bank_idx = pin / 32;
+	uint32_t bit_idx = pin % 32;
+
+	if (read && !((mPin_Reservations_Read[bank_idx] >> bit_idx) & 0x1))
+		return false;
+
+	if (write && !((mPin_Reservations_Write[bank_idx] >> bit_idx) & 0x1))
+		return false;
+
+	if (read)
+		mPin_Reservations_Read[bank_idx] &= ~(1ULL << bit_idx);
+
+	if (write)
+		mPin_Reservations_Write[bank_idx] &= ~(1ULL << bit_idx);
+
+	return true;
 }
