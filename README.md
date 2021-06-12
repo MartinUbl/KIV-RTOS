@@ -10,21 +10,18 @@ This software is developed as a demonstration project for operating systems cour
 - basic kernel memory management
 - support for tasks
 - basic time-slicing scheduler
-- drivers
--- GPIO
--- UART
--- AUX
--- timer
+- drivers (GPIO, UART, AUX, timer)
 - C++ development support
 
 ### Planned features
-- time slicing process scheduler (EDF)
+- real-time process scheduler (EDF)
 - spinlocks
 - semaphores, mutexes, condition variables
 - eMMC driver
 - FAT32 support
-- WiFi driver
+- WiFi and Bluetooth driver
 - I2C OLED display driver
+- 74HC595 shift register driver
 - named pipes
 
 ## License
