@@ -41,6 +41,15 @@ void Process_2()
     uint32_t rdbuf;
     char numbuf[16];
 
+    uint32_t srf = open("DEV:sr", NFile_Open_Mode::Write_Only);
+
+    write(srf, "\x00", 1);
+    for (i = 0; i < 0x80000; i++)
+			;
+    write(srf, "\xFF", 1);
+
+    close(srf);
+
 	while (true)
 	{
 		write(f, msg, strlen(msg));

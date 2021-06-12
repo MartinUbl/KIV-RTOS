@@ -1,6 +1,7 @@
 #include <drivers/gpio.h>
 #include <drivers/uart.h>
 #include <drivers/timer.h>
+#include <drivers/shiftregister.h>
 #include <interrupt_controller.h>
 
 #include <memory/memmap.h>
