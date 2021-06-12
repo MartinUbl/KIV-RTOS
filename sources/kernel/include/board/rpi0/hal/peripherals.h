@@ -175,4 +175,15 @@ namespace hal
 		Pre_Divider 	= 7,
 		Free_Running	= 8,
 	};
+
+	constexpr unsigned long TRNG_Base = Peripheral_Base + 0x00104000;
+
+	enum class TRNG_Reg
+	{
+		Control			= 0,
+		Status			= 1,
+		Data			= 2,
+		// 3 - nepouzivano
+		Int_Mask		= 4,
+	};
 }
