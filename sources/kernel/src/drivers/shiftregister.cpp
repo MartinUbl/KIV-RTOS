@@ -56,6 +56,8 @@ void CShift_Register::Close()
     sGPIO.Free_Pin(mLatch_Pin, true, true);
     sGPIO.Free_Pin(mData_Pin, true, true);
     sGPIO.Free_Pin(mClock_Pin, true, true);
+
+    mOpened = false;
 }
 
 bool CShift_Register::Is_Opened() const
@@ -65,6 +67,9 @@ bool CShift_Register::Is_Opened() const
 
 void CShift_Register::Shift_In(bool bit)
 {
+    if (!mOpened)
+        return;
+
     volatile int i;
 
     // budeme nahravat bity do banku
@@ -92,6 +97,9 @@ void CShift_Register::Shift_In(bool bit)
 
 void CShift_Register::Shift_In(uint8_t byte)
 {
+    if (!mOpened)
+        return;
+
     volatile int i;
 
     // zapisovat do banku
@@ -105,7 +113,7 @@ void CShift_Register::Shift_In(uint8_t byte)
         
         for (i = 0; i < 0x4000; i++)
             ;
-        
+
         sGPIO.Set_Output(mClock_Pin, false);
 
         for (i = 0; i < 0x4000; i++)

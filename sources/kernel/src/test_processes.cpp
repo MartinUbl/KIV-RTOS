@@ -50,6 +50,9 @@ void Process_2()
 
     close(srf);
 
+    srf = open("DEV:segd", NFile_Open_Mode::Write_Only);
+    write(srf, "4", 1);
+
 	while (true)
 	{
 		write(f, msg, strlen(msg));

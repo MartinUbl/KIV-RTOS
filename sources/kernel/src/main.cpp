@@ -1,7 +1,6 @@
 #include <drivers/gpio.h>
 #include <drivers/uart.h>
 #include <drivers/timer.h>
-#include <drivers/shiftregister.h>
 #include <interrupt_controller.h>
 
 #include <memory/memmap.h>
@@ -30,7 +29,7 @@ extern void Process_2();
 extern "C" int _kernel_main(void)
 {
 	// debug output, kdyz budeme neco ladit; jinak vyzadujeme, aby si proces UART otevrel a spravoval
-	/*
+	/*	
 	sUART0.Open();
 	sUART0.Set_Baud_Rate(NUART_Baud_Rate::BR_115200);
 	sUART0.Set_Char_Length(NUART_Char_Length::Char_8);
