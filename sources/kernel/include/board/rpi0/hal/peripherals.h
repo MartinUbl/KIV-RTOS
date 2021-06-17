@@ -186,4 +186,20 @@ namespace hal
 		// 3 - nepouzivano
 		Int_Mask		= 4,
 	};
+
+	constexpr unsigned long BSC0_Base = Peripheral_Base + 0x00205000;
+	constexpr unsigned long BSC1_Base = Peripheral_Base + 0x00804000;
+	constexpr unsigned long BSC2_Base = Peripheral_Base + 0x00805000;
+
+	enum class BSC_Reg
+	{
+		Control			= 0,
+		Status			= 1,
+		Data_Length		= 2,
+		Slave_Address	= 3,
+		Data_FIFO		= 4,
+		Clock_Div		= 5,
+		Data_Delay		= 6,
+		CLKT			= 7,	// clock stretch timeout
+	};
 }
