@@ -22,19 +22,25 @@ TKernel_Heap_Chunk_Header* CKernel_Heap_Manager::Alloc_Next_Page()
 
 void* CKernel_Heap_Manager::Alloc(uint32_t size)
 {
+    // zatim neumime alokovat >4kB, protoze zatim nemame virtualni pamet a tedy negarantujeme souvisly kus pameti (mozne, ale zbytecne nakladne)
+    if (size > mem::PageSize - sizeof(TKernel_Heap_Chunk_Header))
+        return nullptr;
+
     TKernel_Heap_Chunk_Header* chunk = mFirst;
+    TKernel_Heap_Chunk_Header* last = mFirst;
 
     // potrebujeme najit prvni blok, ktery je volny a zaroven alespon tak velky, jak potrebujeme (pro ted pouzivame proste first-fit)
     while (chunk != nullptr && (!chunk->is_free || chunk->size < size))
     {
+        last = chunk;
         chunk = chunk->next;
     }
 
+    // jiz nemame volnou diru - alokujeme dalsi stranku o 4kB
     if (!chunk)
     {
-        // TODO: tady by se hodila alokace dalsi stranky (Alloc_Next_Page) a navazani na predchozi chunk
-        // pro ted nechme byt, vic jak 4kB snad v tomto prikladu potrebovat nebudeme
-        return nullptr;
+        last->next = Alloc_Next_Page();
+        chunk = last->next;
     }
 
     // pokud je pozadovane misto uz tak velke, jak potrebujeme, tak je to snadne - jen ho oznacime za alokovane a vratime
