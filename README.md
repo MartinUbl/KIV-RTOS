@@ -10,7 +10,7 @@ This software is developed as a demonstration project for operating systems cour
 - basic kernel memory management
 - support for tasks
 - basic time-slicing scheduler
-- drivers (GPIO, UART, AUX, timer, shift register, 7-segment display, I2C, TRNG)
+- drivers (GPIO, UART, AUX, timer, 74HC595 shift register, 7-segment display, I2C, SSD1306 OLED display, TRNG)
 - C++ development support
 
 ### Planned features
@@ -20,8 +20,6 @@ This software is developed as a demonstration project for operating systems cour
 - eMMC driver
 - FAT32 support
 - WiFi and Bluetooth driver
-- SSD1306 display driver
-- 74HC595 shift register driver
 - named pipes
 
 ## License

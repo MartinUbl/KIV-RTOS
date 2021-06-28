@@ -324,13 +324,28 @@ void CDisplay_SSD1306::Process_External_Command(const char* input, uint32_t leng
 
             const uint8_t* data = &pkt->first;
 
-            for (uint16_t x = pkt->x1; x < pkt->x1 + pkt->w; x++)
+            if (pkt->vflip == 0)
             {
-                for (uint16_t y = pkt->y1; y < pkt->y1 + pkt->h; y++)
+                for (uint16_t x = pkt->x1; x < pkt->x1 + pkt->w; x++)
                 {
-                    const uint16_t pos = (y * pkt->w + x);
+                    for (uint16_t y = pkt->y1; y < pkt->y1 + pkt->h; y++)
+                    {
+                        const uint16_t pos = ((y - pkt->y1) * pkt->w + (x - pkt->x1));
 
-                    Set_Pixel(x, y, ((data[pos / 8] >> (7 - (pos % 8))) & 0x1) != 0);
+                        Set_Pixel(x, y, ((data[pos / 8] >> (7 - (pos % 8))) & 0x1) != 0);
+                    }
+                }
+            }
+            else
+            {
+                for (uint16_t x = 0; x < pkt->w; x++)
+                {
+                    for (uint16_t y = 0; y < pkt->h; y++)
+                    {
+                        const uint16_t pos = (x * pkt->h + y);
+
+                        Set_Pixel(x + pkt->x1, (pkt->h - y) + pkt->y1, ((data[pos / 8] >> (7 - (pos % 8))) & 0x1) != 0);
+                    }
                 }
             }
 

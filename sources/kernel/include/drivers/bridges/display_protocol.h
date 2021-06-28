@@ -24,7 +24,7 @@ enum class NDisplay_Command : uint8_t
     Draw_Pixel_Array = 3,
 
     // vykresli pixely z obdelniku do bufferu
-    // 8 + n*1: uint16_t x1, y1, w, h, uint8_t[] bitArray
+    // 9 + n: uint16_t x1, y1, w, h, vflip, uint8_t[] bitArray
     Draw_Pixel_Array_To_Rect = 4,
 };
 
@@ -72,6 +72,7 @@ struct TDisplay_Pixels_To_Rect
     TDisplay_Packet_Header header;
     uint16_t x1, y1;
     uint16_t w, h;
+    uint8_t vflip; // 0 = nepreklapet obdelnik, 1 = preklopit x a y
 
     uint8_t first;
 };
