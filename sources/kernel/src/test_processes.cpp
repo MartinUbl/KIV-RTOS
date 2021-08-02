@@ -16,6 +16,10 @@ void Process_1()
 	disp.Put_String(10, 10, "ABC abc 123");
 	disp.Flip();
 
+	int lcd_state = 0;
+	const int counter_rst = 10;
+	int counter = counter_rst;
+
 	while (true)
 	{
 		write(f, "1", 1);
@@ -27,6 +31,24 @@ void Process_1()
 
 		for (i = 0; i < 0x40000; i++)
 			;
+
+		if (--counter == 0)
+		{
+			counter = counter_rst;
+
+			disp.Clear(false);
+			
+			if (lcd_state == 0)
+				disp.Put_String(10, 10, "Welcome");
+			else if (lcd_state == 1)
+				disp.Put_String(10, 10, "in KIV-RTOS");
+			else if (lcd_state == 2)
+				disp.Put_String(10, 10, "Hello world!");
+
+			disp.Flip();
+
+			lcd_state = (lcd_state + 1) % 3;
+		}
 	}
 
 	close(f);
