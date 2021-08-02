@@ -1,4 +1,4 @@
-.globl _start
+.global _start
 _start:
     b skip
 
