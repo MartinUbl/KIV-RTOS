@@ -1,0 +1,486 @@
+\documentclass{article}
+
+\usepackage[pdftex]{graphicx}
+\usepackage[czech]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{enumitem}
+\usepackage{amsmath}
+\usepackage{url}
+\usepackage{listings}
+\usepackage{caption}
+\usepackage[usenames,dvipsnames,svgnames,table]{xcolor}
+
+\usepackage[pdftex]{hyperref}
+\hypersetup{colorlinks=true,
+  unicode=true,
+  linkcolor=black,
+  citecolor=black,
+  urlcolor=black,
+  bookmarksopen=true}
+
+\usepackage[numbers,sort&compress]{natbib}
+
+\newcommand*\justify{
+  \fontdimen2\font=0.4em
+  \fontdimen3\font=0.2em
+  \fontdimen4\font=0.1em
+  \fontdimen7\font=0.1em
+  \hyphenchar\font=`\-
+}
+
+\author{Martin Úbl}
+
+\title{KIV/OS - cvičení č. 1}
+
+\begin{document}
+
+\maketitle
+
+\section{Orientační plán cvičení}
+
+Cvičení budou probíhat prezenčně v laboratoři UC-326. Studentům bude k dispozici potřebný hardware do skupin po 2-4 lidech (dle dostupnosti a obsazenosti cvičení). Plán cvičení:
+
+\begin{enumerate}
+	\item úvodní cvičení
+	\begin{itemize}
+		\item seznámení s hardware, nastavení vývojového prostředí, základní pojmy
+		\item rozblikání LED na desce
+	\end{itemize}
+
+	\item struktura projektu, bootloader, nahrávání kernelu z PC
+	\begin{itemize}
+		\item základní struktura projektu OS
+		\item miniUART a orientace v manuálu k BCM2835
+		\item UART bootloader
+	\end{itemize}
+
+	\item AUX koprocesor, UART
+	\begin{itemize}
+		\item AUX koprocesor, komunikace přes UART
+		\item driver pro UART (miniUART)
+	\end{itemize}
+
+	\item přerušení
+	\begin{itemize}
+		\item operační módy procesoru ARM1176
+		\item tabulka vektorů přerušení, IRQ
+		\item driver pro ARM timer, využití IRQ
+	\end{itemize}
+
+	\item paměť a procesy
+	\begin{itemize}
+		\item alokátor paměti (bitmapový), kernel heap
+		\item procesy (tasky) a jejich implementace
+		\item time-slicing plánovač
+	\end{itemize}
+
+	\item filesystem a systémová volání
+	\begin{itemize}
+		\item filesystem manager, filesystem drivery
+		\item základní drivery pro FS (GPIO, UART)
+		\item systémová volání (open, read, write, close, ioctl), RTL
+	\end{itemize}
+
+	\item ovladače pro periferie desky KIV-DPP-01
+	\begin{itemize}
+		\item posuvný registr a 7-segmentový displej
+		\item generátor náhodných čísel (TRNG)
+		\item I2C a OLED displej
+	\end{itemize}
+
+	\item stránkování, uživatelský režim tasků
+	\begin{itemize}
+		\item stránkování, TLB, správa tabulek stránek
+		\item data abort, prefetch abort
+		\item vedlejší: RTL support pro OLED displej
+	\end{itemize}
+
+	\item real-time
+	\begin{itemize}
+		\item GPIO přerušení
+		\item periodické a aperiodické tasky
+		\item EDF plánovač
+		\item semafory, mutexy, podmínkové proměnné
+		\item základy power managementu (WFI, WFE)
+	\end{itemize}
+
+	\item eMMC a SD karta
+	\begin{itemize}
+		\item převzatý eMMC driver a driver pro SD kartu
+		\item čtení bloků z karty, vlastní jednoduchý filesystém
+	\end{itemize}
+
+	\item co zbylo
+	\begin{itemize}
+		\item WiFi, USB
+		\item co se jinam nevešlo
+	\end{itemize}
+\end{enumerate}
+
+\section{Hardware}
+
+V rámci cvičení budeme využívat vývojovou desku Raspberry Pi Zero WH (dále jen RPi Zero). Ta je osazena mikrokontrolérem BCM2835 s procesorem ARM1176JZFS, grafickým procesorem a dalšími periferiemi, které probereme později.
+
+Dále bude pro potřeby cvičení používána rozšiřující deska KIV-DPP-01, která obsahuje řadu periferií, pro které budeme v rámci cvičení psát ovladače. Tato deska obsahuje:\\
+\begin{itemize}
+	\item senzor náklonu (binární)
+	\item 7-segmentový displej
+	\item OLED displej (na rozhraní I2C)
+	\item tlačítko
+	\item 2x dvou-polohový přepínač
+	\item 1x LED
+	\item pasivní bzučák (k použití s PWM)
+\end{itemize}
+Budeme tedy určitě potřebovat dokumentaci:
+
+\begin{itemize}
+	\item BCM2835: <TODO:LINK>
+	\item ARM1176JZFS: <TODO:LINK>
+	\item příručku ARM6 assembly: <TODO:LINK>
+	\item RPi Zero pinout: <TODO:LINK>
+	\item KIV-DPP-01: <TODO:LINK>
+\end{itemize}
+
+\section{Seznámení s hardware}
+
+RPi Zero obsahuje již zmíněný mikrokontrolér BCM2835. Jedná se o tzv. System on a Chip (SoC), tedy integraci více komponent do jednoho pouzdra, které dohromady tvoří funkční programovatelný systém. Jádrem mikrokontroléru je procesor ARM1176JZFS, tedy procesor ARM řady 7 s taktovací frekvencí 800 Mhz. Tento procesor budeme programovat částečně v assembly a částečně v C/C++.
+
+\subsection{Registry procesoru}
+
+Procesor ARM1176JZFS obsahuje celkem 15 obecných registrů značených \texttt{r0 - r15}. Pak obsahuje dva řídicí registry (\texttt{cpsr} a \texttt{spsr}).
+
+Některé z registrů mají speciální význam:
+\begin{itemize}
+	\item \texttt{r13} (\texttt{sp}) - stack pointer, ukazatel na vrchol zásobníku
+	\item \texttt{r14} (\texttt{lr}) - link register, registr obsahující návratovou adresu (pro návrat z volání podprogramu)
+	\item \texttt{r15} (\texttt{pc}) - program counter, ukazatel na instrukci k načtení
+	\item \texttt{cpsr} - current program state register - obsahuje příznakové bity (pro vykonání podmínek), stav procesoru, režim procesoru, apod.
+\end{itemize}
+
+Tento procesor může operovat v následujících režimech:
+\begin{itemize}
+	\item system/user - systémový (výchozí) a uživatelský režim
+	\item FIQ - fast IRQ režim pro rychlé zpracování HW přerušení
+	\item supervisor - privilegovaný režim
+	\item abort - režim pro zpracování abort výjimek
+	\item IRQ - IRQ režim pro zpracování neprioritních HW přerušení
+	\item undefined - mód pro zpracování výjimky \uv{neznámá instrukce}
+	\item secure monitor - mód pro TrustZone Secure Monitor
+\end{itemize}
+
+Registry mohou být tzv. \emph{banked} (\uv{uschované}). Každý režim má vždy svou \uv{verzi} registrů \texttt{r13} (stack pointer) a \texttt{r14} (link register), které jsou nahrány vždy při přechodu do daného režimu a uschovány při odchodu. Navíc režim FIQ uschovává registry \texttt{r8 - r12}. Uschované verze registrů jsou z privilegovaného režimu dostupné užitím prefixu (např. \texttt{r8\_fiq}).
+
+\subsection{Assembly}
+
+Procesor ARM je schopen pracovat v několika režimech zpracování instrukcí. Mezi základní dva patří tzv. ARM režim a Thumb režim. Instrukce v ARM formátu mají fixní délku 32 bitů (4 byty) a jejich zarovnání v paměti tomu musí odpovídat - musí začínat vždy na adrese, která je násobkem 4. Instrukce formátu Thumb mají variabilní délku - buď 16 nebo 32 bitů a procesor musí být přepnutý do daného režimu, aby je uměl číst a vykonávat. Zarovnání musí v tomto případě být na násobky 2.
+
+Pro moderní vývoj v assembly byl definován standard zápisu UAL (Unified Assembly Language), který dovoluje psát instrukce v unifikované podobě, a až kompilátor v době překladu rozhodne, která instrukční sada se použije. Vybrané prvky jazyka ale zůstávají stejné.
+
+Následují vybrané konstrukce, které se mohou při programování pro ARM hodit.
+
+Můžeme například definovat sekce direktivou \texttt{.section}, do kterých se má následující kus kódu/dat uložit. To se nám bude hodit v momentě, kdy budeme chtít uložit konkrétní věci na konkrétní místa. Typickým příkladem je právě bootovací sekvence.
+
+\begin{lstlisting}[language=C]
+.section .text
+\end{lstlisting}
+
+Můžeme definovat návěští pouhým jménem a dvojtečkou - návěští je pouze pojmenovaná adresa. To se bude hodit často - zejména pro definici rutin, které budeme volat z jazyka C (protože něco prostě v C zapsat neumíme).
+
+\begin{lstlisting}[language=C]
+mojefunkce:
+\end{lstlisting}
+
+Rovněž budeme chtít návěští exportovat tak, aby jej viděl linker (a potažmo ostatní moduly) direktivou \texttt{.global}.
+
+\begin{lstlisting}[language=C]
+.global mojefunkce
+\end{lstlisting}
+
+Komentáře se standardně v námi použitém assembleru značí středníkem a zavináčem.
+
+\begin{lstlisting}[language=C]
+;@ Toto je komentar
+\end{lstlisting}
+
+Konstanty lze definovat direktivou \texttt{.equ} - jde vlastně o obdobu maker v C.
+
+\begin{lstlisting}[language=C]
+.equ KONSTANTA, 42
+\end{lstlisting}
+
+Pak už můžeme pracovat s registry, pamětí, daty a jinými. Více pochopitelně v referenčním manuálu nebo v dodané \uv{quick reference card}. Můžeme například chtít:
+
+\begin{lstlisting}[language=C]
+;@ presunout cislo do registru r1
+mov r1, #99
+
+;@ secist obsah dvou registru a vysledek dat do registru r2
+add r2, r1, r3
+
+;@ presunout provadeni programu jinam
+b mojefunkce
+
+;@ regulerne zavolat funkci (nastavuje LR)
+bl mojefunkce
+
+;@ vratit se z volani funkce
+bx lr
+\end{lstlisting}
+
+Více až když to budeme potřebovat, resp. v daném referenčním manuálu.
+
+\subsection{Paměť a memory-mapped IO}
+
+Procesor má k dispozici adresní prostor, který lze adresovat čísly od 0 do \texttt{0xFFFFFFFF}. Jde tedy o 32-bitový adresní prostor. Z něj ale pouze část představuje fyzická paměť. Obvykle bývá fyzická paměť mapována na dolní část rozsahu, aby adresa na sběrnici odpovídala adrese ve fyzické paměti.
+
+Zmínili jsme pojem \uv{sběrnice} a v souvislosti s tímto pojmem nějakou adresu. Když hovoříme o adrese, můžeme tím myslet adresu fyzickou, sběrnicovou, virtuální nebo jinou. V každém případě jde o číslo, které je často v procesu adresace různě překládáno a mapováno do adresního prostoru, ve kterém se právě pohybujeme.
+
+Tohoto mapování využívají i některé periferie, které jsou mapovány do tohoto adresního rozsahu na předem známé adrese. Pro BCM2835 a tento procesor jde o rozsah fyzických adres \texttt{0x20000000 - 0x20FFFFFF}, které jsou ovšem mapovány na sběrnicový rozsah adres \texttt{0x7E000000 - 0xFEFFFFFF}. Procesor tedy pracuje s adresami z rozsahu sběrnicového, interně je ale tento rozsah mapován na rozsah fyzický. V dokumentaci pro BCM2835 nalezneme adresy sběrnicové.
+
+Poté můžeme používat registry periferií pouhým vybráním příslušné buňky v dokumentaci a překladem do adresního prostoru. Například zápis na pin GPIO řadiče (aby se např. rozsvítila LED) můžeme provést zápisem bitu na specifickou adresu \uv{set} registru dané sady pinů. Příkladem může být následující kód, který zapíše 1 na pin 0 - adresu \texttt{0x7E20001C} nalezneme v BCM2835 manuálu jako adresu registru \texttt{GPSET0}:
+
+\begin{lstlisting}[language=C]
+(*(volatile int*)0x7E20001C) = (1 << 0);
+\end{lstlisting}
+
+Pochopitelně je potřeba provést ještě několik dalších věcí (nastavit režim GPIO, ...), ale o tom až jindy.
+
+K drtivé většině periferií budeme přistupovat takto. K části se pak přistupuje pomocí principu tzv. \emph{mailboxů}, o kterých si povíme až v pozdějších cvičeních.
+
+\subsection{Bootloader}
+
+Bootloader je ve zkratce program, který se spustí jako první po spuštění počítače. Je součástí operačního systému, který jej obvykle dodává ve svém instalačním balíku.
+
+Bootovací proces u RPi Zero (a vlastně u spousty dalších embedded zařízení) je poněkud složitější. Po zapnutí desky je přečten z SD karty seznam oddílů, vybere se první, který je naformátovaný na souborový systém FAT32 a s tím se dále pracuje. Tam je nalezen soubor \texttt{bootcode.bin}, který představuje vlastní bootloader (stage 1). Ten přečte dále obsah souboru \texttt{config.txt} a jiných, nastaví co je třeba a do grafického jádra načte obsah souboru \texttt{start.elf}. Grafické jádro pak v bootování pokračuje tím, že procesor resetuje do pracovního stavu a načte do paměti z SD karty obsah souboru \texttt{kernel.img}. To je soubor, který obsahuje samotný obsah paměti (RAM) a funguje tedy jako jakýsi \uv{stage 2} bootovacího procesu. Poté nastaví programový čítač na předem sjednanou hodnotu (\texttt{0x8000}) a předá řízení hlavnímu procesoru.
+
+My bychom chtěli ve fázi vývoje neustále nahrávat nový kód do našeho zařízení. To můžeme například soustavným vyndaváním SD karty a přehráváním souboru \texttt{kernel.img}. To sice není úplně praktické, ale pro začátek to stačí.
+
+Lepší nápad bude mít právě jeden \texttt{kernel.img}, který bude sloužit jen jako již zmíněná \uv{stage 2} bootovacího procesu. Tento kód bude čekat, až mu po nějakém komunikačním rozhraní skutečný kernel odešleme z našeho vývojového počítače, \uv{stage 2} ho pak nahraje do paměti a spustí. O tom ale až ve cvičení číslo 2.
+
+\section{Nastavení prostředí pro vývoj}
+
+Jediné, co pro vývoj explicitně budeme potřebovat je překladač jazyka C/C++ a ARM assembly a sadu nástrojů pro převod výstupu do přenositelné podoby. Na to je k dispozici na různých distribucích Linuxu sada \texttt{gcc-arm-none-eabi}, která vlastně obsahuje vše, co budeme potřebovat.
+
+Pro Debian-based (apt-based) distribuce stačí tedy použít příkaz (volitelně prefixovaný \texttt{sudo}):\\
+
+\texttt{apt install gcc-arm-none-eabi}\\
+
+Uživatelé systému Windows mohou použít od verze operačního systému Windows 10 i vestavěný WSL (Windows Subsystem for Linux) a nějakou instalovatelnou distribuci (např. Debian, Ubuntu, ...). Instalace je pak totožná. Odvážnější mohou zkusit zprovoznit balík \texttt{gcc-arm-none-eabi} pro Windows přímo z oficiálních distribucí (TODO:LINK) bez nutnosti instalovat WSL.
+
+Samozřejmě bude dobré mít i nějaké IDE, které nám trochu pomůže s vývojem. Mně se osvědčilo MS Visual Studio Code s pluginy pro jazyk C++ a assembly.
+
+
+
+\section{Testovací kód}
+
+Pro začátek si zkusíme jen něco jednoduchého - rozblikáme LED na desce (tzv. ACT LED, activity LED) bez nutnosti mít jakkoliv použitelný operační systém.
+
+Nejprve je potřeba napsat kus assembly, jelikož nelze nijak snadno a univerzálně v C kódu povědět, že chceme mít funkci, která vlastně není funkce, a že je zarovnána na přesnou adresu. Tedy - ne že by to nešlo, jen to dělat nechceme a musíme si trochu zvyknout na to, že budeme mixovat jazyky C a C++ s assembly.
+
+Nejprve nakopírujme obsahy souborů, níže jejich obsah trochu rozebereme.
+
+\subsection{Kód}
+
+Definujme soubor \texttt{start.s}:
+
+\begin{lstlisting}[language=C]
+.global _start
+.global dummy
+
+;@ vstupni bod do kernelu
+_start:
+  mov sp,#0x8000
+  bl blinker_main
+hang:
+  b hang
+
+;@ dummy funkce (nevyoptimalizuje se; fixni pocet taktu procesoru)
+dummy:
+  bx lr
+\end{lstlisting}
+
+Rovněž si definujme soubor \texttt{blinker.c}:
+
+\begin{lstlisting}[language=C]
+#define GPFSEL3 0x2020000C
+#define GPFSEL4 0x20200010
+#define GPSET1  0x20200020
+#define GPCLR1  0x2020002C
+
+extern void dummy(unsigned int);
+
+// zapise 32bitovou hodnotu na danou adresu
+void write32(unsigned int addr, unsigned int value)
+{
+  *((volatile unsigned int*)addr) = value;
+}
+
+// precte 32bitovou hodnotu ze zadane adresy
+unsigned int read32(unsigned int addr)
+{
+  return *((volatile unsigned int*)addr);
+}
+
+// aktivni "spanek" - spali nekolik taktu procesoru naprazdno
+void active_sleep(unsigned int ticks)
+{
+  volatile unsigned int ra;
+  for (ra = 0; ra < ticks; ra++)
+    dummy(ra);
+}
+
+int blinker_main(void)
+{
+  unsigned int ra;
+	
+  // nastavime pin ACT LEDky na vystupni
+  ra = read32(GPFSEL4);
+  ra &= ~(7 << 21);
+  ra |= 1 << 21;
+  write32(GPFSEL4,ra);
+	
+  // nekonecna smycka
+  while (1)
+  {
+    // ACT LED je zapojena "proti intuici", tzn. zapisem 0 se
+    // rozsviti, zapisem 1 zhasne
+		
+    // 0 --> ACT LED (rozsvitit)
+    write32(GPCLR1,1<<(47-32));
+    // spalit 0x80000 cyklu ("pocka" par milisekund)
+    active_sleep(0x80000);
+		
+    // 1 --> ACT LED (zhasnout)
+    write32(GPSET1,1<<(47-32));
+    // ...
+    active_sleep(0x80000);
+		
+    write32(GPCLR1,1<<(47-32));
+    active_sleep(0x80000);
+		
+    write32(GPSET1,1<<(47-32));
+    active_sleep(0x300000);
+  }
+	
+  return 0;
+}
+\end{lstlisting}
+
+To budeme potřebovat namapovat nějak do paměti (linker nám s tím pomůže) pomocí souboru \texttt{memmap}:
+
+\begin{lstlisting}[language=C]
+MEMORY
+{
+  ram : ORIGIN = 0x8000, LENGTH = 0x10000
+}
+
+SECTIONS
+{
+  .text : { *(.text*) } > ram
+  .bss : { *(.bss*) } > ram
+}
+\end{lstlisting}
+
+A to všechno sestavíme dle návodu v \texttt{Makefile}:
+
+\begin{lstlisting}[language=C]
+ARMGNU ?= arm-none-eabi
+
+AOPS = --warn --fatal-warnings
+COPS = -Wall -Werror -O2 -nostdlib -nostartfiles -ffreestanding
+
+all: kernel.img
+
+clean:
+  rm -f *.o
+  rm -f *.bin
+  rm -f *.hex
+  rm -f *.srec
+  rm -f *.elf
+  rm -f *.list
+  rm -f *.img
+
+start.o: start.s
+  $(ARMGNU)-as $(AOPS) start.s -o start.o
+
+blinker.o: blinker.c
+  $(ARMGNU)-gcc $(COPS) -c blinker.c -o blinker.o
+
+blinker.elf: link.ld start.o blinker.o
+  $(ARMGNU)-ld start.o blinker.o -T link.ld -o blinker.elf
+  $(ARMGNU)-objdump -D blinker.elf > blinker.list
+
+kernel.img: blinker.elf
+  $(ARMGNU)-objcopy blinker.elf -O binary kernel.img
+\end{lstlisting}
+
+\subsection{Význam konstrukcí}
+
+V souboru \texttt{start.s} vidíme 3 návěští:
+\begin{itemize}
+	\item \texttt{\_start} - vstupní bod do jádra, sem skočí bootloader
+	\item \texttt{hang} - jen nekonečná smyčka, nemáme kam se \uv{vrátit} z kernelu, tak se zacyklíme
+	\item \texttt{dummy} - dummy funkce, která se nevyoptimalizuje a má fixní počet taktů na zpracování, budeme ji volat kvůli aktivnímu zpoždění
+\end{itemize}
+
+Jediný kód, který vlastně něco dělá, se nachází v \texttt{\_start} - nastaví ukazatel na vrchol zásobníku na adresu \texttt{0x8000} a zavolá C funkci \texttt{blinker\_main}. Vrchol zásobníku nastavujeme na \texttt{0x8000}, a jelikož zásobník roste na opačnou stranu, tak vkládáním bude tato adresa klesat. Nepřepíšeme si tedy žádný z kódů, který je naopak situován do oblasti nad adresou \texttt{0x8000}.
+
+Soubor \texttt{blinker.c} již obsahuje o něco zajímavější konstrukce. Zejména si všimněte, že je často používáno klíčového slova \texttt{volatile}. To proto, že pokud by kompilátor měl optimalizovat a narazil na zápis do místa, ze kterého se nikde v programu nečte, mohl by tento zápis odstranit. My ale potřebujeme, aby se zápis provedl, protože tím ovládáme vybrané periferie (které \uv{čtou} vždy to, co zapíšeme).
+
+Dále jsou zde 4 funkce:
+\begin{itemize}
+	\item \texttt{write32} - provede nevyoptimalizovaný zápis na danou adresu
+	\item \texttt{read32} - přečte (necachovaně) z dané adresy
+	\item \texttt{active\_sleep} - aktivní \uv{spánek} (\uv{pálíme} cykly procesoru na neužitečné práci)
+	\item \texttt{blinker\_main} - vlastní program pro blikání s ACT LED
+\end{itemize}
+
+První zajímavou funkcí pro nás je \texttt{active\_sleep}, která pochopitelně nepředstavuje něco, co bychom měli použít v produkčním kódu. Jde o aktivní spánek, tedy vlastně jen sekvenci instrukcí, které se budou provádět bez většího užitku. My to využijeme pro časování blikání LED. Později si ukážeme, jak aktivní spánek nahradit nařízením časovače a využitím přerušení.
+
+Následuje funkce \texttt{blinker\_main}, která obsahuje vlastní logiku. Nejprve je nutné podotknout, že chceme blikat LED, ale fakticky jde o nastavování nějakého výstupu na \uv{zapnuto} (vysoká úroveň napětí, HIGH) a \uv{vypnuto} (nízká úroveň napětí, LOW). K tomu je potřeba ovládat tzv. GPIO (General-Purpose Input Output) řadič a jeho piny.
+
+Tento řadič se dá ovládat zápisy do dedikovaných registrů, které jsou namapovány do paměťového prostoru. Pro úspěšné blikání s ACT LED potřebujeme nejprve nastavit její vyhrazený GPIO pin na výstupní (tedy my budeme ovládat výstup) a pak až pin nastavovat na žádanou úroveň napětí.
+
+GPIO pin může operovat v několika režimech:
+\begin{itemize}
+	\item input (vstupní)
+	\item output (výstupní)
+	\item alternate function 0-5 (speciální funkce pro nějaké periferie; více o tomto jindy)
+\end{itemize}
+
+Ten se nastavuje do příslušného registru zvaného \texttt{GPFSEL} (\emph{function select}). Jakmile zapíšeme mód do tohoto registru, můžeme zápisem do registru \texttt{GPSET}, resp. \texttt{GPCLR} výstup ovládat.
+
+ACT LED je připojena na GPIO pin 47. V manuálu se dočteme, že musíme nastavit registr \texttt{GPFSEL4} a pro ovládání registry \texttt{GPSET1} a \texttt{GPCLR1}. V kódu lze vidět čtení \texttt{GPFSEL4}, odmaskování 3 bitů na pozici 21, 20 a 19, které opět dle manuálu přísluší námi vybranému pinu, zápisu bitu na pozici 21 a zápis upraveného čísla zpět do registru. Tímto jsme nastavili pin 47 na výstupní.
+
+Dále se dozvíme v manuálu, že pro ovládání výstupu existují registry \texttt{GPSET0}, \texttt{GPSET1} a jejich ekvivalenty \texttt{GPCLR0} a \texttt{GPCLR1}. Každý bit v každém z těchto 32-bitových registrů odpovídá jednomu pinu. \texttt{GPSET0} a \texttt{GPCLR1} obstarávají dolní piny 0-31, \texttt{GPSET1} a \texttt{GPCLR1} pak obstarávají piny 32-63 (teoreticky, některé nejsou použité).
+
+Nyní můžeme v jedné velké smyčce nastavit ACT LED, aktivně čekat pár taktů a zase ji vypnout. V příkladu LED problikne dvakrát za sebou a pak následuje větší časové okno.
+
+\section{Úkol za body}
+
+Na rozšiřující desce KIV-DPP-01 je obsažena LED, která je připojena na pin <TODO>. Rozblikejte ji tak, aby vysílala SOS signál (tři krátká, tři dlouhá a tři krátká probliknutí následovaná pauzou). Věnujte pozornost jak dokumentaci mikrokontroléru BCM2835, tak schématu přídavné desky.
+
+\end{document}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
