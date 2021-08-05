@@ -29,17 +29,17 @@ class CProcess_Manager
         // uzel procesu, ktery je prave naplanovan
         CProcess_List_Node* mCurrent_Task_Node;
 
+        // SP a PC procesu, ktery byl prerusen, a take SP IRQ modu, aby nam nepretekl zasobnik pri prepinani procesu
+        uint32_t mInterrupted_SP, mInterrupted_PC, mOriginal_IRQ_SP;
+
     private:
         void Switch_To(CProcess_List_Node* node);
 
     public:
         CProcess_Manager();
 
-        // vytvori systemovy proces
-        void Create_Main_Process();
-
-        // vytvori proces, ktery bude vykonavat zadanou funkci, vraci jeho PID
-        uint32_t Create_Process(unsigned long funcptr);
+        // vytvori proces, ktery bude vykonavat zadanou funkci, vraci jeho PID; volitelne muze jit o systemovy proces
+        uint32_t Create_Process(unsigned long funcptr, bool is_system);
 
         // metoda, kterou se explicitne spusti planovac - muze byt volana z IRQ handleru casovace, nebo treba i ze SW preruseni (kdyz se proces zablokuje)
         void Schedule();
@@ -52,6 +52,9 @@ class CProcess_Manager
 
         // odmapuje soubor z daneho handle
         bool Unmap_File_Current(uint32_t handle);
+
+        // ulozi SP a PC preruseneho procesu - hodi se napr. v momente, kdy mame prepnout kontext jinam a tyto hodnoty ulozit do PCB
+        void Set_Interrupted_Process_State(uint32_t proc_sp, uint32_t proc_pc, uint32_t irq_sp);
 
         // softwarova preruseni pro process facility
         void Handle_Process_SWI(NSWI_Process_Service svc_idx, uint32_t r0, uint32_t r1, uint32_t r2, TSWI_Result& target);

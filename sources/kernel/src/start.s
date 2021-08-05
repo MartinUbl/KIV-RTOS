@@ -99,10 +99,14 @@ hang:
 
 .global enable_irq
 enable_irq:
+	;@ kompletni sekvence instrukci:
     mrs r0, cpsr		;@ presun ridiciho registru (CPSR) do general purpose registru (R0)
     bic r0, r0, #0x80	;@ vypne bit 7 v registru r0 ("IRQ mask bit")
     msr cpsr_c, r0		;@ nacteme upraveny general purpose (R0) registr do ridiciho (CPSR)
+
+	;@ nebo lze udelat jen tohle:
     cpsie i				;@ povoli preruseni
+
     bx lr
 
 undefined_instruction_handler:
@@ -120,25 +124,36 @@ software_interrupt_handler:
 	mov r2, r0					;@ ten vraci pointer na result kontejner v r0, presuneme do r2 - potrebujeme obsah dostat do r0 a r1
 	ldr r0, [r2, #0]			;@ nacteme navratove hodnoty do registru
 	ldr r1, [r2, #4]
+
 	ldmfd sp!, {r2-r12,pc}^		;@ obnovime ze zasobniku stav (jen puvodni lr nacteme do pc)
 
 
 .global _internal_irq_handler
 irq_handler:
 	sub lr, lr, #4
-	srsdb #CPSR_MODE_SYS!		;@ ekvivalent k push lr a msr+push spsr
-	cpsid if, #CPSR_MODE_SYS	;@ prechod do SYS modu + zakazeme preruseni
-	push {r0-r4, r12, lr}		;@ ulozime callee-saved registry
 
-	and r4, sp, #7
-	sub sp, sp, r4
+	;@ tady musime pocitat s tim, ze handler bude opusten bud zde (dole) nebo preplanovanim na jiny proces, pokud IRQ vyvolal casovac a planovac uzna za vhodne prepnout kontext
+	;@ kod tady (a to co provadi se zasobnikem napr.) musi byt binarne ekvivalentni k tomu, co dela process manazer pri planovani procesu
+
+	srsdb #CPSR_MODE_SYS!		;@ ekvivalent k push lr a push spsr --> uklada do zasobniku specifikovaneho rezimu!
+	cpsid if, #CPSR_MODE_SYS	;@ prechod do SYS modu + zakazeme preruseni
+	push {r0-r12}				;@ ulozime registry (musime dbat na to, ze nektere z nich mohou byt pozdeji prepsany a planovac/planovany proces by je mohl potrebovat)
+	push {lr}
+
+	mov r0, sp
+
+	cps #CPSR_MODE_IRQ
+
+	mov r1, lr
+	mov r2, sp
 
 	bl _internal_irq_handler	;@ zavolame handler IRQ
 
-	add sp, sp, r4
+	cps #CPSR_MODE_SYS
 
-	pop {r0-r4, r12, lr}		;@ obnovime callee-saved registry
-	rfeia sp!					;@ vracime se do puvodniho stavu (ktery ulozila instrukce srsdb)
+	pop {lr}
+	pop {r0-r12}		    	;@ obnovime registry
+	rfeia sp!					;@ vracime se do puvodniho stavu (ktery ulozila instrukce srsdb, takze vlastne delame pop cpsr, pop lr)
 
 prefetch_abort_handler:
 	;@ tady pak muzeme osetrit, kdyz program zasahne do mista, ktere nema mapovane ve svem virtualnim adr. prostoru

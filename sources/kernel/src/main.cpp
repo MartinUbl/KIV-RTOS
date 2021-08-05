@@ -27,6 +27,15 @@ extern void Process_1();
 // "main" procesu 2
 extern void Process_2();
 
+// kernelovy "idle task" - ten se bude planovat, kdyz zrovna nic jineho nebude
+void idle_loop()
+{
+	// tady budeme mozna v budoucnu chtit resit treba uspavani, aby nas system nezral vic elektricke energie, nez je treba
+
+    while (1)
+		;
+}
+
 extern "C" int _kernel_main(void)
 {
 	// debug output, kdyz budeme neco ladit; jinak vyzadujeme, aby si proces UART otevrel a spravoval
@@ -42,19 +51,19 @@ extern "C" int _kernel_main(void)
 	// inicializace souboroveho systemu
 	sFilesystem.Initialize();
 
-	// vytvoreni hlavniho procesu
-	sProcessMgr.Create_Main_Process();
+	// vytvoreni hlavniho systemoveho (idle) procesu
+	sProcessMgr.Create_Process(reinterpret_cast<unsigned long>(&idle_loop), true);
 
 	// vytvoreni jednoho testovaciho procesu
-	sProcessMgr.Create_Process(reinterpret_cast<unsigned long>(&Process_1));
+	sProcessMgr.Create_Process(reinterpret_cast<unsigned long>(&Process_1), false);
 	// vytvoreni druheho testovaciho procesu
-	sProcessMgr.Create_Process(reinterpret_cast<unsigned long>(&Process_2));
+	sProcessMgr.Create_Process(reinterpret_cast<unsigned long>(&Process_2), false);
 
 	// zatim zakazeme IRQ casovace
 	sInterruptCtl.Disable_Basic_IRQ(hal::IRQ_Basic_Source::Timer);
 
 	// nastavime casovac - v callbacku se provadi planovani procesu
-	sTimer.Enable(Timer_Callback, 0x20, NTimer_Prescaler::Prescaler_256);
+	sTimer.Enable(Timer_Callback, 0x20, NTimer_Prescaler::Prescaler_1);
 
 	// povolime IRQ casovace
 	sInterruptCtl.Enable_Basic_IRQ(hal::IRQ_Basic_Source::Timer);
@@ -62,8 +71,8 @@ extern "C" int _kernel_main(void)
 	// povolime IRQ a od tohoto momentu je vse v rukou planovace
 	enable_irq();
 
-	// nekonecna smycka - tadyodsud se CPU uz nedostane jinak, nez treba prerusenim
-    while (1)
+	// tohle uz se mockrat nespusti - dalsi IRQ preplanuje procesor na nejaky z tasku (bud systemovy nebo uzivatelsky)
+	while (true)
 		;
 	
 	return 0;

@@ -9,7 +9,7 @@ void Process_1()
 {
 	volatile int i;
 
-	uint32_t f = open("DEV:gpio/47", NFile_Open_Mode::Write_Only);
+	uint32_t f = open("DEV:gpio/18", NFile_Open_Mode::Write_Only);
 
 	COLED_Display disp("DEV:oled");
 	disp.Clear(false);
@@ -37,7 +37,7 @@ void Process_1()
 			counter = counter_rst;
 
 			disp.Clear(false);
-			
+
 			if (lcd_state == 0)
 				disp.Put_String(10, 10, "Welcome");
 			else if (lcd_state == 1)
@@ -83,19 +83,29 @@ void Process_2()
     srf = open("DEV:segd", NFile_Open_Mode::Write_Only);
     write(srf, "4", 1);
 
+	int p = 10;
+
 	while (true)
 	{
 		write(f, msg, strlen(msg));
 
         read(rndf, reinterpret_cast<char*>(&rdbuf), 4);
 
+		// timto jen muzeme overit, ze nam zasobnik umele nebobtna vlivem spatne implementace context switche
+		//asm volatile("mov %0, sp\n\t" : "=r" (rdbuf) );
+
         bzero(numbuf, 16);
-        itoa(rdbuf, numbuf, 10);
+        itoa(rdbuf, numbuf, 16);
 
         write(f, numbuf, strlen(numbuf));
 
 		for (i = 0; i < 0x80000; i++)
 			;
+
+		// nasledujici instrukce v uzivatelskem rezimu neprojde
+		// v systemovem rezimu (tedy nez byly procesy presunuty do "userspace") by to zakazalo preruseni
+		// a mj. ukradlo vsechen procesorovy cas pro tento proces
+		//asm volatile("cpsid i\r\n");
 	}
 
 	close(f);

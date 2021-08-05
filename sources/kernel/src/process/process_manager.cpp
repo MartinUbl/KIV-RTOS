@@ -11,9 +11,11 @@
 // "importovane" funkce z asm
 extern "C"
 {
-    void process_bootstrap();
-    void context_switch(TCPU_Context* ctx_to, TCPU_Context* ctx_from);
-    void context_switch_first(TCPU_Context* ctx_to, TCPU_Context* ctx_from);
+    void user_process_bootstrap();
+    void system_process_bootstrap();
+    void context_switch(TCPU_Context* ctx_to);
+    void context_switch_first(TCPU_Context* ctx_to);
+    void restore_irq_sp(uint32_t irq_sp);
 };
 
 CProcess_Manager sProcessMgr;
@@ -29,30 +31,7 @@ TTask_Struct* CProcess_Manager::Get_Current_Process() const
     return mCurrent_Task_Node ? mCurrent_Task_Node->task : nullptr;
 }
 
-void CProcess_Manager::Create_Main_Process()
-{
-    CProcess_List_Node* procnode = sKernelMem.Alloc<CProcess_List_Node>();
-
-    procnode->next = mProcess_List_Head;
-    procnode->prev = nullptr;
-    mProcess_List_Head->prev = procnode;
-
-    procnode->task = sKernelMem.Alloc<TTask_Struct>();
-
-    auto* task = procnode->task;
-
-    task->pid = ++mLast_PID;
-    task->sched_static_priority = 5;    // TODO: pro ted je to jen hardcoded hodnota, do budoucna urcite bude nutne dovolit specifikovat
-    task->sched_counter = task->sched_static_priority;
-    task->state = NTask_State::Running;
-
-    for (uint32_t i = 0; i < Max_Process_Opened_Files; i++)
-        task->opened_files[i] = nullptr;
-
-    mCurrent_Task_Node = mProcess_List_Head;
-}
-
-uint32_t CProcess_Manager::Create_Process(unsigned long funcptr)
+uint32_t CProcess_Manager::Create_Process(unsigned long funcptr, bool is_system)
 {
     CProcess_List_Node* procnode = sKernelMem.Alloc<CProcess_List_Node>();
 
@@ -69,9 +48,9 @@ uint32_t CProcess_Manager::Create_Process(unsigned long funcptr)
     task->sched_static_priority = 5;    // TODO: pro ted je to jen hardcoded hodnota, do budoucna urcite bude nutne dovolit specifikovat
     task->sched_counter = task->sched_static_priority;
     task->state = NTask_State::New;
-    
+
     task->cpu_context.lr = funcptr;
-    task->cpu_context.pc = reinterpret_cast<unsigned long>(&process_bootstrap);
+    task->cpu_context.pc = is_system ? reinterpret_cast<unsigned long>(&system_process_bootstrap) : reinterpret_cast<unsigned long>(&user_process_bootstrap);
     task->cpu_context.sp = static_cast<unsigned long>(sPage_Manager.Alloc_Page()) + mem::PageSize;
 
     for (uint32_t i = 0; i < Max_Process_Opened_Files; i++)
@@ -133,6 +112,10 @@ void CProcess_Manager::Switch_To(CProcess_List_Node* node)
     // projistotu vynulujeme prideleny pocet casovych kvant
     mCurrent_Task_Node->task->sched_counter = 0;
 
+    // ulozime SP a PC procesu (to nam preda IRQ handler)
+    mCurrent_Task_Node->task->cpu_context.sp = mInterrupted_SP;
+    mCurrent_Task_Node->task->cpu_context.pc = mInterrupted_PC;
+
     TCPU_Context* old = &mCurrent_Task_Node->task->cpu_context;
     bool is_first_time = (node->task->state == NTask_State::New);
 
@@ -141,11 +124,13 @@ void CProcess_Manager::Switch_To(CProcess_List_Node* node)
     mCurrent_Task_Node->task->sched_counter = mCurrent_Task_Node->task->sched_static_priority;
     mCurrent_Task_Node->task->state = NTask_State::Running;
 
+    restore_irq_sp(mOriginal_IRQ_SP);
+
     // pokud je to poprve, co je proces planovany, musime to vzit jeste pres malou odbocku ("bootstrap")
     if (is_first_time)
-        context_switch_first(&node->task->cpu_context, old);
+        context_switch_first(&node->task->cpu_context);
     else
-        context_switch(&node->task->cpu_context, old);
+        context_switch(&node->task->cpu_context);
 }
 
 uint32_t CProcess_Manager::Map_File_To_Current(IFile* file)
@@ -182,6 +167,13 @@ bool CProcess_Manager::Unmap_File_Current(uint32_t handle)
 
     current->opened_files[handle] = nullptr;
     return true;
+}
+
+void CProcess_Manager::Set_Interrupted_Process_State(uint32_t proc_sp, uint32_t proc_pc, uint32_t irq_sp)
+{
+    mInterrupted_SP = proc_sp;
+    mInterrupted_PC = proc_pc;
+    mOriginal_IRQ_SP = irq_sp;
 }
 
 void CProcess_Manager::Handle_Process_SWI(NSWI_Process_Service svc_idx, uint32_t r0, uint32_t r1, uint32_t r2, TSWI_Result& target)
