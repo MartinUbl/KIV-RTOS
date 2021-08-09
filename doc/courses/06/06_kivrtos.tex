@@ -45,6 +45,7 @@
 	\item propojení se správou procesů
 	\item systémová volání \texttt{open}, \texttt{read}, \texttt{write}, \texttt{close}, \texttt{ioctl}
 	\item stub RTL pro systémová volání
+	\item operátory \texttt{new} a \texttt{delete} pro kernelovou haldu
 \end{itemize}
 
 \section{Souborový systém}
@@ -157,11 +158,357 @@ struct TFS_Driver
 \end{lstlisting}
 Struktura obsahuje jen název, výchozí \uv{mountpoint} (zde v uvozovkách, jelikož to není úplně přesný výraz) a odkaz na samotný driver, jehož instance již byla vytvořena (pokud možno staticky, viz dále).
 
+Ve třídě správce souborového systému dále definujme statické pole filesystem driverů a konstantu indikující jejich počet:
+\begin{lstlisting}
+static const TFS_Driver gFS_Drivers[];
+static const uint32_t gFS_Drivers_Count;
+\end{lstlisting}
+
+Nyní definujme kořenovou položku filesystému a první úroveň (tedy naše pevně dané identifikátory podstromů):
+\begin{lstlisting}
+TFS_Tree_Node mRoot;
+TFS_Tree_Node mRoot_Dev;
+TFS_Tree_Node mRoot_Sys;
+TFS_Tree_Node mRoot_Mnt;
+\end{lstlisting}
+
+Nyní se přesuňme do implementace (ze které budeme volně přebíhat do hlavičky a dalších modulů). Jako první je třeba souborový systém inicializovat, tedy nastavit první úroveň zanoření v kořenovém adresáři na definované pevné podadresáře. To udělejme v konstruktoru:
+
+\begin{lstlisting}
+CFilesystem::CFilesystem()
+{	
+  mRoot.parent = nullptr;	
+  mRoot.next = nullptr;
+  mRoot.children = &mRoot_Dev;
+  mRoot.isDirectory = true;
+  mRoot.driver_idx = NoFilesystemDriver;
+  mRoot.name[0] = '\0';
+	
+  mRoot_Dev.parent = &mRoot;
+  mRoot_Dev.next = &mRoot_Sys;
+  mRoot_Dev.children = nullptr;
+  mRoot_Dev.isDirectory = true;
+  mRoot_Dev.driver_idx = NoFilesystemDriver;
+  strncpy(mRoot_Dev.name, "DEV", 4);
+	
+  // ... totez pro MNT a SYS ...
+}
+\end{lstlisting}
+Implementaci \texttt{strncpy} nechám na vás.
+
+Dále je třeba souborový systém inicializovat, a tedy \uv{namountovat} všechny filesystem drivery a připravit celý strom, kam jen to je možné a vhodné. Filesystem driver necháme \uv{mountovat} na konkrétní \uv{mountpoint}. Z toho učiníme adresář, a všechny cesty, které do něj vedou, budeme předávat konkrétnímu filesystem driveru, aby je ošetřil dle vlastního uvážení. Dejme tomu tedy, že vyžádáme cestu \texttt{DEV:gpio/27}. Filesystem driver GPIO je \uv{mountován} na bod \texttt{DEV:gpio}. Filesystem najde tento bod, zjistí, že je s ním asociován tento driver a předá mu zbytek řetězce (tedy \texttt{27}). GPIO FS driver pak ví, že jakákoliv číselná hodnota v rozsahu od 0 do 57 (počet GPIO) je validní a mapuje se na konkrétní GPIO pin. Naparsuje proto číslo \texttt{27}, vytvoří příslušného potomka \texttt{IFile} (např. \texttt{CGPIO\_File}) a tomu předá v konstruktoru číslo 27.
+
+K samotné inicializaci -- následující kód projde všechny FS drivery a \uv{namountuje} je na jejich danou cestu:
+\begin{lstlisting}
+void CFilesystem::Initialize()
+{
+  char tmpName[MaxFilenameLength];
+  const char* mpPtr;
+
+  int i, j;
+
+  for (i = 0; i < gFS_Drivers_Count; i++)
+  {
+    const TFS_Driver* ptr = &gFS_Drivers[i];
+
+    mpPtr = ptr->mountPoint;
+
+    TFS_Tree_Node* node = &mRoot, *tmpNode = nullptr;
+
+    while (mpPtr[0] != '\0')
+    {
+      for (j = 0; j < MaxPathLength && mpPtr[j] != '\0'; j++)
+      {
+        if (mpPtr[j] == ':' || mpPtr[j] == '/')
+          break;
+				
+        tmpName[j] = mpPtr[j];
+      }
+
+      tmpName[j] = '\0';
+      mpPtr += j + 1;
+			
+      tmpNode = node->Find_Child(tmpName);
+      if (tmpNode)
+        node = tmpNode;
+      else
+      {
+        tmpNode = sKernelMem.Alloc<TFS_Tree_Node>();
+        strncpy(tmpNode->name, tmpName, MaxFilenameLength);
+        tmpNode->parent = node;
+        tmpNode->children = nullptr;
+        tmpNode->driver_idx = NoFilesystemDriver;
+        tmpNode->isDirectory = true;
+        tmpNode->next = node->children;
+        node->children = tmpNode;
+
+        node = tmpNode;
+      }
+    }
+		
+    if (node->driver_idx != NoFilesystemDriver)
+      return;
+
+    node->driver_idx = i;
+
+    ptr->driver->On_Register();
+  }
+}
+\end{lstlisting}
+Kód je vcelku přímočarý a snadno pochopitelný -- pro všechny FS drivery projde cestu do požadované hloubky a všechny adresáře na cestě vytvoří, pokud již neexistují. Poslednímu článku pak nastaví ID příslušného filesystem driveru, aby bylo jasné, který kontaktovat při požadavku o operaci nad souborovým systémem. Nakonec zavolá metodu \texttt{On\_Register()}.
+
+V těle je volána metoda \texttt{Find\_Child}, která je průchodem všech potomků a porovnání jmen na prostou shodu:
+\begin{lstlisting}
+CFilesystem::TFS_Tree_Node* CFilesystem::TFS_Tree_Node::Find_Child(
+    const char* name)
+{
+  TFS_Tree_Node* child = children;
+	
+  while (child != nullptr)
+  {
+    if (strncmp(child->name, name, MaxFilenameLength) == 0)
+      return child;
+
+    child = child->next;
+  }
+	
+  return nullptr;
+}
+\end{lstlisting}
+
+Pak potřebujeme metodu \texttt{Open}, která bude přejímat cestu k souboru a mód otevření (\texttt{NFile\_Open\_Mode}). Tato metoda obsahuje v podstatě velmi podobný průchod, jako je vidět výše, jen s tím rozdílem, že pokud narazí na neexistující část cesty, vrací chybu. V momentě, kdy narazí na uzel, který má pod správou nějaký filesystem driver, zavolá jeho metodu \texttt{Open} se zbytkem cesty, který ještě parsován nebyl. Implementace této metody je ponechána na čtenáři.
+
+\section{FS drivery}
+
+Nyní můžeme implementovat konkrétní FS drivery a přidat je do statického pole správce souborového systému. Začneme filesystem driverem pro UART. V hlavičkových souborech pro FS drivery vytvořme soubor \texttt{uart\_fs.h}. Tady vytvořme minimalistický UART FS driver:
+\begin{lstlisting}
+class CUART_FS_Driver : public IFilesystem_Driver
+{
+  public:
+    virtual void On_Register() override
+    {
+    }
+
+    virtual IFile* Open_File(const char* path,
+                             NFile_Open_Mode mode) override
+    {
+      int channel = atoi(path);
+      if (channel != 0)
+        return nullptr;
+
+      CUART_File* f = new CUART_File(channel);
+
+      return f;
+  }
+};
+\end{lstlisting}
+Tady ještě něco chybí. K tomu se pak vraťme v další kapitole. Jak je vidět, je kód velmi jednoduchý -- tento driver nevyžaduje žádnou inicializaci, a metoda pro otevření jen parsuje číslo ze vstupu a porovnává ho s nulou -- to je totiž jediný kanál UARTu, který máme k dispozici. Pokud se tohle povede, je instancována třída \texttt{CUART\_File} (kterou představíme záhy) a je vrácena. Jak vidíte v kódu, použili jsme klíčové slovo \texttt{new}, ale to my víme, že souvisí s dynamickou alokací nějakými standardními metodami. Ty my v jádře nemáme a musíme je dodefinovat. Vrátíme se k nim na konci tohoto cvičení (poslední kapitola).
+
+Nyní ke třídě \texttt{CUART\_File}. Ta bude pro teď podporovat pouze zápis. Níže pak implementujeme ještě \texttt{ioctl} a v některém z dalších cvičení možná i čtení (až budeme umět blokovat proces nad čtením ze souboru). Soubor by měl mít indikaci toho, zda byl uzavřený, aby nedošlo k opětovému uzavření periferie (z důvodu např. vyhrazení, viz dále). Implementace pak může vypadat například takto:
+\begin{lstlisting}
+class CUART_File : public IFile
+{
+  private:
+    int mChannel;
+
+  public:
+    CUART_File(int channel)
+      : mChannel(channel)
+    {
+    }
+
+    ~CUART_File()
+    {
+      Close();
+    }
+
+    virtual uint32_t Write(const char* buffer,
+                           uint32_t num) override
+    {
+      if (num > 0 && buffer != nullptr)
+      {
+        if (mChannel == 0)
+        {
+          sUART0.Write(buffer, num);
+          return num;
+        }
+      }
+		
+      return 0;
+    }
+
+    virtual bool Close() override
+    {
+      if (mChannel < 0)
+        return false;
+
+      mChannel = -1;
+
+      return true;
+    }
+};
+\end{lstlisting}
+Tento hlavičkový soubor budeme includovat pouze a jen v jednom místě -- v souboru \texttt{filesystem\_drivers.cpp}. Nemusíme se tedy bát na konec tohoto souboru vložit instancování FS driveru:
+\begin{lstlisting}
+CUART_FS_Driver fsUART_FS_Driver;
+\end{lstlisting}
+Teď definujme obsah souboru \texttt{filesystem\_drivers.cpp} -- bude obsahovat pouze pole FS driverů a statickou inicializaci konstanty počtu driverů:
+\begin{lstlisting}
+#include <fs/filesystem.h>
+#include <fs/drivers/uart_fs.h>
+
+const CFilesystem::TFS_Driver CFilesystem::gFS_Drivers[] =
+{
+  { "UART_FS", "DEV:uart", &fsUART_FS_Driver },
+};
+
+const uint32_t CFilesystem::gFS_Drivers_Count =
+  sizeof(CFilesystem::gFS_Drivers)
+   / sizeof(CFilesystem::TFS_Driver);
+\end{lstlisting}
+
+\section{Vyhrazení periferií}
+
+Jistě každý z nás narazil v nějakém \uv{velkém} operačním systému na situaci, kdy jsme chtěli otevřít nějaký soubor (použít nějakou periferii), ale bylo nám odpovězeno chybovým kódem a hláškou \uv{Device is busy} (ve Windows něco jako \uv{Device is currently in use}.) -- to proto, že zařízení bylo právě otevřené a používané jiným procesem, který měl na něj exkluzivní práva. To je často z podstaty věci -- typicky nechceme, aby jedno zařízení používalo více procesů naráz, a když ano, máme na to patřičné mechanismy, které procesy synchronizují (např. spooling, fronty, kanály, ...).
+
+V případě našeho systému bude stačit, když jednotlivým driverům periferií implementujeme metody, které dovedou příslušné zařízení (a jeho kanál, pin, ...) uzamknout a odemknout. Pro UART stačí, když implementujeme metodu \texttt{Open} a \texttt{Close}, kdy metoda \texttt{Open} bude vnitřně ověřovat, zda je zařízení již otevřené, a pokud ne, příznak nastaví. Vracet bude vždy příznak toho, zda se zařízení povedlo či nepovedlo zabrat (zda již bylo otevřené nebo ne). Metoda \texttt{Close} pak bude tento příznak odnastavovat.
+
+Pak upravme kód UART FS driveru -- do metody \texttt{Open\_File} před samotné vytvoření souboru vložme tyto řádky:
+\begin{lstlisting}
+if (!sUART0.Open())
+  return nullptr;
+\end{lstlisting}
+Do třídy \texttt{CUART\_File} pak ještě doplňme do metody \texttt{Close} volání \texttt{sUART0.Close()} a vše by mělo být připraveno.
+
+Stejně tak musíme myslet na podobné vyhrazení periferií i v ostatních případech.
+
+\section{Propojení se správou procesů}
+
+Každý proces si bude moci otevřít soubory dle potřeby. Do PCB musíme proto vložit další položku, která bude představovat otevřené soubory. Pro naše potřeby bude stačit, když půjde o pole ukazatelů na \texttt{IFile}, které bude mít statickou velikost několika málo položek -- např. 16.
+
+Struktura PCB a daná konstanta nyní budou vypadat takto:
+\begin{lstlisting}
+constexpr uint32_t Max_Process_Opened_Files = 16;
+
+struct TTask_Struct
+{
+  TCPU_Context cpu_context;
+  unsigned int pid;
+  NTask_State state;
+  unsigned int sched_counter;
+  unsigned int sched_static_priority;
+  IFile* opened_files[Max_Process_Opened_Files];
+};
+\end{lstlisting}
+Index v poli \texttt{opened\_files} bude odpovídat souborovému deskriptoru, který bude poskytnut procesu při otevření souboru (tedy jako výsledek budoucího systémového volání \texttt{open()}).
+
+Do správce procesů přidejme způsob, jakým mapovat otevřený soubor (typu \texttt{IFile*}) do PCB. Vytvořme proto metody \texttt{Map\_File\_To\_Current(IFile* file)} a \texttt{Unmap\_File\_From\_Current(uint32\_t handle)}. Mapovací funkce bude vracet vždy indikátor úspěchu. Vnitřně bude hledat první nepřiřazený slot v poli \texttt{opened\_files} v současnosti naplánovaného procesu, tam soubor umístí a vrátí index. Pokud již proces překročil maximální počet otevřených souborů, vrací chybový kód (např. -1). Metoda pro odmapování bude na konkrétním indexu odmapovávat soubor a uvolní daný slot. Nebude se však pokoušet soubor zavřít -- v tento moment již instance souboru nemusí ani existovat.
+
+Tyto metody budeme volat z obsluhy systémových volání.
+
+\section{Systémová volání}
+
+Systémové volání je hlavním prostředkem pro komunikaci uživatelského procesu s jádrem. Prostřednictvím něj budeme žádat o zdroje, soubory, ovládat periferie, a tak podobně.
+
+Na systémech založených na ARM architektuře je systémové volání vyvoláno instrukcí \texttt{SVC} (\uv{supervisor call}; někdy označováno starším názvem \texttt{SWI}). Tato instrukce může být volána s jedním operandem. Ten je kódován do dolních třech bajtů instrukce a procesor jej nikam nekopíruje (např. do nějakého registru). Musíme si jej proto z kódované instrukce extrahovat sami.
+
+V předchozích cvičeních jsme implementovali obsluhu přerušení a pro obsluhu systémových volání jsme ponechali zatím jen prázdný stub -- nepoužívali jsme jej. Nyní jej už potřebovat budeme, a tak implementujme první úroveň obsluhy v assembly, abychom korektně zvládli dekódovat parametr instrukce, uložit a obnovit kontext procesu a zavolat druhou úroveň obsluhy v C/C++ kódu.
+
+Systémové volání bude předávat parametry a návratové hodnoty výhradně prostřednictvím registrů. Částečně využijme volací konvenci ARM, a pro systémové volání vyhraďme registry \texttt{r0}, \texttt{r1} a \texttt{r2}. Registr \texttt{r3} nechme volný, abychom měli kam dekódovat spodní část instrukce a tedy samotnou službu, kterou se snažíme vyvolat. Systémové volání bude výsledky vracet v registrech \texttt{r0} a \texttt{r1}.
+
+První úroveň tedy může vypadat třeba takto:
+\begin{lstlisting}
+.global _internal_software_interrupt_handler
+software_interrupt_handler:
+  stmfd sp!,{r2-r12,lr}
+  ldr r3,[lr,#-4]
+  bic r3,r3,#0xff000000
+  bl _internal_software_interrupt_handler
+  mov r2, r0
+  ldr r0, [r2, #0]
+  ldr r1, [r2, #4]
+  ldmfd sp!, {r2-r12,pc}^
+\end{lstlisting}
+Jak je vidět, nejprve uložíme registry procesu a návratovou adresu, a pak načteme do registru \texttt{r3} kus paměti, který je o 4 bajty před současným obsahem registru \texttt{lr}. Jde tedy o 4 bajty, které představují zakódovanou instrukci, která vyvolala přerušení -- \texttt{lr} ukazuje na následující instrukci (tedy kam se vrátit). Z této sekvence bajtů vymaskujeme poslední 3 bajty a ty nám označují službu, kterou se snažíme vyvolat. Následně zavoláme obsluhu v C++ kódu, do které se jako parametry \uv{automaticky} předají registry \texttt{r0}, \texttt{r1}, \texttt{r2} a \texttt{r3}.
+
+Ještě než se pustíme do implementace C++ části, je nutné si trochu rozmyslet, jak vlastně budeme mít rozdělená systémová volání na \uv{obslužné jednotky} (tzv. \emph{facility}) a jednotlivé služby v nich. Identifikátor, který předala instrukce ve svém těle by sice mohl být 24-bitový, ale instrukční sada definuje, že lze do těla kódovat pouze 8-bitové číslo. To je koneckonců poměrně logické -- instrukce musí být kompatibilní se všemi režimy procesoru, mj. i s Thumb režimem, který instrukce kóduje pouze na 2 bajty.
+
+Rozdělme tedy identifikátor ...
+
+
+V C++ kódu tedy vytvořme druhou úroveň obsluhy:
+
+\begin{lstlisting}
+static TSWI_Result _SWI_Result;
+
+extern "C" TSWI_Result* _internal_software_interrupt_handler(
+  uint32_t register r0, uint32_t register r1,
+  uint32_t register r2, uint32_t register service_identifier)
+{
+  NSWI_Facility facility = static_cast<NSWI_Facility>(service_identifier >> 6);
+	
+  switch (facility)
+  {
+    case NSWI_Facility::Process:
+      sProcessMgr.Handle_Process_SWI(
+          static_cast<NSWI_Process_Service>(service_identifier & 0x3F),
+          r0, r1, r2, _SWI_Result);
+      break;
+    case NSWI_Facility::Filesystem:
+      sProcessMgr.Handle_Filesystem_SWI(
+          static_cast<NSWI_Filesystem_Service>(service_identifier & 0x3F),
+          r0, r1, r2, _SWI_Result);
+      break;
+  }
+	
+  return &_SWI_Result;
+}
+\end{lstlisting}
 
 
 
 
 
+
+
+
+\section{Operátory new a delete}
+
+Jak jsme zmínili v předchozích kapitolách, budeme chtít alokovat paměť pomocí operátorů \texttt{new} a dealokovat pomocí \texttt{delete}. V C++ mají oba tyto operátory několik variant -- \uv{obyčejnou}, pro alokací polí a tzv. placement \texttt{new} variantu. V zásadě ale pro teď nepotřebujeme nic složitého -- jen aby používaly naši implementaci kernelové haldy a placement varianty byly čistě transparentní. Doplňme proto soubor \texttt{kernel\_heap.h} o následující inline implementace:
+\begin{lstlisting}
+inline void* operator new(uint32_t size)
+{
+  return sKernelMem.Alloc(size);
+}
+
+inline void *operator new(uint32_t, void *p)
+{
+  return p;
+}
+
+inline void *operator new[](uint32_t, void *p)
+{
+  return p;
+}
+
+inline void operator delete(void* p)
+{
+  sKernelMem.Free(p);
+}
+
+inline void operator delete(void* p, uint32_t)
+{
+  sKernelMem.Free(p);
+}
+
+inline void  operator delete  (void *, void *)
+{
+}
+
+inline void  operator delete[](void *, void *)
+{
+}
+\end{lstlisting}
 
 
 
@@ -169,7 +516,9 @@ Struktura obsahuje jen název, výchozí \uv{mountpoint} (zde v uvozovkách, jel
 
 \section{Úkol za body}
 
-...
+Implementujte GPIO FS driver, který podporuje čtení i zápis a vyhrazení pinů. Cesta bude odpovídat definici v první kapitole, tedy \texttt{DEV:gpio/<cislo pinu>} (např. \texttt{DEV:GPIO/24}).
+
+Implementaci ověřte v rámci nějakého procesu a blikání LED buď na desce (ACT LED) nebo na rozšiřující desce KIV-DPP-01. Rovněž můžete ověřit vstupy čtením z pinu, který je přiřazen nějaké jednoduché spínačové periferii z desky KIV-DPP-01 (tlačítko, polohový přepínač nebo senzor náklonu).
 
 \end{document}
 
