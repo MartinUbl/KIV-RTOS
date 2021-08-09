@@ -30,10 +30,8 @@ extern "C" TSWI_Result* _internal_software_interrupt_handler(uint32_t register r
     return &_SWI_Result;
 }
 
-extern "C" void _internal_irq_handler(uint32_t register interrupted_sp, uint32_t register interrupted_pc, uint32_t register orig_irq_sp)
+extern "C" void _internal_irq_handler()
 {
-    sProcessMgr.Set_Interrupted_Process_State(interrupted_sp, interrupted_pc, orig_irq_sp);
-
     // jelikoz ARM nerozlisuje zdroje IRQ implicitne, ani nezarucuje, ze se navzajen nemaskuji, musime
     // projit vsechny mozne zdroje a podivat se (poll), zda nebylo vyvolano preruseni
 

@@ -132,24 +132,17 @@ software_interrupt_handler:
 irq_handler:
 	sub lr, lr, #4
 
-	;@ tady musime pocitat s tim, ze handler bude opusten bud zde (dole) nebo preplanovanim na jiny proces, pokud IRQ vyvolal casovac a planovac uzna za vhodne prepnout kontext
-	;@ kod tady (a to co provadi se zasobnikem napr.) musi byt binarne ekvivalentni k tomu, co dela process manazer pri planovani procesu
-
 	srsdb #CPSR_MODE_SYS!		;@ ekvivalent k push lr a push spsr --> uklada do zasobniku specifikovaneho rezimu!
 	cpsid if, #CPSR_MODE_SYS	;@ prechod do SYS modu + zakazeme preruseni
-	push {r0-r12}				;@ ulozime registry (musime dbat na to, ze nektere z nich mohou byt pozdeji prepsany a planovac/planovany proces by je mohl potrebovat)
+	push {r0-r12}				;@ ulozime registry (pro ted proste vsechny)
 	push {lr}
 
-	mov r0, sp
-
-	cps #CPSR_MODE_IRQ
-
-	mov r1, lr
-	mov r2, sp
+	and r4, sp, #7				;@ zarovname SP na nasobek 8 (viz volaci konvence ARM)
+	sub sp, sp, r4
 
 	bl _internal_irq_handler	;@ zavolame handler IRQ
 
-	cps #CPSR_MODE_SYS
+	add sp, sp, r4				;@ "odzarovname" SP -> vracime do puvodniho stavu
 
 	pop {lr}
 	pop {r0-r12}		    	;@ obnovime registry

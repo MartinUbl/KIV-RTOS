@@ -13,9 +13,8 @@ extern "C"
 {
     void user_process_bootstrap();
     void system_process_bootstrap();
-    void context_switch(TCPU_Context* ctx_to);
-    void context_switch_first(TCPU_Context* ctx_to);
-    void restore_irq_sp(uint32_t irq_sp);
+    void context_switch(TCPU_Context* ctx_to, TCPU_Context* ctx_from);
+    void context_switch_first(TCPU_Context* ctx_to, TCPU_Context* ctx_from);
 };
 
 CProcess_Manager sProcessMgr;
@@ -112,10 +111,6 @@ void CProcess_Manager::Switch_To(CProcess_List_Node* node)
     // projistotu vynulujeme prideleny pocet casovych kvant
     mCurrent_Task_Node->task->sched_counter = 0;
 
-    // ulozime SP a PC procesu (to nam preda IRQ handler)
-    mCurrent_Task_Node->task->cpu_context.sp = mInterrupted_SP;
-    mCurrent_Task_Node->task->cpu_context.pc = mInterrupted_PC;
-
     TCPU_Context* old = &mCurrent_Task_Node->task->cpu_context;
     bool is_first_time = (node->task->state == NTask_State::New);
 
@@ -124,13 +119,11 @@ void CProcess_Manager::Switch_To(CProcess_List_Node* node)
     mCurrent_Task_Node->task->sched_counter = mCurrent_Task_Node->task->sched_static_priority;
     mCurrent_Task_Node->task->state = NTask_State::Running;
 
-    restore_irq_sp(mOriginal_IRQ_SP);
-
     // pokud je to poprve, co je proces planovany, musime to vzit jeste pres malou odbocku ("bootstrap")
     if (is_first_time)
-        context_switch_first(&node->task->cpu_context);
+        context_switch_first(&node->task->cpu_context, old);
     else
-        context_switch(&node->task->cpu_context);
+        context_switch(&node->task->cpu_context, old);
 }
 
 uint32_t CProcess_Manager::Map_File_To_Current(IFile* file)
@@ -167,13 +160,6 @@ bool CProcess_Manager::Unmap_File_Current(uint32_t handle)
 
     current->opened_files[handle] = nullptr;
     return true;
-}
-
-void CProcess_Manager::Set_Interrupted_Process_State(uint32_t proc_sp, uint32_t proc_pc, uint32_t irq_sp)
-{
-    mInterrupted_SP = proc_sp;
-    mInterrupted_PC = proc_pc;
-    mOriginal_IRQ_SP = irq_sp;
 }
 
 void CProcess_Manager::Handle_Process_SWI(NSWI_Process_Service svc_idx, uint32_t r0, uint32_t r1, uint32_t r2, TSWI_Result& target)
