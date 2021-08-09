@@ -1,0 +1,197 @@
+\documentclass{article}
+
+\usepackage[pdftex]{graphicx}
+\usepackage[czech]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{enumitem}
+\usepackage{amsmath}
+\usepackage{url}
+\usepackage{listings}
+\usepackage{caption}
+\usepackage[usenames,dvipsnames,svgnames,table]{xcolor}
+
+\usepackage[pdftex]{hyperref}
+\hypersetup{colorlinks=true,
+  unicode=true,
+  linkcolor=black,
+  citecolor=black,
+  urlcolor=black,
+  bookmarksopen=true}
+
+\usepackage[numbers,sort&compress]{natbib}
+
+\newcommand*\justify{
+  \fontdimen2\font=0.4em
+  \fontdimen3\font=0.2em
+  \fontdimen4\font=0.1em
+  \fontdimen7\font=0.1em
+  \hyphenchar\font=`\-
+}
+
+\author{Martin Úbl}
+
+\title{KIV/OS - cvičení č. 6}
+
+\begin{document}
+
+\maketitle
+
+\section{Obsah cvičení}
+
+\begin{itemize}
+	\item jednoduchý in-memory souborový systém
+	\item FS drivery (UART, GPIO)
+	\item vyhrazení periferií
+	\item propojení se správou procesů
+	\item systémová volání \texttt{open}, \texttt{read}, \texttt{write}, \texttt{close}, \texttt{ioctl}
+	\item stub RTL pro systémová volání
+\end{itemize}
+
+\section{Souborový systém}
+
+Náš operační systém bude v budoucnu využívat izolace uživatelských procesů od systémového (kernel) kódu. Stěžejním prvkem tohoto oddělení je právě souborový systém jako prostředek, ve kterém lze organizovat připojená datová média, připojené periferie a jiné prostředky, jejichž správu chceme mít úzce spjatou se správou procesů.
+
+Jelikož tvoříme pouze minimalistický operační systém, který v budoucnu bude systémem reálného času, vytvoříme souborový systém rovněž jednoduchý a přímočarý. Nepotřebujeme VFS v celé svojí kráse -- tento systém je pro embedded zařízení a real-time OS příliš složitý a my zdaleka nevyužijeme jeho potenciál. Proto si definujme základní strukturu souborového systému, kdy první částí řetězce cesty identifikujeme \uv{podstrom} v hierarchii. Tímto identifikátorem může být například:
+\begin{description}
+	\item[DEV] - připojená periferie (např. UART nebo GPIO)
+	\item[MNT] - připojené datové úložiště (např. SD karta nebo EEPROM)
+	\item[SYS] - systémová nastavení, se kterými může uživatelský proces hýbat (např. povolení nebo zakázání nějaké periferie, pokud to kernel dovolí)
+\end{description}
+
+Zbytek bude za dvojtečkou lomítky oddělená cesta, která specifikuje konkrétní zdroj. Jako příklad uveďme:
+\begin{itemize}
+	\item \texttt{DEV:gpio/10} - označuje GPIO pin číslo 10
+	\item \texttt{DEV:uart/0} - označuje UART kanál 0
+	\item \texttt{MNT:sd/0/soubor.txt} - označuje soubor \texttt{soubor.txt} v kořenovém adresáři na oddílu 0 SD karty
+	\item \texttt{SYS:peripherals/uart/0/enable} - označuje soubor, kterým můžeme zakázat nebo povolit UART kanál 0
+\end{itemize}
+
+Toto schéma nám dovoluje pevně definovat položky kořenového adresáře bez nutnosti přehnané dynamické alokace. Zároveň můžeme napsat minimalistický systém \uv{driverů} pro souborový systém, který umožní připojit jednotlivé části dle dostupných periferií. Pak jen stačí napsat driver pro každou periferii a můžeme periferie ovládat skrze souborový systém.
+
+Začněme strukturou -- v kořenovém adresáři zdrojových souborů jádra vytvořme podsložku \texttt{fs}. Totéž proveďme u hlavičkových souborů. Tam navíc ještě jako podsložku této úrovně vytvořme složku \texttt{drivers}, kam budeme ukládat hlavičkové implementace driverů pro filesystém.
+
+V hlavičkových souborech filesystému vytvořme soubor \texttt{filesystem.h}. V něm nyní definujeme konstanty a rozhraní.
+
+Jako první bychom měli stanovit konstanty, které omezí velikosti vybraných struktur a jmen v rámci našeho souborového systému. Znovu je třeba zdůraznit, že píšeme systém pro embedded zařízení, jehož paměť a výpočetní výkon jsou velmi omezené a tak šetříme co možná nejvíce to jde.
+
+Definujme nyní konstanty:
+\begin{lstlisting}
+constexpr const uint32_t MaxFSDriverNameLength = 16;
+constexpr const uint32_t MaxFilenameLength = 16;
+constexpr const uint32_t MaxPathLength = 128;
+constexpr const uint32_t NoFilesystemDriver = static_cast<uint32_t>(-1);
+\end{lstlisting}
+Význam většiny je poměrně zřejmý -- omezíme velikost názvu driveru pro souborový systém, pro název souboru, pro délku celé cesty a taktéž definujeme konstantu, která označuje, že daný uzel ve stromu nemá přiřazen žádný driver (později bude zřejmé i proč).
+
+Dále se nám bude hodit i režim otevření souboru:
+\begin{lstlisting}
+enum class NFile_Open_Mode
+{
+  Read_Only,
+  Write_Only,
+  Read_Write,
+};
+\end{lstlisting}
+Nyní definujme rozhraní (resp. třídu předka) pro soubor. Tato třída, resp. její instance, neopustí hranice jádra! Kód uživatelského procesu ji jen bude moci označovat pomocí čísla, tzv. file deskriptoru. Veškeré operace bude moci rovněž provádět jen díky tomuto číslu.
+\begin{lstlisting}
+class IFile
+{
+  public:
+    virtual ~IFile() = default;
+	
+    virtual uint32_t Read(char* buffer, uint32_t num) {
+      return 0;
+    }
+    virtual uint32_t Write(const char* buffer, uint32_t num) {
+      return 0;
+    }
+    virtual bool Close() {
+      return true;
+    }
+    virtual bool IOCtl(NIOCtl_Operation dir, void* ctlptr) {
+      return false;
+    };
+};
+\end{lstlisting}
+Rozhraní (resp. základní třída) obsahuje poměrně standardní základní sadu metod -- čtení, zápis, zavření a modifikace nějakých vlastností. Samozřejmě toho spousty chybí (např. \texttt{seek}, ...), což částečně napravíme v dalších cvičeních. Všimněme si rovněž skutečnosti, že zde není metoda \texttt{open} -- to bude úkolem filesystem driveru, který část režie dle vlastního uvážení přesune do konstruktoru potomka této třídy.
+
+Zbývá už jen rozhraní pro filesystem driver:
+\begin{lstlisting}
+class IFilesystem_Driver
+{
+  public:
+    virtual void On_Register() = 0;
+    virtual IFile* Open_File(const char* path,
+                         NFile_Open_Mode mode) = 0;
+};
+\end{lstlisting}
+Ten pro teď obsahuje pouze dvě metody. První je metoda volaná po registraci, která dovoluje například vytvořit nějaký prvotní stav v paměti. Druhá je pro teď důležitější -- ta se bude starat o vytvoření příslušné instance potomka \texttt{IFile} dle implementace. Bude tedy ve svém podstromu hledat příslušný zdroj, a pokud ho nalezne a zvládne ho otevřít, vytvoří instanci souboru a vrátí ji vnějšímu kódu.
+
+Námi navržený souborový systém bude mít uzly, které mohou být reprezentovány například následující přepravkou:
+\begin{lstlisting}
+struct TFS_Tree_Node
+{
+  char name[MaxFilenameLength];
+	
+  bool isDirectory = false;
+	
+  uint32_t driver_idx = NoFilesystemDriver;
+	
+  TFS_Tree_Node* parent;
+  TFS_Tree_Node* children;
+  TFS_Tree_Node* next;
+
+  TFS_Tree_Node* Find_Child(const char* name);
+};
+\end{lstlisting}
+Každý uzel tedy má nějaké jméno, příznak adresáře a může mít přidělený filesystem driver. Následující položky odpovídají pouze organizaci v paměti -- zde jde o obyčejný spojový seznam. Navíc každý prvek ukazuje na rodiče a na prvního potomka.
+
+Rovněž definujme záznam filesystem driveru:
+\begin{lstlisting}
+struct TFS_Driver
+{
+  char name[MaxFSDriverNameLength];
+  const char* mountPoint;
+  IFilesystem_Driver* driver;
+};
+\end{lstlisting}
+Struktura obsahuje jen název, výchozí \uv{mountpoint} (zde v uvozovkách, jelikož to není úplně přesný výraz) a odkaz na samotný driver, jehož instance již byla vytvořena (pokud možno staticky, viz dále).
+
+
+
+
+
+
+
+
+
+
+
+\section{Úkol za body}
+
+...
+
+\end{document}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
