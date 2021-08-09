@@ -155,6 +155,7 @@ Některé z registrů mají speciální význam:
 	\item \texttt{r14} (\texttt{lr}) - link register, registr obsahující návratovou adresu (pro návrat z volání podprogramu)
 	\item \texttt{r15} (\texttt{pc}) - program counter, ukazatel na instrukci k načtení
 	\item \texttt{cpsr} - current program state register - obsahuje příznakové bity (pro vykonání podmínek), stav procesoru, režim procesoru, apod.
+	\item \texttt{spsr} - saved program state register - obsahuje uložený stav \texttt{cpsr} před vznikem výjimky (resp. před přechodem do jiného režimu procesoru, viz dále)
 \end{itemize}
 
 Tento procesor může operovat v následujících režimech:
@@ -256,6 +257,31 @@ Bootovací proces u RPi Zero (a vlastně u spousty dalších embedded zařízen�
 My bychom chtěli ve fázi vývoje neustále nahrávat nový kód do našeho zařízení. To můžeme například soustavným vyndaváním SD karty a přehráváním souboru \texttt{kernel.img}. To sice není úplně praktické, ale pro začátek to stačí.
 
 Lepší nápad bude mít právě jeden \texttt{kernel.img}, který bude sloužit jen jako již zmíněná \uv{stage 2} bootovacího procesu. Tento kód bude čekat, až mu po nějakém komunikačním rozhraní skutečný kernel odešleme z našeho vývojového počítače, \uv{stage 2} ho pak nahraje do paměti a spustí. O tom ale až ve cvičení číslo 2.
+
+\subsection{Volací konvence}
+
+Ještě je třeba zmínit, jak probíhá volání funkcí od momentu předávání parametrů až po návrat včetně předání návratové hodnoty. Volání se týká všech registrů následovně:
+
+\begin{description}
+	\item[r0-r3] - předávání parametrů
+	\item[r0-r1] - předávání návratové hodnoty
+	\item[r4-r11] - callee-saved registry -- pokud tyto registry chce volaná procedura použít, je povinna jejich obsah předtím uložit na zásobník a před návratem tento stav obnovit
+	\item[r11] - frame pointer -- registr může být použit jako ukazatel na rámec volání podprogramu
+	\item[r12] - temporary, scratch registr -- registr, jehož obsah se může po volání procedury změnit
+	\item[r13 (SP)], resp. zásobník jako takový - předávání parametrů které se nevejdou do registru, ukládání registrů pro přemazání; jeho hodnota by měla po návratu být stejná, jako před voláním podprogramu
+	\item[r14 (LR)] - obsahuje adresu, na kterou se má program vrátit po dokončení provádění podprogramu -- volající ukládá hodnotu na zásobník při volání dalšího podprogramu
+	\item[r15 (PC)] - nastaven na cílovou adresu po přípravě kontextu, pro návrat je přemazán hodnotou \texttt{LR}
+\end{description}
+
+Nemá cenu zde probírat celou volací konvenci, jen je dobré zmínit pár důležitých bodů:
+\begin{itemize}
+	\item \texttt{r13} (SP) musí být v momentě volání podprogramu zarovnaný na násobek 8
+	\item přechody mezi režimy procesoru (ARM a Thumb) jsou možné jak při volání (instrukce \texttt{blx} a \texttt{bx}, např. \texttt{blx r11}), tak při návratu (\texttt{bx lr}) -- režim je určen posledním bitem hodnoty registru
+	\item volaná funkce nemusí okamžitě ukládat všechny registry -- jen ty, které plánuje použít a klidně až před momentem prvního použití
+	\item registry \texttt{r0 - r3} mohou plnit funkci scratch registrů, pokud nenesou parametry volání funkce
+\end{itemize}
+
+Více o volací konvenci ARM zde: \url{https://developer.arm.com/documentation/ihi0042/j/}
 
 \section{Nastavení prostředí pro vývoj}
 
