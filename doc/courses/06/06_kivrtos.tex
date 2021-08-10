@@ -18,6 +18,35 @@
   urlcolor=black,
   bookmarksopen=true}
 
+\usepackage{xcolor}
+\colorlet{mygray}{black!30}
+\colorlet{mygreen}{green!60!blue}
+\colorlet{mymauve}{red!60!blue}
+\lstset{
+	backgroundcolor=\color{gray!10},  
+	basicstyle=\ttfamily,
+	columns=fullflexible,
+	breakatwhitespace=false,      
+	breaklines=true,                
+	captionpos=b,                    
+	commentstyle=\color{mygreen}, 
+	extendedchars=true,              
+	frame=single,                   
+	keepspaces=true,             
+	keywordstyle=\color{blue},      
+	language=c++,                 
+	numbers=none,                
+	numbersep=5pt,                   
+	numberstyle=\tiny\color{blue}, 
+	rulecolor=\color{mygray},        
+	showspaces=false,               
+	showtabs=false,                 
+	stepnumber=5,                  
+	stringstyle=\color{mymauve},    
+	tabsize=3,                      
+	title=\lstname                
+}
+
 \usepackage[numbers,sort&compress]{natbib}
 
 \newcommand*\justify{
@@ -43,7 +72,8 @@
 	\item FS drivery (UART, GPIO)
 	\item vyhrazení periferií
 	\item propojení se správou procesů
-	\item systémová volání \texttt{open}, \texttt{read}, \texttt{write}, \texttt{close}, \texttt{ioctl}
+	\item systémová volání \texttt{open}, \texttt{read}, \texttt{write}, \texttt{close}
+	\item systémové volání \texttt{ioctl} (a UART)
 	\item stub RTL pro systémová volání
 	\item operátory \texttt{new} a \texttt{delete} pro kernelovou haldu
 \end{itemize}
@@ -431,12 +461,92 @@ software_interrupt_handler:
 \end{lstlisting}
 Jak je vidět, nejprve uložíme registry procesu a návratovou adresu, a pak načteme do registru \texttt{r3} kus paměti, který je o 4 bajty před současným obsahem registru \texttt{lr}. Jde tedy o 4 bajty, které představují zakódovanou instrukci, která vyvolala přerušení -- \texttt{lr} ukazuje na následující instrukci (tedy kam se vrátit). Z této sekvence bajtů vymaskujeme poslední 3 bajty a ty nám označují službu, kterou se snažíme vyvolat. Následně zavoláme obsluhu v C++ kódu, do které se jako parametry \uv{automaticky} předají registry \texttt{r0}, \texttt{r1}, \texttt{r2} a \texttt{r3}.
 
-Ještě než se pustíme do implementace C++ části, je nutné si trochu rozmyslet, jak vlastně budeme mít rozdělená systémová volání na \uv{obslužné jednotky} (tzv. \emph{facility}) a jednotlivé služby v nich. Identifikátor, který předala instrukce ve svém těle by sice mohl být 24-bitový, ale instrukční sada definuje, že lze do těla kódovat pouze 8-bitové číslo. To je koneckonců poměrně logické -- instrukce musí být kompatibilní se všemi režimy procesoru, mj. i s Thumb režimem, který instrukce kóduje pouze na 2 bajty.
+Ještě než se pustíme do implementace C++ části, je nutné si trochu rozmyslet, jak vlastně budeme mít rozdělená systémová volání na \uv{obslužné jednotky} (tzv. \emph{facility}) a jednotlivé služby v nich. Identifikátor, který předala instrukce ve svém těle by sice mohl být 24-bitový, ale instrukční sada definuje, že lze do těla univerzálně kódovat pouze 8-bitové číslo. To je koneckonců poměrně logické -- instrukce musí být kompatibilní se všemi režimy procesoru, mj. i s Thumb režimem, který instrukce kóduje pouze na 2 bajty. Thumb režim je dosti ceněným nástrojem v ARM světě, a tak mu nelze odepřít systémová volání -- počítejme tedy s tím, že toto číslo má pouze 8 bitů.
 
-Rozdělme tedy identifikátor ...
+Rozdělme tedy identifikátor na dvě části -- vrchní dva bity nám budou stačit pro obslužnou jednotku (facility), jelikož těch moc nebude. V zásadě nám bude stačit identifikátor pro \uv{procesy} a \uv{filesystem}. Dolních 6 bitů tedy musí stačit pro číslo služby, které může být dále rozmělněno pomocí obsahu registrů. Máme tedy prostor pro 4 facility a 64 služeb v každé z nich.
 
+Nejprve si tedy definujme hlavičkový soubor v adresáři pro procesové hlavičky \texttt{swi.h}, ve kterém definujeme identifikátory, struktury a služby, které budeme záhy implementovat:
 
-V C++ kódu tedy vytvořme druhou úroveň obsluhy:
+Začněme kontejnerem pro výsledek systémového volání -- z důvodu vícečetného zanoření předávejme obsah odpovědi v přepravce, z níž nastavíme příslušné registry až těsně před přechodem zpět do procesu. Zamezíme tak nechtěnému přemazání.
+\begin{lstlisting}
+struct TSWI_Result
+{
+  uint32_t r0;
+  uint32_t r1;
+};
+\end{lstlisting}
+Dále je dobré specifikovat návratové kódy pro úspěch a neúspěch:
+\begin{lstlisting}
+enum class NSWI_Result_Code
+{
+  OK   = 0,
+  Fail = 1,
+};
+\end{lstlisting}
+Pak samotný výčet facilities:
+\begin{lstlisting}
+enum class NSWI_Facility
+{
+  Process    = 0b00,
+  Filesystem = 0b01,
+};
+\end{lstlisting}
+A pak už definujeme jen služby včetně nějakých doprovodných komentářů, co která služba provádí, co v jakém registru očekává a tak podobně. Začněme process facility, tam toho máme zatím nejméně:
+\begin{lstlisting}
+enum class NSWI_Process_Service
+{
+  // Vraci PID procesu
+  // IN:  -
+  // OUT: r0 = PID procesu
+  Get_PID         = 0,
+};
+\end{lstlisting}
+A pak přijde na řadu filesystem facility:
+\begin{lstlisting}
+enum class NSWI_Filesystem_Service
+{
+  // Otevre soubor
+  // IN:  r0 = ukazatel na retezec identifikujici soubor,
+  //      r1 = rezim otevreni souboru
+  // OUT: r0 = handle otevreneho souboru nebo Invalid_Handle
+  Open            = 0,
+	
+  // Precte ze souboru
+  // IN:  r0 = handle otevreneho souboru,
+  //      r1 = buffer,
+  //      r2 = pocet znaku/velikost bufferu
+  // OUT: r0 = pocet prectenych znaku
+  Read            = 1,
+	
+  // Zapise do souboru
+  // IN:  r0 = handle otevreneho souboru,
+  //      r1 = buffer,
+  //      r2 = pocet znaku/velikost bufferu
+  // OUT: r0 = pocet zapsanych znaku
+  Write           = 2,
+	
+  // Zavre soubor
+  // IN:  r0 = handle otevreneho souboru
+  // OUT: r0 = indikator uspechu (NSWI_Result_Code)
+  Close           = 3,
+	
+  // Ziska/zmeni parametry souboru dle jeho typu
+  // IN:  r0 = handle otevreneho souboru,
+  //      r1 = identifikator operace (NIOCtl_Operation),
+  //      r2 = ukazatel na strukturu s nastavenim (specificka pro soubor)
+  // OUT: r0 = indikator uspechu (NSWI_Result_Code)
+  IOCtl           = 4,
+};
+\end{lstlisting}
+Do správce procesů nyní implementujme základ metod pro ošetření jednotlivých služeb v rámci každé facility. Prototypy metod tedy budou vypadat nějak takto:
+\begin{lstlisting}
+void Handle_Process_SWI(NSWI_Process_Service svc_idx,
+     uint32_t r0, uint32_t r1, uint32_t r2, TSWI_Result& target);
+void Handle_Filesystem_SWI(NSWI_Filesystem_Service svc_idx,
+     uint32_t r0, uint32_t r1, uint32_t r2, TSWI_Result& target);
+\end{lstlisting}
+
+V \texttt{interrupt\_handler.cpp} kódu pak vytvořme druhou úroveň obsluhy, která tyto metody bude volat:
 
 \begin{lstlisting}
 static TSWI_Result _SWI_Result;
@@ -445,18 +555,21 @@ extern "C" TSWI_Result* _internal_software_interrupt_handler(
   uint32_t register r0, uint32_t register r1,
   uint32_t register r2, uint32_t register service_identifier)
 {
-  NSWI_Facility facility = static_cast<NSWI_Facility>(service_identifier >> 6);
+  NSWI_Facility facility =
+    static_cast<NSWI_Facility>(service_identifier >> 6);
+    
+  const uint8_t service_id_base = service_identifier & 0x3F;
 	
   switch (facility)
   {
     case NSWI_Facility::Process:
       sProcessMgr.Handle_Process_SWI(
-          static_cast<NSWI_Process_Service>(service_identifier & 0x3F),
+          static_cast<NSWI_Process_Service>(service_id_base),
           r0, r1, r2, _SWI_Result);
       break;
     case NSWI_Facility::Filesystem:
       sProcessMgr.Handle_Filesystem_SWI(
-          static_cast<NSWI_Filesystem_Service>(service_identifier & 0x3F),
+          static_cast<NSWI_Filesystem_Service>(service_id_base),
           r0, r1, r2, _SWI_Result);
       break;
   }
@@ -464,17 +577,216 @@ extern "C" TSWI_Result* _internal_software_interrupt_handler(
   return &_SWI_Result;
 }
 \end{lstlisting}
+Nyní už zbývá jen implementovat příslušné facility a služby.
+
+Procesová facility bude velmi jednoduchá; volitelně pak můžeme přidat indikaci chyby, ale pro teď ponechme jen holé handlery:
+\begin{lstlisting}
+switch (svc_idx)
+{
+  case NSWI_Process_Service::Get_PID:
+    target.r0 = mCurrent_Task_Node->task->pid;
+    break;
+}
+\end{lstlisting}
+Filesystem facility je rovněž poměrně přímočará:
+\begin{lstlisting}
+switch (svc_idx)
+{
+  case NSWI_Filesystem_Service::Open:
+  {
+    target.r0 = Invalid_Handle;
+
+    IFile* f = sFilesystem.Open(reinterpret_cast<const char*>(r0), static_cast<NFile_Open_Mode>(r1));
+    if (!f)
+      return;
+
+    target.r0 = Map_File_To_Current(f);
+
+    if (target.r0 == Invalid_Handle)
+    {
+      f->Close();
+      delete f;
+    }
+    break;
+  }
+  case NSWI_Filesystem_Service::Read:
+  {
+    target.r0 = 0;
+
+    if (r0 > Max_Process_Opened_Files || !mCurrent_Task_Node->task->opened_files[r0])
+      return;
+
+    target.r0 = mCurrent_Task_Node->task->opened_files[r0]->Read(reinterpret_cast<char*>(r1), r2);
+    break;
+  }
+  case NSWI_Filesystem_Service::Write:
+  {
+    target.r0 = 0;
+
+    if (r0 > Max_Process_Opened_Files || !mCurrent_Task_Node->task->opened_files[r0])
+      return;
+
+    target.r0 = mCurrent_Task_Node->task->opened_files[r0]->Write(reinterpret_cast<const char*>(r1), r2);
+    break;
+  }
+  case NSWI_Filesystem_Service::Close:
+  {
+    if (r0 > Max_Process_Opened_Files || !mCurrent_Task_Node->task->opened_files[r0])
+      return;
+
+    target.r0 = mCurrent_Task_Node->task->opened_files[r0]->Close();
+    Unmap_File_Current(r0);
+
+    break;
+  }
+  case NSWI_Filesystem_Service::IOCtl:
+  {
+    if (r0 > Max_Process_Opened_Files || !mCurrent_Task_Node->task->opened_files[r0])
+      return;
+
+    target.r0 = mCurrent_Task_Node->task->opened_files[r0]->IOCtl(static_cast<NIOCtl_Operation>(r1), reinterpret_cast<void*>(r2));
+    break;
+  }
+}
+\end{lstlisting}
+
+Tím by měla být hlavní část systémových volání implementována.
+
+\section{Systémové volání IOCtl}
+
+Některá zařízení (a potažmo jejich soubory) mohou vyžadovat dodatečná nastavení, která nelze specifikovat při jejich otevírání nebo zápisem do nich. Mezi dva dominantní způsoby, jak se s tím vypořádat, patří buď systémové volání \texttt{ioctl} (a jím podobné) nebo definice protokolu, který slouží jako mezivrstva v souborovém systému a samotný \uv{datový} přenos je obsažen jako jedna ze zpráv tohoto protokolu.
+
+Druhému způsobu se budeme více věnovat v dalším cvičení. Pro teď se zaměřme na systémové volání \texttt{ioctl} a jeho aplikaci na UART -- ten má totiž nějaké parametry, které je nutné nastavit, aby přenos fungoval (baudovou rychlost, velikost znaku, ...).
+
+Obvyklou implementací \texttt{ioctl} je takové volání, které přejímá souborový deskriptor, kód požadavku (specifický pro zařízení) a ukazatel na strukturu, která je s daným kódem požadavku asociovaná. Pro teď si definujme dva více-méně generické kódy:
+\begin{lstlisting}
+enum class NIOCtl_Operation
+{
+  Get_Params      = 0,
+  Set_Params      = 1,
+};
+\end{lstlisting}
+Tyto kódy označují takové operace, které mají vyzískat aktuální nastavení nebo naopak přepsat nastavení dodanou sadou parametrů.
+
+U generického předka souboru \texttt{IFile} již máme vytvořenou metodu \texttt{IOCtl}. Stačí pouze její tělo pro konkrétní soubory implementovat. Začněme tedy u definice struktur pro UART a jeho \texttt{ioctl} operace. Jako přepravku s nastavením vytvořme v hlavičkovém souboru jeho driveru strukturu:
+\begin{lstlisting}
+struct TUART_IOCtl_Params
+{
+  NUART_Char_Length char_length;
+  NUART_Baud_Rate baud_rate;
+};
+\end{lstlisting}
+Pak jen stačí v implementaci \texttt{CUART\_File} implementovat zmíněnou metodu:
+\begin{lstlisting}
+virtual bool IOCtl(NIOCtl_Operation dir, void* ctlptr) override
+{
+  if (dir == NIOCtl_Operation::Get_Params)
+  {
+    TUART_IOCtl_Params* params = reinterpret_cast<TUART_IOCtl_Params*>(ctlptr);
+    params->baud_rate = sUART0.Get_Baud_Rate();
+    params->char_length = sUART0.Get_Char_Length();
+    return true;
+  }
+  else if (dir == NIOCtl_Operation::Set_Params)
+  {
+    TUART_IOCtl_Params* params = reinterpret_cast<TUART_IOCtl_Params*>(ctlptr);
+    sUART0.Set_Baud_Rate(params->baud_rate);
+    sUART0.Set_Char_Length(params->char_length);
+    return true;
+  }
+  return false;
+}
+\end{lstlisting}
+A pak pochopitelně odpovídajícím způsobem implementovat v driveru metody \texttt{Get\_Baud\_Rate()}, \texttt{Get\_Char\_Length()} a jejich \texttt{Set\_*} varianty.
 
 
+\section{RTL}
 
+Systémová volání definovaná máme, ale abychom je mohli bez problémů a přehledně volat, je téměř nutností implementovat minimalistický obal nad vyvoláním příslušné facility a služby. Založme si proto podprojekt běhové knihovny (RTL), pokud už jsme to nestihli během minulých cvičení. Ten se bude linkovat staticky ke všemu, co bude určeno k běhu na našem systému.
 
+Vytvořme pak hlavičkový soubor \texttt{stdfile.h} a odpovídající implementaci \texttt{stdfile.cpp}. V nich vytvořme pro každé systémové volání jednu funkci včetně parametrů, které má přejímat.
 
+Uvnitř volání je nutné nastavit vstupní registry, vyvolat instrukci \texttt{svc} s příslušným parametrem a postarat se o předání návratové hodnoty. Pro názornost proveďme implementaci v inline assembly, tedy vnořeném assembly do C/C++ kódu.
 
+Pro volání \texttt{open} tedy může funkce vypadat třeba takto:
+\begin{lstlisting}
+uint32_t open(const char* filename, NFile_Open_Mode mode)
+{
+  uint32_t file;
 
+  asm volatile("mov r0, %0" : : "r" (filename));
+  asm volatile("mov r1, %0" : : "r" (mode));
+  asm volatile("svc 64");
+  asm volatile("mov %0, r0" : "=r" (file));
+
+  return file;
+}
+\end{lstlisting}
+Inline assembly lze v tomto případě propojit vcelku elegantně -- pokud chceme obsah nějaké proměnné přesunout do registru, stačí předat její identifikátor v příslušné sekci inline assembly direktivy, a kompilátor, jelikož stejně bude kompilovat kód do strojového kódu, jehož je assembly přímým přepisem, jen nahradí parametr skutečným umístěním identifikátoru.
+
+Tímto způsobem do \texttt{r0} a \texttt{r1} přesuneme příslušné parametry (s největší pravděpodobností tam už ale byly, protože ARM volací konvence je tam přesně takto uložila), zavoláme systémové volání \texttt{svc 64} (64 = facility 1, služba 0, tedy \texttt{open}).
+
+Obdobně můžeme implementovat i zbytek:
+\begin{lstlisting}
+uint32_t read(uint32_t file, char* const buffer, uint32_t size)
+{
+  uint32_t rdnum;
+	
+  asm volatile("mov r0, %0" : : "r" (file));
+  asm volatile("mov r1, %0" : : "r" (buffer));
+  asm volatile("mov r2, %0" : : "r" (size));
+  asm volatile("swi 65");
+  asm volatile("mov %0, r0" : "=r" (rdnum));
+	
+  return rdnum;
+}
+
+uint32_t write(uint32_t file, const char* buffer, uint32_t size)
+{
+  uint32_t wrnum;
+	
+  asm volatile("mov r0, %0" : : "r" (file));
+  asm volatile("mov r1, %0" : : "r" (buffer));
+  asm volatile("mov r2, %0" : : "r" (size));
+  asm volatile("swi 66");
+  asm volatile("mov %0, r0" : "=r" (wrnum));
+	
+  return wrnum;
+}
+
+void close(uint32_t file)
+{
+  asm volatile("mov r0, %0" : : "r" (file));
+  asm volatile("swi 67");
+}
+
+uint32_t ioctl(uint32_t file, NIOCtl_Operation operation, void* param)
+{
+  uint32_t retcode;
+	
+  asm volatile("mov r0, %0" : : "r" (file));
+  asm volatile("mov r1, %0" : : "r" (operation));
+  asm volatile("mov r2, %0" : : "r" (param));
+  asm volatile("swi 68");
+  asm volatile("mov %0, r0" : "=r" (retcode));
+	
+  return retcode;
+}
+
+uint32_t getpid()
+{
+  uint32_t pid;
+	
+  asm volatile("swi 0");
+  asm volatile("mov %0, r0" : "=r" (pid));
+	
+  return pid;
+}
+\end{lstlisting}
 
 \section{Operátory new a delete}
 
-Jak jsme zmínili v předchozích kapitolách, budeme chtít alokovat paměť pomocí operátorů \texttt{new} a dealokovat pomocí \texttt{delete}. V C++ mají oba tyto operátory několik variant -- \uv{obyčejnou}, pro alokací polí a tzv. placement \texttt{new} variantu. V zásadě ale pro teď nepotřebujeme nic složitého -- jen aby používaly naši implementaci kernelové haldy a placement varianty byly čistě transparentní. Doplňme proto soubor \texttt{kernel\_heap.h} o následující inline implementace:
+Jak jsme zmínili v předchozích kapitolách, budeme chtít alokovat paměť pomocí operátorů \texttt{new} a dealokovat pomocí \texttt{delete}. V C++ mají oba tyto operátory několik variant -- \uv{obyčejnou} pro skalární alokaci, pro alokací polí a tzv. placement \texttt{new} variantu. V zásadě ale pro teď nepotřebujeme nic složitého -- jen aby používaly naši implementaci kernelové haldy a placement varianty byly čistě transparentní. Doplňme proto soubor \texttt{kernel\_heap.h} o následující inline implementace:
 \begin{lstlisting}
 inline void* operator new(uint32_t size)
 {
@@ -510,13 +822,55 @@ inline void  operator delete[](void *, void *)
 }
 \end{lstlisting}
 
+V kontextu vývoje OS má placement varianta význam především v momentě, kdy potřebujeme na předem jasném místě vykonstruovat objekt daného typu. Například již zmíněné memory-mapped I/O mají pevně danou adresu, díky které je možné ovládat periferie a jiné. V tomto případě můžeme \uv{alokovat} tuto paměť pomocí placement operátoru a jde vlastně o ekvivalentní operaci k \texttt{reinterpret\_cast} na daný typ (jen možná trochu přehlednější):
+\begin{lstlisting}
+uint32_t* peripheral_regs =
+    new (hal::Peripheral_Base) uint32_t[32];
 
+uint32_t* peripheral_regs =
+    reinterpret_cast<uint32_t*>(hal::Peripheral_Base);
+\end{lstlisting}
+
+Teď ale máme situaci, kdy potřebujeme například na předem alokované paměti pro nějaký objekt skutečně provést konstrukci objektu (zavolat konstruktor, inicializovat atributy, ...). Pak nám nezbývá než použít placement \texttt{new} operátor a nad takto alokovanou pamětí ho zavolat:
+\begin{lstlisting}
+void* mem = sKernelHeap.Alloc(sizeof(CObject));
+
+CObject* obj = new (mem) obj(1, 2, "hello");
+\end{lstlisting}
+Bude ale bohatě stačit, když přepíšeme klasický operátor \texttt{new} (a odpovídající \texttt{delete}), jelikož přesměrováváme jeho implementaci na naši implementaci kernelové haldy.
+
+\section{Testovací program}
+
+Teď můžeme vše otestovat. Upravme proto jeden z procesů, aby prováděl tento kód:
+\begin{lstlisting}
+volatile int i;
+
+const char* msg = "Hello!\r\n";
+
+uint32_t f = open("DEV:uart/0", NFile_Open_Mode::Read_Write);
+
+TUART_IOCtl_Params params;
+params.baud_rate = NUART_Baud_Rate::BR_115200;
+params.char_length = NUART_Char_Length::Char_8;
+ioctl(f, NIOCtl_Operation::Set_Params, &params);
+
+while (true)
+{
+  write(f, msg, strlen(msg));
+	
+  for (i = 0; i < 0x80000; i++)
+    ;
+}
+
+close(f);
+\end{lstlisting}
+Výsledkem by mělo být cyklické vypisování řetězce \texttt{Hello!} na UART konzoli.
 
 
 
 \section{Úkol za body}
 
-Implementujte GPIO FS driver, který podporuje čtení i zápis a vyhrazení pinů. Cesta bude odpovídat definici v první kapitole, tedy \texttt{DEV:gpio/<cislo pinu>} (např. \texttt{DEV:GPIO/24}).
+Implementujte GPIO FS driver, který podporuje čtení i zápis a vyhrazení pinů. Cesta bude odpovídat definici v první kapitole, tedy \texttt{DEV:gpio/<cislo pinu>} (např. \texttt{DEV:gpio/24}).
 
 Implementaci ověřte v rámci nějakého procesu a blikání LED buď na desce (ACT LED) nebo na rozšiřující desce KIV-DPP-01. Rovněž můžete ověřit vstupy čtením z pinu, který je přiřazen nějaké jednoduché spínačové periferii z desky KIV-DPP-01 (tlačítko, polohový přepínač nebo senzor náklonu).
 
