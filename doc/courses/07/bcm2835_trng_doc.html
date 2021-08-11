@@ -1,0 +1,681 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"></head><body><div>
+	<h1>
+		1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Random Number Generator</h1>
+</div>
+<p>
+	The Random Number Generator is used to generate random numbers required by software supported cryptographic functions.</p>
+<h2>
+	1.1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Registers View</h2>
+<p>
+	The Random Number Generator registers are accessible via the block’s APB slave interface.</p>
+<p>
+	&nbsp;</p>
+<table align="center" border="1" cellpadding="0" cellspacing="0" width="631">
+	<tbody>
+		<tr>
+			<td style="width:112px;height:28px;">
+				<p align="center">
+					Address</p>
+			</td>
+			<td style="width:131px;height:28px;">
+				<p align="center">
+					Name</p>
+			</td>
+			<td style="width:237px;height:28px;">
+				<p align="center">
+					Description</p>
+			</td>
+			<td style="width:47px;height:28px;">
+				<p align="center">
+					Size</p>
+			</td>
+			<td style="width:104px;height:28px;">
+				<p align="center">
+					Read/Write</p>
+			</td>
+		</tr>
+		<tr>
+			<td style="width:112px;">
+				<p>
+					0x2010 4000</p>
+			</td>
+			<td style="width:131px;">
+				<p>
+					RNG_CTRL</p>
+			</td>
+			<td style="width:237px;">
+				<p>
+					Random Number Generator</p>
+				<p>
+					Control Register</p>
+			</td>
+			<td style="width:47px;">
+				<p align="center">
+					32</p>
+			</td>
+			<td style="width:104px;">
+				<p align="center">
+					R/W</p>
+			</td>
+		</tr>
+		<tr>
+			<td style="width:112px;">
+				<p>
+					0x2010 4004</p>
+			</td>
+			<td style="width:131px;">
+				<p>
+					RNG_STATUS</p>
+			</td>
+			<td style="width:237px;">
+				<p>
+					Random Number Generator</p>
+				<p>
+					Status Register</p>
+			</td>
+			<td style="width:47px;">
+				<p align="center">
+					32</p>
+			</td>
+			<td style="width:104px;">
+				<p align="center">
+					R/W</p>
+			</td>
+		</tr>
+		<tr>
+			<td style="width:112px;">
+				<p>
+					0x2010 4008</p>
+			</td>
+			<td style="width:131px;">
+				<p>
+					RNG_DATA</p>
+			</td>
+			<td style="width:237px;">
+				<p>
+					Random Number Generator</p>
+				<p>
+					Data &lt;#&gt; Register</p>
+			</td>
+			<td style="width:47px;">
+				<p align="center">
+					32</p>
+			</td>
+			<td style="width:104px;">
+				<p align="center">
+					R/W</p>
+			</td>
+		</tr>
+		<tr>
+			<td style="width:112px;">
+				<p>
+					0x2010 400C</p>
+			</td>
+			<td style="width:131px;">
+				<p>
+					RNG_FF_THRES</p>
+			</td>
+			<td style="width:237px;">
+				<p>
+					Random Number Generator</p>
+				<p>
+					FIFO Threshold Register</p>
+			</td>
+			<td style="width:47px;">
+				<p align="center">
+					32</p>
+			</td>
+			<td style="width:104px;">
+				<p align="center">
+					R/W</p>
+			</td>
+		</tr>
+		<tr>
+			<td style="width:112px;">
+				<p>
+					0x2010 4010</p>
+			</td>
+			<td style="width:131px;">
+				<p>
+					RNG_INT_MASK</p>
+			</td>
+			<td style="width:237px;">
+				<p>
+					Random Number Generator</p>
+				<p>
+					Interrupt Mask Register</p>
+			</td>
+			<td style="width:47px;">
+				<p align="center">
+					32</p>
+			</td>
+			<td style="width:104px;">
+				<p align="center">
+					R/W</p>
+			</td>
+		</tr>
+	</tbody>
+</table>
+<div style="clear:both;">
+	&nbsp;</div>
+<p align="left">
+	&nbsp;</p>
+<p align="center">
+	Table 21‑1Random Number Generator Register Assignment</p>
+<br clear="all">
+<p>
+	&nbsp;</p>
+<p align="center">
+	<br>
+	<strong>&nbsp;Random Number Generator Control Register (RNG_CTRL)<br>
+	<br>
+	</strong></p>
+<p>
+	<strong>Address</strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 0x2010 4000</p>
+<p style="margin-left:72.0pt;">
+	<strong>Synopsis</strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Control register.</p>
+<p style="margin-left:72.0pt;">
+	&nbsp;</p>
+<table align="center" border="1" cellpadding="0" cellspacing="0" width="562">
+	<tbody>
+		<tr>
+			<td style="width:69px;height:28px;">
+				<p align="center">
+					Bit</p>
+				<p align="center">
+					Number</p>
+			</td>
+			<td style="width:103px;height:28px;">
+				<p align="center">
+					Field</p>
+				<p align="center">
+					Name</p>
+			</td>
+			<td style="width:273px;height:28px;">
+				<p align="center">
+					Description</p>
+			</td>
+			<td style="width:61px;height:28px;">
+				<p align="center">
+					Read/</p>
+				<p align="center">
+					Write</p>
+			</td>
+			<td style="width:56px;height:28px;">
+				<p align="center">
+					Reset</p>
+				<p align="center">
+					Value</p>
+			</td>
+		</tr>
+		<tr>
+			<td style="width:69px;">
+				<p align="center">
+					31-2</p>
+			</td>
+			<td style="width:103px;">
+				<p align="center">
+					---</p>
+			</td>
+			<td style="width:273px;">
+				<p>
+					Reserved</p>
+			</td>
+			<td style="width:61px;">
+				<p align="center">
+					R/W</p>
+			</td>
+			<td style="width:56px;">
+				<p align="center">
+					0</p>
+			</td>
+		</tr>
+		<tr>
+			<td style="width:69px;">
+				<p align="center">
+					1</p>
+			</td>
+			<td style="width:103px;">
+				<p align="center">
+					RNG_RBG2X</p>
+			</td>
+			<td style="width:273px;">
+				<p>
+					RBG 2X SPEED: Connect to DIV2 pin of RBG100. Increase the RBG generator speed by 2X at the expense of the quality of the RBG that is generated.</p>
+			</td>
+			<td style="width:61px;">
+				<p align="center">
+					R/W</p>
+			</td>
+			<td style="width:56px;">
+				<p align="center">
+					0</p>
+			</td>
+		</tr>
+		<tr>
+			<td style="width:69px;">
+				<p align="center">
+					0</p>
+			</td>
+			<td style="width:103px;">
+				<p align="center">
+					RNG_RBGEN</p>
+			</td>
+			<td style="width:273px;">
+				<p>
+					RBG enable, connect to EN pin of BG100. By default the RBG100 is enabled after each reset.</p>
+			</td>
+			<td style="width:61px;">
+				<p align="center">
+					R/W</p>
+			</td>
+			<td style="width:56px;">
+				<p align="center">
+					0</p>
+			</td>
+		</tr>
+	</tbody>
+</table>
+<div style="clear:both;">
+	&nbsp;</div>
+<p>
+	&nbsp;</p>
+<p align="center">
+	Table 21‑2Random Number Generator Control Register</p>
+<p>
+	&nbsp;</p>
+<p>
+	&nbsp;</p>
+<p align="center">
+	<br>
+	<strong>&nbsp;Random Number Generator Status Register (RNG_STATUS)<br>
+	<br>
+	</strong></p>
+<p>
+	<strong>Address</strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 0x2010 4004</p>
+<p style="margin-left:72.0pt;">
+	<strong>Synopsis</strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Status register.</p>
+<p style="margin-left:72.0pt;">
+	&nbsp;</p>
+<table align="center" border="1" cellpadding="0" cellspacing="0" width="586">
+	<tbody>
+		<tr>
+			<td style="width:69px;height:28px;">
+				<p align="center">
+					Bit</p>
+				<p align="center">
+					Number</p>
+			</td>
+			<td style="width:134px;height:28px;">
+				<p align="center">
+					Field</p>
+				<p align="center">
+					Name</p>
+			</td>
+			<td style="width:242px;height:28px;">
+				<p align="center">
+					Description</p>
+			</td>
+			<td style="width:61px;height:28px;">
+				<p align="center">
+					Read/</p>
+				<p align="center">
+					Write</p>
+			</td>
+			<td style="width:80px;height:28px;">
+				<p align="center">
+					Reset</p>
+				<p align="center">
+					Value</p>
+			</td>
+		</tr>
+		<tr>
+			<td style="width:69px;">
+				<p align="center">
+					31-24</p>
+			</td>
+			<td style="width:134px;">
+				<p align="center">
+					RND_VAL</p>
+			</td>
+			<td style="width:242px;">
+				<p>
+					RNG VALID WORD count: Contains the number of valid words in the RNG FIFO.</p>
+			</td>
+			<td style="width:61px;">
+				<p align="center">
+					R</p>
+			</td>
+			<td style="width:80px;">
+				<p align="center">
+					0</p>
+			</td>
+		</tr>
+		<tr>
+			<td style="width:69px;">
+				<p align="center">
+					23-20</p>
+			</td>
+			<td style="width:134px;">
+				<p align="center">
+					---</p>
+			</td>
+			<td style="width:242px;">
+				<p>
+					Reserved</p>
+			</td>
+			<td style="width:61px;">
+				<p align="center">
+					R/W</p>
+			</td>
+			<td style="width:80px;">
+				<p align="center">
+					0</p>
+			</td>
+		</tr>
+		<tr>
+			<td style="width:69px;">
+				<p align="center">
+					19-0</p>
+			</td>
+			<td style="width:134px;">
+				<p align="center">
+					RNG_WARM_CNT</p>
+			</td>
+			<td style="width:242px;">
+				<p>
+					RNG Warm Up count.</p>
+			</td>
+			<td style="width:61px;">
+				<p align="center">
+					R/W</p>
+			</td>
+			<td style="width:80px;">
+				<p align="center">
+					0x4_0000</p>
+			</td>
+		</tr>
+	</tbody>
+</table>
+<div style="clear:both;">
+	&nbsp;</div>
+<p>
+	&nbsp;</p>
+<p align="center">
+	Table 21‑3Random Number Generator Status Register</p>
+<p>
+	&nbsp;</p>
+<p>
+	&nbsp;</p>
+<p align="center">
+	<br>
+	<strong>&nbsp;Random Number Generator Data &lt;#&gt; Register (RNG_DATA)<br>
+	<br>
+	</strong></p>
+<p>
+	<strong>Address</strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 0x2010 4008</p>
+<p style="margin-left:72.0pt;">
+	<strong>Synopsis</strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Data register.</p>
+<p style="margin-left:72.0pt;">
+	&nbsp;</p>
+<table align="center" border="1" cellpadding="0" cellspacing="0" width="562">
+	<tbody>
+		<tr>
+			<td style="width:69px;height:28px;">
+				<p align="center">
+					Bit</p>
+				<p align="center">
+					Number</p>
+			</td>
+			<td style="width:103px;height:28px;">
+				<p align="center">
+					Field</p>
+				<p align="center">
+					Name</p>
+			</td>
+			<td style="width:273px;height:28px;">
+				<p align="center">
+					Description</p>
+			</td>
+			<td style="width:61px;height:28px;">
+				<p align="center">
+					Read/</p>
+				<p align="center">
+					Write</p>
+			</td>
+			<td style="width:56px;height:28px;">
+				<p align="center">
+					Reset</p>
+				<p align="center">
+					Value</p>
+			</td>
+		</tr>
+		<tr>
+			<td style="width:69px;">
+				<p align="center">
+					31-0</p>
+			</td>
+			<td style="width:103px;">
+				<p align="center">
+					RNG_NUM</p>
+			</td>
+			<td style="width:273px;">
+				<p>
+					Random number.</p>
+			</td>
+			<td style="width:61px;">
+				<p align="center">
+					R</p>
+			</td>
+			<td style="width:56px;">
+				<p align="center">
+					0</p>
+			</td>
+		</tr>
+	</tbody>
+</table>
+<div style="clear:both;">
+	&nbsp;</div>
+<p>
+	&nbsp;</p>
+<p align="center">
+	Table 21‑4Random Number Generator Data &lt;#&gt; Register</p>
+<p>
+	&nbsp;</p>
+<p>
+	&nbsp;</p>
+<p align="center">
+	<br>
+	<strong>&nbsp;Random Number Generator FIFO Threshold Register (RNG_FF_THRES)<br>
+	<br>
+	</strong></p>
+<p>
+	<strong>Address</strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 0x2010 400C</p>
+<p style="margin-left:72.0pt;">
+	<strong>Synopsis</strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; FIFO threshold register.</p>
+<p style="margin-left:72.0pt;">
+	&nbsp;</p>
+<table align="center" border="1" cellpadding="0" cellspacing="0" width="594">
+	<tbody>
+		<tr>
+			<td style="width:69px;height:28px;">
+				<p align="center">
+					Bit</p>
+				<p align="center">
+					Number</p>
+			</td>
+			<td style="width:134px;height:28px;">
+				<p align="center">
+					Field</p>
+				<p align="center">
+					Name</p>
+			</td>
+			<td style="width:273px;height:28px;">
+				<p align="center">
+					Description</p>
+			</td>
+			<td style="width:61px;height:28px;">
+				<p align="center">
+					Read/</p>
+				<p align="center">
+					Write</p>
+			</td>
+			<td style="width:56px;height:28px;">
+				<p align="center">
+					Reset</p>
+				<p align="center">
+					Value</p>
+			</td>
+		</tr>
+		<tr>
+			<td style="width:69px;">
+				<p align="center">
+					31-5</p>
+			</td>
+			<td style="width:134px;">
+				<p align="center">
+					---</p>
+			</td>
+			<td style="width:273px;">
+				<p>
+					Reserved</p>
+			</td>
+			<td style="width:61px;">
+				<p align="center">
+					R/W</p>
+			</td>
+			<td style="width:56px;">
+				<p align="center">
+					0</p>
+			</td>
+		</tr>
+		<tr>
+			<td style="width:69px;">
+				<p align="center">
+					7-0</p>
+			</td>
+			<td style="width:134px;">
+				<p align="center">
+					RNG_FF_THRESH</p>
+			</td>
+			<td style="width:273px;">
+				<p>
+					Number of words threshold before the interrupt is asserted.</p>
+			</td>
+			<td style="width:61px;">
+				<p align="center">
+					R/W</p>
+			</td>
+			<td style="width:56px;">
+				<p align="center">
+					0x10</p>
+			</td>
+		</tr>
+	</tbody>
+</table>
+<div style="clear:both;">
+	&nbsp;</div>
+<p>
+	&nbsp;</p>
+<p align="center">
+	Table 21‑5Random Number Generator FIFO Threshold Register</p>
+<p>
+	&nbsp;</p>
+<br clear="all">
+<p>
+	&nbsp;</p>
+<p align="center">
+	<br>
+	&nbsp;<strong>Random Number Generator Interrupt Mask Register (RNG_INT_MASK)<br>
+	<br>
+	</strong></p>
+<p>
+	<strong>Address</strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 0x2010 4010</p>
+<p style="margin-left:72.0pt;">
+	<strong>Synopsis</strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Interrupt mask register.</p>
+<p style="margin-left:72.0pt;">
+	&nbsp;</p>
+<table align="center" border="1" cellpadding="0" cellspacing="0" width="562">
+	<tbody>
+		<tr>
+			<td style="width:69px;height:28px;">
+				<p align="center">
+					Bit</p>
+				<p align="center">
+					Number</p>
+			</td>
+			<td style="width:115px;height:28px;">
+				<p align="center">
+					Field</p>
+				<p align="center">
+					Name</p>
+			</td>
+			<td style="width:261px;height:28px;">
+				<p align="center">
+					Description</p>
+			</td>
+			<td style="width:61px;height:28px;">
+				<p align="center">
+					Read/</p>
+				<p align="center">
+					Write</p>
+			</td>
+			<td style="width:56px;height:28px;">
+				<p align="center">
+					Reset</p>
+				<p align="center">
+					Value</p>
+			</td>
+		</tr>
+		<tr>
+			<td style="width:69px;">
+				<p align="center">
+					31-1</p>
+			</td>
+			<td style="width:115px;">
+				<p align="center">
+					---</p>
+			</td>
+			<td style="width:261px;">
+				<p>
+					Reserved</p>
+			</td>
+			<td style="width:61px;">
+				<p align="center">
+					R/W</p>
+			</td>
+			<td style="width:56px;">
+				<p align="center">
+					0</p>
+			</td>
+		</tr>
+		<tr>
+			<td style="width:69px;">
+				<p align="center">
+					0</p>
+			</td>
+			<td style="width:115px;">
+				<p align="center">
+					RNG_INT_OFF</p>
+			</td>
+			<td style="width:261px;">
+				<p>
+					Interrupt disable. Write "1" to mask the interrupt.</p>
+			</td>
+			<td style="width:61px;">
+				<p align="center">
+					R/W</p>
+			</td>
+			<td style="width:56px;">
+				<p align="center">
+					0</p>
+			</td>
+		</tr>
+	</tbody>
+</table>
+<div style="clear:both;">
+	&nbsp;</div>
+<p>
+	&nbsp;</p>
+<p align="center">
+	Table 21‑6Random Number Generator Interrupt Mask Register</p></body></html>
