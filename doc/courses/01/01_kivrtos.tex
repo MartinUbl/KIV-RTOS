@@ -163,11 +163,11 @@ Dále bude pro potřeby cvičení používána rozšiřující deska KIV-DPP-01,
 Budeme tedy určitě potřebovat dokumentaci:
 
 \begin{itemize}
-	\item BCM2835: <TODO:LINK>
-	\item ARM1176JZFS: <TODO:LINK>
-	\item příručku ARM6 assembly: <TODO:LINK>
-	\item RPi Zero pinout: <TODO:LINK>
-	\item KIV-DPP-01: <TODO:LINK>
+	\item BCM2835: \url{http://home.zcu.cz/~ublm/files/os/BCM2835-ARM-Peripherals.pdf}
+	\item ARM1176JZFS: \url{https://developer.arm.com/documentation/ddi0301/h?lang=en}
+	\item příručku ARM assembly (UAL): \url{https://www.keil.com/support/man/docs/armasm/armasm_dom1359731145130.htm}
+	\item RPi Zero pinout: \url{https://pinout.xyz/}
+	\item KIV-DPP-01: \url{http://home.zcu.cz/~ublm/files/os/kiv-dpp-01.pdf}
 \end{itemize}
 
 \section{Seznámení s hardware}
@@ -320,7 +320,7 @@ Pro Debian-based (apt-based) distribuce stačí tedy použít příkaz (voliteln
 
 \texttt{apt install gcc-arm-none-eabi}\\
 
-Uživatelé systému Windows mohou použít od verze operačního systému Windows 10 i vestavěný WSL (Windows Subsystem for Linux) a nějakou instalovatelnou distribuci (např. Debian, Ubuntu, ...). Instalace je pak totožná. Odvážnější mohou zkusit zprovoznit balík \texttt{gcc-arm-none-eabi} pro Windows přímo z oficiálních distribucí (TODO:LINK) bez nutnosti instalovat WSL.
+Uživatelé systému Windows mohou použít od verze operačního systému Windows 10 i vestavěný WSL (Windows Subsystem for Linux) a nějakou instalovatelnou distribuci (např. Debian, Ubuntu, ...). Instalace je pak totožná. Odvážnější mohou zkusit zprovoznit balík \texttt{gcc-arm-none-eabi} pro Windows přímo z oficiálních distribucí (\url{https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-rm/downloads}) bez nutnosti instalovat WSL.
 
 Samozřejmě bude dobré mít i nějaké IDE, které nám trochu pomůže s vývojem. Mně se osvědčilo MS Visual Studio Code s pluginy pro jazyk C++ a assembly.
 
@@ -513,7 +513,7 @@ Nyní můžeme v jedné velké smyčce nastavit ACT LED, aktivně čekat pár ta
 
 \section{Úkol za body}
 
-Na rozšiřující desce KIV-DPP-01 je obsažena LED, která je připojena na pin <TODO>. Rozblikejte ji tak, aby vysílala SOS signál (tři krátká, tři dlouhá a tři krátká probliknutí následovaná pauzou). Věnujte pozornost jak dokumentaci mikrokontroléru BCM2835, tak schématu přídavné desky.
+Na rozšiřující desce KIV-DPP-01 je obsažena LED, která je připojena na pin 18. Rozblikejte ji tak, aby vysílala SOS signál (tři krátká, tři dlouhá a tři krátká probliknutí následovaná pauzou). Věnujte pozornost jak dokumentaci mikrokontroléru BCM2835, tak schématu přídavné desky.
 
 \end{document}
 

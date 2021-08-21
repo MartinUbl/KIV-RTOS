@@ -192,7 +192,7 @@ Filesystem driver opět ponechme na fantazii čtenáře -- nahookujte ho na cest
 
 \section{TRNG}
 
-Mikrokontrolér BCM2835 má integrovaný hardwarový zdroj náhodných čísel. V oficiálním manuálu však není zdokumentovaný, a tak musíme sahnout po alternativních zdrojích. Těch moc není -- jeden je například přímo zdrojový soubor jádra GNU/Linux v oficiálních repozitářích Raspberry Pi (\url{https://github.com/raspberrypi/linux/blob/204050d0eafb565b68abf512710036c10ef1bd23/drivers/char/hw_random/bcm2835-rng.c}). Skutečné důvody neveřejnosti této dokumentace mi nejsou známé. Další dostupný kus dokumentace, jen s nejasným původem, naleznete zde <TODO>.
+Mikrokontrolér BCM2835 má integrovaný hardwarový zdroj náhodných čísel. V oficiálním manuálu však není zdokumentovaný, a tak musíme sahnout po alternativních zdrojích. Těch moc není -- jeden je například přímo zdrojový soubor jádra GNU/Linux v oficiálních repozitářích Raspberry Pi (\url{https://github.com/raspberrypi/linux/blob/204050d0eafb565b68abf512710036c10ef1bd23/drivers/char/hw_random/bcm2835-rng.c}). Skutečné důvody neveřejnosti této dokumentace mi nejsou známé. Další dostupný kus dokumentace, jen s nejasným původem, naleznete zde \url{http://home.zcu.cz/~ublm/files/os/bcm2835_trng_doc.html}.
 
 Princip ovládání je však vcelku stejný -- generátor lze povolit zápisem do řídicího registru. Dále je třeba počkat, až dosahne potřebné úrovně entropie (aby byla generovaná čísla \uv{dostatečně náhodná}) a pak je možné si čísla zase vyzvednout z výstupního registru. Až generátor nebudeme potřebovat, je vhodné ho zápisem do řídicího registru opět vypnout, aby zbytečně nespotřebovával elektrickou energii.
 
@@ -363,7 +363,7 @@ Integrace této transakční třídy už je opět ponecháno jako cvičení pro 
 
 Na desce KIV-DPP-01 je připojený displej s označením Adafruit SSD1306. Ten je připojen na I2C kanál 1 (druhé BSC) na piny 2 a 3. V tomto předmětu nemá moc smysl rozebírat, jak takový displej funguje -- to je obsahem jiných předmětů a nebo si můžete funkci displeje nastudovat po vlastní ose. V tento moment však není důležité, jak přesně displej funguje, ani jaké konkrétní příkazy mu musíme poslat, aby se něco ukázalo.
 
-Zdrojové kódy, které volně integrujte do svého projektu, si můžete stahnout zde: <TODO>.
+Zdrojové kódy, které volně integrujte do svého projektu, si můžete stahnout zde: \url{http://home.zcu.cz/~ublm/files/os/oled_base_code.zip}.
 
 Poskytnuté kódy obsahují pro teď vše, co je třeba ke zobrazení sady pixelů na výstup. Pochopitelně lze část ještě zefektivnit tím, že budeme překreslovat pouze část displeje (a ne vždy celý buffer) a tak podobně.
 

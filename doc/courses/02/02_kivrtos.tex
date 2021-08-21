@@ -108,11 +108,11 @@ Výsledná struktura by měla vypadat zhruba takto:
 
 Pro sestavení projektu budeme potřebovat nějaký nástroj a \uv{recept} pro něj, a to ideálně takový, abychom nemuseli vše ručně doplňovat při každé změně ve struktuře. Pro tyto účely se hodí nástroj CMake. Pokud nechcete používat CMake, můžete použít a vhodně modifikovat \texttt{Makefile} z minulého cvičení, nebo si napsat vlastní recept ve Vámi oblíbeném nástroji -- stačí, když zvládnete specifikovat kompilátor, kterým chcete zdrojové soubory překládat a dodat jim příslušné přepínače.
 
-Pro potřeby demonstrace budu používat nástroj CMake. Pokud byste se rozhodli pro tentýž nástroj, lze ho stahnout pro Windows na adrese <TODO>, popř. ve většině balíčkovacích systémů pro Linux nebo macOS ho lze najít pod prostým názvem \texttt{cmake}. Na Debian-based (apt-based) distribucích ho můžeme nainstalovat příkazem
+Pro potřeby demonstrace budu používat nástroj CMake. Pokud byste se rozhodli pro tentýž nástroj, lze ho stahnout pro Windows na adrese \url{https://cmake.org/}, popř. ve většině balíčkovacích systémů pro Linux nebo macOS ho lze najít pod prostým názvem \texttt{cmake}. Na Debian-based (apt-based) distribucích ho můžeme nainstalovat příkazem
 \begin{verbatim}
 apt install cmake
 \end{verbatim}
-Po instalaci stačí specifikovat soubor \texttt{CMakeLists.txt} a dodat toolchain soubor. Toolchain soubor pro náš překlad v ARM-specific gcc stahnete např. zde: <TODO>.
+Po instalaci stačí specifikovat soubor \texttt{CMakeLists.txt} a dodat toolchain soubor. Toolchain soubor pro náš překlad v ARM-specific gcc stahnete např. zde: \url{http://home.zcu.cz/~ublm/files/os/toolchain-arm-none-eabi-rpi0.cmake}.
 
 Obsah \texttt{CMakeLists.txt} souboru může vypadat např. takto:
 
@@ -212,7 +212,9 @@ skip:
 
 Problém by pochopitelně nastal, kdyby kód našeho jádra byl větší, než cca 2 MiB (\texttt{0x200000 - 0x8000}). Tento problém lze řešit posunutím adresy o kus dál. Naše jádro však stěží překročí tuhle velikost a tak můžeme pro teď být v klidu.
 
-Bootloader (zdrojové soubory i obraz) si můžete stahnout zde: <TODO>
+Bootloader (zdrojové soubory i obraz) si můžete stahnout zde: \url{http://home.zcu.cz/~ublm/files/os/bootloader_uart.zip}
+
+Pro Windows pak můžete využít nahrávací software (nutno zkompilovat; volně upravte dle potřeb), který se zároveň po nahrání přepne do režimu poslouchání (hodí se pro debugging): \url{http://home.zcu.cz/~ublm/files/os/windows_uart_flasher.zip}
 
 \section{Inicializace jádra a C++}
 
