@@ -14,6 +14,11 @@ SECTIONS
 		*(.initsys*)
 	} > initsys_base
 
+	.initsys.data :
+	{
+		*(.initsys.data*)
+	} > initsys_base
+
 	__kernel_high_code = ALIGN(4k);
 
     .text (__kernel_high_code + 0xF0000000) : AT(__kernel_high_code)

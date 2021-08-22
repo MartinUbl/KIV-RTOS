@@ -2,6 +2,7 @@
 .equ    CPSR_MODE_IRQ,          0x12
 .equ    CPSR_MODE_SVR,          0x13
 .equ    CPSR_MODE_SYS,          0x1F
+.equ    CPSR_MODE_ABT,          0x17
 .equ    CPSR_IRQ_INHIBIT,       0x80
 .equ    CPSR_FIQ_INHIBIT,       0x40
 
@@ -58,7 +59,7 @@ _reset:
     stmia r1!,{r2, r3, r4, r5, r6, r7, r8, r9}
 
 	;@ baze pro systemove zasobniky
-	mov r4, #0x80000000
+	mov r4, #0x00000000
 
 	;@ nejdrive supervisor mod a jeho stack
     mov r0, #(CPSR_MODE_SVR | CPSR_IRQ_INHIBIT | CPSR_FIQ_INHIBIT)
@@ -75,10 +76,15 @@ _reset:
     msr cpsr_c, r0
 	add sp, r4, #0x6000
 
+	;@ abort mod a stack
+    mov r0, #(CPSR_MODE_ABT | CPSR_IRQ_INHIBIT | CPSR_FIQ_INHIBIT)
+    msr cpsr_c, r0
+	add sp, r4, #0x5000
+
 	;@ nakonec system mod a stack
     mov r0, #(CPSR_MODE_SYS | CPSR_IRQ_INHIBIT | CPSR_FIQ_INHIBIT)
     msr cpsr_c, r0
-	add sp, r4, #0x5000
+	add sp, r4, #0x4000
 
 	;@ zapneme nezarovnany pristup do pameti (nemusi byt zadouci, ale pro nase potreby je to v poradku)
 	mrc p15, #0, r4, c1, c0, #0

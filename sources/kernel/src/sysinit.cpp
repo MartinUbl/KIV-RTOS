@@ -22,8 +22,8 @@ extern "C" void __attribute__((section(".text"))) _init_system_memory_high();
 
 extern unsigned int _phys_data_start;
 
-static unsigned int *initpagetable = (unsigned int * const)0x4000; /* 16K */
-static unsigned int *kerneldatatable = (unsigned int * const)0x3c00; /* 1K */
+unsigned int *initpagetable __attribute__((section(".initsys.data"))) = (unsigned int *)0x2000; /* 8K */
+unsigned int *kerneldatatable __attribute__((section(".initsys.data"))) = (unsigned int *)0x1c00; /* 1K */
 
 extern "C" void __attribute__((section(".initsys"))) _init_system_memory()
 {
