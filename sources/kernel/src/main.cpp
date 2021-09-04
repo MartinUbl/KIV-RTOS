@@ -55,9 +55,9 @@ extern "C" int _kernel_main(void)
 	sProcessMgr.Create_Process(reinterpret_cast<unsigned long>(&idle_loop), true);
 
 	// vytvoreni jednoho testovaciho procesu
-	sProcessMgr.Create_Process(reinterpret_cast<unsigned long>(&Process_1), false);
+	//sProcessMgr.Create_Process(reinterpret_cast<unsigned long>(&Process_1), false);
 	// vytvoreni druheho testovaciho procesu
-	sProcessMgr.Create_Process(reinterpret_cast<unsigned long>(&Process_2), false);
+	//sProcessMgr.Create_Process(reinterpret_cast<unsigned long>(&Process_2), false);
 
 	// zatim zakazeme IRQ casovace
 	sInterruptCtl.Disable_Basic_IRQ(hal::IRQ_Basic_Source::Timer);
@@ -70,6 +70,8 @@ extern "C" int _kernel_main(void)
 
 	// povolime IRQ a od tohoto momentu je vse v rukou planovace
 	enable_irq();
+
+	sProcessMgr.Schedule();
 
 	// tohle uz se mockrat nespusti - dalsi IRQ preplanuje procesor na nejaky z tasku (bud systemovy nebo uzivatelsky)
 	while (true)

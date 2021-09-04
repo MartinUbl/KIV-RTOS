@@ -27,8 +27,14 @@ FILE(GLOB_RECURSE stdlib_src "stdlib/*.cpp" "stdlib/*.c" "stdlib/*.h" "stdlib/*.
 # pridame knihovnu utilit (ovladani zarizeni z userspace, apod)
 FILE(GLOB_RECURSE stdutils_src "stdutils/*.cpp" "stdutils/*.c" "stdutils/*.h" "stdutils/*.hpp" "stdutils/*.s")
 
+# pridame cil - sestavujeme standardni knihovnu (minimalni)
+ADD_LIBRARY(kivrtos_stdlib STATIC ${stdlib_src} ${stdutils_src})
+
 # pridame cil - sestavujeme jen kernel
-ADD_EXECUTABLE(kernel ${kernel_src} ${stdlib_src} ${stdutils_src})
+ADD_EXECUTABLE(kernel ${kernel_src})
+
+# prilinkujeme standardni knihovnu do kernelu
+TARGET_LINK_LIBRARIES(kernel kivrtos_stdlib)
 
 # po dokonceni sestaveni musime jeste zkonvertovat vystupy
 # 1) zkompilovany ELF soubor na surovou binarni mapu pro RPi bootloader (kernel.img)

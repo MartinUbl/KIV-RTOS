@@ -7,7 +7,7 @@ namespace hal
 	constexpr unsigned int Default_Clock_Rate = 250000000; // taktovaci frekvence hlavniho jadra
 
 	// baze pro memory-mapped I/O
-	constexpr unsigned long Peripheral_Base = 0xA0000000UL;
+	constexpr unsigned long Peripheral_Base = 0x20000000UL;
 
 	// baze pro memory-mapped I/O pro GPIO
 	constexpr unsigned long GPIO_Base = Peripheral_Base + 0x00200000UL;

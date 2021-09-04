@@ -39,6 +39,9 @@ uint32_t CProcess_Manager::Create_Process(unsigned long funcptr, bool is_system)
     mProcess_List_Head->prev = procnode;
     mProcess_List_Head = procnode;
 
+    if (!mCurrent_Task_Node)
+        mCurrent_Task_Node = procnode;
+
     procnode->task = sKernelMem.Alloc<TTask_Struct>();
 
     auto* task = procnode->task;

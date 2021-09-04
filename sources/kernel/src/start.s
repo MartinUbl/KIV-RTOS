@@ -6,7 +6,7 @@
 .equ    CPSR_IRQ_INHIBIT,       0x80
 .equ    CPSR_FIQ_INHIBIT,       0x40
 
-.section .initsys
+.section .initsys.start
 
 .global _start
 
@@ -49,10 +49,10 @@ _fast_interrupt_ptr:
 _reset:
 	;@ nacteni tabulky vektoru preruseni do pameti
 	mov r0, #0x8000			;@ adresa 0x8000 (_start) do r0
-    mov r1, #0x0000			;@ adresa 0x0000 (pocatek RAM) do r1 - tam budeme vkladat tabulku vektoru preruseni
+    mov r1, #0xF0000		;@ adresa 0xF0000 do r1 - tam budeme vkladat tabulku vektoru preruseni (zapnuli jsme high exception vectors, musime je pak v initsys mapovat)
 
-	;@ Thumb instrukce - nacteni 4B slov z pameti ulozene v r0 (0x8000) do registru r2, 3, ... 9
-	;@                 - ulozeni obsahu registru r2, 3, ... 9 do pameti ulozene v registru r1 (0x0000)
+	;@ hromadne instrukce - nacteni 4B slov z pameti ulozene v r0 (0x8000) do registru r2, 3, ... 9
+	;@                    - ulozeni obsahu registru r2, 3, ... 9 do pameti ulozene v registru r1 (0x0000)
     ldmia r0!,{r2, r3, r4, r5, r6, r7, r8, r9}
     stmia r1!,{r2, r3, r4, r5, r6, r7, r8, r9}
     ldmia r0!,{r2, r3, r4, r5, r6, r7, r8, r9}
@@ -86,12 +86,7 @@ _reset:
     msr cpsr_c, r0
 	add sp, r4, #0x4000
 
-	;@ zapneme nezarovnany pristup do pameti (nemusi byt zadouci, ale pro nase potreby je to v poradku)
-	mrc p15, #0, r4, c1, c0, #0
-	orr r4, #0x400000
-	mcr p15, #0, r4, c1, c0, #0
-
-	bl _c_startup			;@ C startup kod (inicializace prostredi)
+	bl _c_startup			;@ C startup kod (inicializace prostredi, nulovani .bss sekce)
 	bl _init_system_memory
 init_hang:
 	b init_hang
@@ -100,6 +95,37 @@ init_hang:
 
 .global kernel_mode_start
 kernel_mode_start:
+
+	;@ baze pro systemove zasobniky
+	ldr r4, =#0xFFFF0000
+
+	;@ nejdrive supervisor mod a jeho stack
+    mov r0, #(CPSR_MODE_SVR | CPSR_IRQ_INHIBIT | CPSR_FIQ_INHIBIT)
+    msr cpsr_c, r0
+	add sp, r4, #0x8000
+
+	;@ na moment se prepneme do IRQ rezimu, nastavime mu stack pointer
+	mov r0, #(CPSR_MODE_IRQ | CPSR_IRQ_INHIBIT | CPSR_FIQ_INHIBIT)
+    msr cpsr_c, r0
+	add sp, r4, #0x7000
+
+	;@ na moment se prepneme do FIQ rezimu, nastavime mu stack pointer
+	mov r0, #(CPSR_MODE_FIQ | CPSR_IRQ_INHIBIT | CPSR_FIQ_INHIBIT)
+    msr cpsr_c, r0
+	add sp, r4, #0x6000
+
+	;@ abort mod a stack
+    mov r0, #(CPSR_MODE_ABT | CPSR_IRQ_INHIBIT | CPSR_FIQ_INHIBIT)
+    msr cpsr_c, r0
+	add sp, r4, #0x5000
+
+	;@ nakonec system mod a stack
+    mov r0, #(CPSR_MODE_SYS | CPSR_IRQ_INHIBIT | CPSR_FIQ_INHIBIT)
+    msr cpsr_c, r0
+	add sp, r4, #0x4000
+
 	bl _cpp_startup			;@ C++ startup kod (volani globalnich konstruktoru, ...)
 	bl _kernel_main			;@ skocime do hlavniho kodu jadra (v C)
 	bl _cpp_shutdown		;@ C++ shutdown kod (volani globalnich destruktoru, ...)
+upper_half_hang:
+	b upper_half_hang
