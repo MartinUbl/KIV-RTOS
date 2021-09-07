@@ -15,7 +15,7 @@ class COLED_Display
         // konstruktor - otevira soubor displeje
         COLED_Display(const char* path = "DEV:oled");
         // destruktor - zavira soubor displeje
-        virtual ~COLED_Display();
+        /*virtual*/ ~COLED_Display();
 
         // je soubor/displej otevreny?
         bool Is_Opened() const;

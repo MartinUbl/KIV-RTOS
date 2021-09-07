@@ -46,19 +46,42 @@ int main(int argc, char** argv)
             return 1;
         }
 
+        std::string str((std::istreambuf_iterator<char>(ifile)),
+                         std::istreambuf_iterator<char>());
+        ifile.seekg(0, std::ios::beg);
+
+        int linecnt = 0;
+        int linecounter = 0;
+        int lineinc = 0;
+        for (int j = 0; j < str.size(); j++)
+        {
+            if (str[j] == '\n')
+                linecnt++;
+        }
+
+        std::cout << "Line count: " << linecnt << std::endl;
+
         std::cout << "Uploading..." << std::endl;
 
         while (std::getline(ifile, ln))
         {
-            WriteFile(hComm, ln.c_str(), ln.length(), &l, NULL);
-            Sleep(10);
+            linecounter++;
+            WriteFile(hComm, ln.c_str(), static_cast<DWORD>(ln.length()), &l, NULL);
+
+            if (lineinc < ((100 * linecounter) / linecnt))
+            {
+                lineinc = ((100 * linecounter) / linecnt);
+                std::cout << "Progress: " << lineinc << " %" << std::endl;
+            }
+
+            //Sleep(10);
         }
     }
 
     std::cout << "Launching..." << std::endl;
 
     ln = "G";
-    WriteFile(hComm, ln.c_str(), ln.length(), &l, NULL);
+    WriteFile(hComm, ln.c_str(), static_cast<DWORD>(ln.length()), &l, NULL);
 
     std::cout << "Done. Switching to listener mode." << std::endl << std::endl;
 

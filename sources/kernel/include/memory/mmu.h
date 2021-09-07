@@ -1,6 +1,7 @@
 #pragma once
 
 #include <hal/peripherals.h>
+#include <hal/intdef.h>
 
 // symboly definovane v link.ld
 extern "C"
@@ -182,3 +183,8 @@ namespace DL1_Flags
 extern "C" void mmu_invalidate_cache();
 extern "C" void mmu_data_sync_barrier();
 extern "C" void mmu_invalidate_tlb();
+
+// zkopiruje tabulku stranek jadra do dodane tabulky
+void copy_kernel_page_table_to(uint32_t* target);
+// namapuje do zadane tabulky dane adresy; pro ted jde jen o stranky velikosti 1MB
+void map_memory(uint32_t* target_pt, uint32_t phys, uint32_t virt);

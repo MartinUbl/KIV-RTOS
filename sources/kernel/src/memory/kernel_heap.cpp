@@ -4,9 +4,9 @@
 CKernel_Heap_Manager sKernelMem;
 
 CKernel_Heap_Manager::CKernel_Heap_Manager()
+    : mFirst{nullptr}
 {
-    // na zacatku si alokujeme jednu stranku dopredu, protoze je temer jiste, ze budeme docela brzy potrebovat nejakou pamet
-    mFirst = Alloc_Next_Page();
+    //
 }
 
 TKernel_Heap_Chunk_Header* CKernel_Heap_Manager::Alloc_Next_Page()
@@ -25,6 +25,9 @@ void* CKernel_Heap_Manager::Alloc(uint32_t size)
     // zatim neumime alokovat >4kB, protoze zatim nemame virtualni pamet a tedy negarantujeme souvisly kus pameti (mozne, ale zbytecne nakladne)
     if (size > mem::PageSize - sizeof(TKernel_Heap_Chunk_Header))
         return nullptr;
+
+    if (!mFirst)
+        mFirst = Alloc_Next_Page();
 
     TKernel_Heap_Chunk_Header* chunk = mFirst;
     TKernel_Heap_Chunk_Header* last = mFirst;

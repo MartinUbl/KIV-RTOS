@@ -62,25 +62,31 @@ extern "C" void __attribute__((section(".initsys"))) __attribute__((noreturn)) _
     }
 
     // kernel kod - konstantni, budeme z nej v podstate jen cist a spoustet ho
-    // mapujeme 0xF0000000-0xF00FFFFF na 0x00000000-0x000FFFFF
-    Page_Directory_Kernel[PT_Entry(0xF0000000)] = 0
-            | DL1_Flags::Access_Type_Section_Address
-            | DL1_Flags::Bufferable
-            | DL1_Flags::Cacheable
-            | DL1_Flags::Domain_0
-            | DL1_Flags::Access_Privileged_RW_User_None
-            | DL1_Flags::TEX_001
-            | DL1_Flags::Shareable;
+    // mapujeme 0xF0000000-0xF0FFFFFF na 0x00000000-0x00FFFFFF
+    for (addr = 0xF0000000; addr < 0xF1000000; addr += PT_Region_Size)
+    {
+        Page_Directory_Kernel[PT_Entry(addr)] = (addr - 0xF0000000)
+                | DL1_Flags::Access_Type_Section_Address
+                | DL1_Flags::Bufferable
+                | DL1_Flags::Cacheable
+                | DL1_Flags::Domain_0
+                | DL1_Flags::Access_Privileged_RW_User_None
+                | DL1_Flags::TEX_001
+                | DL1_Flags::Shareable;
+    }
 
-    // mapujeme 0xC0000000-0xC00FFFFF na 0x00000000-0x000FFFFF
-    Page_Directory_Kernel[PT_Entry(0xC0000000)] = 0
-            | DL1_Flags::Access_Type_Section_Address
-            | DL1_Flags::Cacheable
-            | DL1_Flags::Domain_0
-            | DL1_Flags::Execute_Never
-            | DL1_Flags::Access_Privileged_RW_User_None
-            | DL1_Flags::TEX_000
-            | DL1_Flags::Shareable;
+    // mapujeme 0xC0000000-0xCFFFFFFF na 0x00000000-0x0FFFFFFF (abychom meli z kernelu pristup do veskere fyzicke pameti "jako k datum")
+    for (addr = 0xC0000000; addr < 0xD0000000; addr += PT_Region_Size)
+    {
+        Page_Directory_Kernel[PT_Entry(addr)] = (addr - 0xC0000000)
+                | DL1_Flags::Access_Type_Section_Address
+                | DL1_Flags::Cacheable
+                | DL1_Flags::Domain_0
+                | DL1_Flags::Execute_Never
+                | DL1_Flags::Access_Privileged_RW_User_None
+                | DL1_Flags::TEX_000
+                | DL1_Flags::Shareable;
+    }
 
     // systemove zasobniky (0xFFFF3000 - 0xFFFF8000), exception vektory (0xFFFF0000 - 0xFFFF001C)
     Page_Directory_Kernel[PT_Entry(0xFFF00000)] = 0
@@ -127,10 +133,10 @@ extern "C" void __attribute__((section(".initsys"))) __attribute__((noreturn)) _
         | MMUCR_Flags::Branch_Prediction_Enable
         | MMUCR_Flags::Instruction_Cache_Enable
         | MMUCR_Flags::High_Exception_Vectors
+        | MMUCR_Flags::Unaligned_Memory_Access_Enable // toto se muze negativne podepsat na vykonu
         | MMUCR_Flags::Disable_Subpage_AP;
 
     asm volatile ("mcr p15,0,%0,c1,c0,0" :: "r" (mmucr) : "memory");
-
 
 
     /*

@@ -36,7 +36,7 @@ class CProcess_Manager
         CProcess_Manager();
 
         // vytvori proces, ktery bude vykonavat zadanou funkci, vraci jeho PID; volitelne muze jit o systemovy proces
-        uint32_t Create_Process(unsigned long funcptr, bool is_system);
+        uint32_t Create_Process(unsigned char* elf_file_data, unsigned int elf_file_length, bool is_system);
 
         // metoda, kterou se explicitne spusti planovac - muze byt volana z IRQ handleru casovace, nebo treba i ze SW preruseni (kdyz se proces zablokuje)
         void Schedule();

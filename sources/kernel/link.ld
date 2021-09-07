@@ -6,9 +6,9 @@ MEMORY
     initsys_base : ORIGIN = 0x8000, LENGTH = 0x10000
 
 	/* virtualni adresa (a oblast) kerneloveho kodu a read-only dat (rx) */
-	kernel : ORIGIN = 0xF0000000, LENGTH = 0x20000
+	kernel : ORIGIN = 0xF0000000, LENGTH = 0x100000
 	/* virtualni adresa (a oblast) kernelovych dat (rw) */
-	kerneldata : ORIGIN = 0xC0000000, LENGTH = 0x20000
+	kerneldata : ORIGIN = 0xC0000000, LENGTH = 0x100000
 }
 
 SECTIONS

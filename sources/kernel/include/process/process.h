@@ -22,6 +22,7 @@ struct TCPU_Context
     unsigned long lr;
     unsigned long sp;
     unsigned long pc;
+    unsigned long ttbr0;
 };
 
 #pragma pack(pop)

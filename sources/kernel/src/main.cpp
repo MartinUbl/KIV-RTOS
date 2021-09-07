@@ -22,42 +22,25 @@ extern "C" void Timer_Callback()
 	sProcessMgr.Schedule();
 }
 
-// "main" procesu 1
-extern void Process_1();
-// "main" procesu 2
-extern void Process_2();
-
-// kernelovy "idle task" - ten se bude planovat, kdyz zrovna nic jineho nebude
-void idle_loop()
-{
-	// tady budeme mozna v budoucnu chtit resit treba uspavani, aby nas system nezral vic elektricke energie, nez je treba
-
-    while (1)
-		;
-}
+extern "C" unsigned char __idle_process[];
+extern "C" unsigned char __proc_test_1[];
+extern "C" unsigned char __proc_test_2[];
+extern "C" unsigned int __idle_process_len;
+extern "C" unsigned int __proc_test_1_len;
+extern "C" unsigned int __proc_test_2_len;
 
 extern "C" int _kernel_main(void)
 {
-	// debug output, kdyz budeme neco ladit; jinak vyzadujeme, aby si proces UART otevrel a spravoval
-	/*
-	sUART0.Open();
-	sUART0.Set_Baud_Rate(NUART_Baud_Rate::BR_115200);
-	sUART0.Set_Char_Length(NUART_Char_Length::Char_8);
-
-	sUART0.Write("Welcome to KIV/OS RPiOS kernel\r\n");
-	//sUART0.Close();
-	*/
-
 	// inicializace souboroveho systemu
 	sFilesystem.Initialize();
 
 	// vytvoreni hlavniho systemoveho (idle) procesu
-	sProcessMgr.Create_Process(reinterpret_cast<unsigned long>(&idle_loop), true);
+	sProcessMgr.Create_Process(__idle_process, __idle_process_len, true);
 
 	// vytvoreni jednoho testovaciho procesu
-	//sProcessMgr.Create_Process(reinterpret_cast<unsigned long>(&Process_1), false);
+	sProcessMgr.Create_Process(__proc_test_1, __proc_test_1_len, false);
 	// vytvoreni druheho testovaciho procesu
-	//sProcessMgr.Create_Process(reinterpret_cast<unsigned long>(&Process_2), false);
+	sProcessMgr.Create_Process(__proc_test_2, __proc_test_2_len, false);
 
 	// zatim zakazeme IRQ casovace
 	sInterruptCtl.Disable_Basic_IRQ(hal::IRQ_Basic_Source::Timer);
@@ -70,8 +53,6 @@ extern "C" int _kernel_main(void)
 
 	// povolime IRQ a od tohoto momentu je vse v rukou planovace
 	enable_irq();
-
-	sProcessMgr.Schedule();
 
 	// tohle uz se mockrat nespusti - dalsi IRQ preplanuje procesor na nejaky z tasku (bud systemovy nebo uzivatelsky)
 	while (true)

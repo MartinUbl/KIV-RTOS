@@ -3,9 +3,6 @@
 #include <hal/intdef.h>
 #include "memmap.h"
 
-// page manager pro ted jeste operuje s fyzickymi adresami, do budoucna, az prejdeme na praci s MMU, bude umet navic i
-// operace s virtualnimi adresami a mapovani do adresnich prostoru uziv. procesu a jadra
-
 class CPage_Manager
 {
     private:
@@ -16,9 +13,9 @@ class CPage_Manager
     public:
         CPage_Manager();
 
-        // alokuje novou stranku, vraci fyzickou adresu pridelene stranky (pro ted)
+        // alokuje novou stranku, vraci virtualni adresu pridelene stranky v adresnim prostoru kernelu
         uint32_t Alloc_Page();
-        // dealokuje stranku s danou fyzickou adresou (pro ted)
+        // dealokuje stranku s danou virtualni adresou (adr. prostor kernelu)
         void Free_Page(uint32_t fa);
 };
 
