@@ -35,9 +35,14 @@ undefined_instruction_handler:
 
 .global _internal_software_interrupt_handler
 software_interrupt_handler:
-	stmfd sp!,{r2-r12,lr}		;@ ulozime na zasobnik stav
+	mov r12, lr					;@ pouzijeme scratch registr pro ulozeni LR (nemeni se pri prechodu do jineho rezimu)
 
-	;@ tady budeme mozna chtit prepinat do SYS rezimu v budoucnu
+	srsdb #CPSR_MODE_SYS!		;@ ekvivalent k push lr a push spsr --> uklada do zasobniku specifikovaneho rezimu!
+	cpsid if, #CPSR_MODE_SYS	;@ prechod do supervisor modu + zakazeme preruseni
+	push {r3-r12}				;@ ulozime registry (pro ted proste vsechny krome tech, ktere nebudeme vracet)
+	push {lr}
+
+	mov lr, r12					;@ nahrajeme si zpet LR registr, abychom pomoci nej mohli vycist instrukci, ktera vyvolala supervisor call
 
 	ldr r3,[lr,#-4]				;@ do registru r3 nacteme instrukci, ktera vyvolala preruseni (lr = navratova adresa, -4 proto, ze ukazuje na nasledujici instrukci)
     bic r3,r3,#0xff000000		;@ vymaskujeme parametr (dolnich 24 bitu) a nechame ho v r3
@@ -46,7 +51,9 @@ software_interrupt_handler:
 	ldr r0, [r2, #0]			;@ nacteme navratove hodnoty do registru
 	ldr r1, [r2, #4]
 
-	ldmfd sp!, {r2-r12,pc}^		;@ obnovime ze zasobniku stav (jen puvodni lr nacteme do pc)
+	pop {lr}
+	pop {r3-r12}		    	;@ obnovime registry
+	rfeia sp!					;@ vracime se do puvodniho stavu (ktery ulozila instrukce srsdb, takze vlastne delame pop cpsr, pop lr)
 
 
 .global _internal_irq_handler

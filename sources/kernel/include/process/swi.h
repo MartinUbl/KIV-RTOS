@@ -33,6 +33,16 @@ enum class NSWI_Process_Service
     // IN:  -
     // OUT: r0 = PID procesu
     Get_PID         = 0,
+
+    // Ukonci proces - prevede do stavu zombie a jiz ho nebude planovat
+    // IN:  r0 = navratovy/exit kod procesu
+    // OUT: -
+    Terminate       = 1,
+
+    // Preda zbytek prideleneho casoveho kvanta jinemu tasku
+    // IN:  -
+    // OUT: -
+    Yield           = 2,
 };
 
 enum class NSWI_Filesystem_Service

@@ -12,8 +12,11 @@ This software is developed as a demonstration project for operating systems cour
 - basic time-slicing scheduler
 - drivers (GPIO, UART, AUX, timer, 74HC595 shift register, 7-segment display, I2C, SSD1306 OLED display, TRNG)
 - C++ development support
+- paging support
+- userspace process isolation
 
 ### Planned features
+- ELF loader (now the files are just loaded as-is)
 - real-time process scheduler (EDF)
 - spinlocks
 - semaphores, mutexes, condition variables

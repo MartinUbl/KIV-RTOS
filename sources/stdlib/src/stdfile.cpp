@@ -10,6 +10,12 @@ uint32_t getpid()
     return pid;
 }
 
+void terminate(int exitcode)
+{
+    asm volatile("mov r0, %0" : : "r" (exitcode));
+    asm volatile("swi 1");
+}
+
 uint32_t open(const char* filename, NFile_Open_Mode mode)
 {
     uint32_t file;

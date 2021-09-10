@@ -32,6 +32,16 @@ process_bootstrap_common:
 	push {r1}					;@ pak LR
 	rfeia sp!					;@ naraz ze zasobniku prebere CPSR a LR --> tim docilime zmeny rezimu a skok do uzivatelskeho programu
 
+	;@ sem by se uz provadeni programu dostat nemelo, ale ...
+	;@ kdyby CRT0 nevolalo terminate syscall, tak by mohlo
+	;@   - user procesy by tady vyvolaly prefetch abort vyjimku (nemaji prava vykonavat kod)
+	;@   - system procesy by ale mohly vesele pokracovat dal, proto si tady umele zavolame terminate
+	mov r0, #1
+	svc #1
+	;@ no a kdyby v kodu planovace byla chyba, tak jeste projistotu zacyklime program
+bootstrap_hang:
+	b bootstrap_hang
+
 .global context_switch
 ;@ Prepnuti procesu ze soucasneho na jiny, ktery jiz byl planovany
 ;@ r0 - novy proces
@@ -43,7 +53,6 @@ context_switch:
 	push {r0-r12}           ;@ push registru
 	str sp, [r1, #4]        ;@ ulozit SP stareho procesu
 
-	ldr sp, [r0, #4]        ;@ nacist SP noveho procesu
 	ldr r12, [r0, #12]		;@ nacist TTBR0 (tabulka stranek a priznaky) do r12
 	mcr p15, 0, r12, c2, c0, 0	;@ nacist novy obsah TTBR0
 
@@ -51,6 +60,8 @@ context_switch:
 	mcr p15, 0, r1, c7, c10, 4
 	mcr p15, 0, r1, c8, c7, 0
 	mcr p15, 0, r1, c7, c7, 0
+
+	ldr sp, [r0, #4]        ;@ nacist SP noveho procesu
 
 	pop {r0-r12}            ;@ obnovit registry noveho procesu
 	msr cpsr_c, r12         ;@ obnovit CPU state
@@ -67,16 +78,17 @@ context_switch_first:
 	push {r13}              ;@ push SP
 	push {r0-r12}           ;@ push registru
 	str sp, [r1, #4]        ;@ ulozit SP stareho procesu
-	ldr sp, [r0, #4]        ;@ nacteme stack pointer procesu
-    ldr r3, [r0, #0]        ;@ "budouci" PC do r3 (entry point procesu)
-    ldr r2, [r0, #8]        ;@ "vstupni" PC do r2 (bootstrap procesu v kernelu)
-	ldr r12, [r0, #12]		;@ nacist TTBR0 (tabulka stranek a priznaky) do r12
-	mcr p15, 0, r12, c2, c0, 0	;@ nacist novy obsah TTBR0
 
+	ldr r12, [r0, #12]			;@ nacist TTBR0 (tabulka stranek a priznaky) do r12
+	mcr p15, 0, r12, c2, c0, 0	;@ nacist novy obsah TTBR0
 	mov r1, #0					;@ data barrier, vymazat cache a TLB
 	mcr p15, 0, r1, c7, c10, 4
 	mcr p15, 0, r1, c8, c7, 0
 	mcr p15, 0, r1, c7, c7, 0
+
+	ldr sp, [r0, #4]        ;@ nacteme stack pointer procesu
+    ldr r3, [r0, #0]        ;@ "budouci" PC do r3 (entry point procesu)
+    ldr r2, [r0, #8]        ;@ "vstupni" PC do r2 (bootstrap procesu v kernelu)
 
     push {r3}               ;@ budouci navratova adresa -> do zasobniku, bootstrap si ji tamodsud vyzvedne
     push {r2}               ;@ pushneme si i bootstrap adresu, abychom ji mohli obnovit do PC

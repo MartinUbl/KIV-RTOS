@@ -99,13 +99,13 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
 
 void CProcess_Manager::Schedule()
 {
-    // je nejaky proces naplanovany?
-    if (mCurrent_Task_Node)
+    // je nejaky proces naplanovany? pokud je ve stavu running, budeme snizovat citac, pokud ne, musime okamzite preplanovat
+    if (mCurrent_Task_Node && mCurrent_Task_Node->task->state == NTask_State::Running)
     {
         // snizime citac planovace
         mCurrent_Task_Node->task->sched_counter--;
         // pokud je citac vetsi nez 0, zatim nebudeme preplanovavat (a zaroven je proces stale ve stavu Running - nezablokoval se nad necim)
-        if (mCurrent_Task_Node->task->sched_counter > 0 && mCurrent_Task_Node->task->state == NTask_State::Running)
+        if (mCurrent_Task_Node->task->sched_counter > 0)
             return;
     }
 
@@ -128,6 +128,9 @@ void CProcess_Manager::Schedule()
         else
             next = next->next;
     }
+
+    // tady bychom jeste meli osetrit nejakou hranicni situaci, kdy by nebylo co naplanovat - to se sice nesmi stat a byla by to chyba programatora kernelu,
+    // ale kdyby k tomu doslo, obtizne by se to diagnostikovalo
 
     // stavajici proces je jediny planovatelny - nemusime nic preplanovavat
     if (next == mCurrent_Task_Node)
@@ -211,6 +214,15 @@ void CProcess_Manager::Handle_Process_SWI(NSWI_Process_Service svc_idx, uint32_t
     {
         case NSWI_Process_Service::Get_PID:
             target.r0 = mCurrent_Task_Node->task->pid;
+            break;
+        case NSWI_Process_Service::Terminate:
+            mCurrent_Task_Node->task->sched_counter = 1;
+            mCurrent_Task_Node->task->state = NTask_State::Zombie;
+            mCurrent_Task_Node->task->exit_code = r0;
+            Schedule();
+            break;
+        case NSWI_Process_Service::Yield:
+            Schedule();
             break;
     }
 }

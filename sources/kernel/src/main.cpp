@@ -54,6 +54,8 @@ extern "C" int _kernel_main(void)
 	// povolime IRQ a od tohoto momentu je vse v rukou planovace
 	enable_irq();
 
+	sProcessMgr.Schedule();
+
 	// tohle uz se mockrat nespusti - dalsi IRQ preplanuje procesor na nejaky z tasku (bud systemovy nebo uzivatelsky)
 	while (true)
 		;
