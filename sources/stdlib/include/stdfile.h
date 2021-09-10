@@ -6,6 +6,7 @@
 
 uint32_t getpid();
 void terminate(int exitcode);
+void sched_yield();
 
 uint32_t open(const char* filename, NFile_Open_Mode mode);
 uint32_t read(uint32_t file, char* const buffer, uint32_t size);

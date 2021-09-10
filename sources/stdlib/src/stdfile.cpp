@@ -16,6 +16,11 @@ void terminate(int exitcode)
     asm volatile("swi 1");
 }
 
+void sched_yield()
+{
+    asm volatile("swi 2");
+}
+
 uint32_t open(const char* filename, NFile_Open_Mode mode)
 {
     uint32_t file;
