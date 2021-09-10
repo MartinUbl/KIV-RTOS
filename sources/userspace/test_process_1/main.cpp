@@ -43,7 +43,13 @@ int main(int argc, char** argv)
 			else if (lcd_state == 1)
 				disp.Put_String(10, 10, "in KIV-RTOS");
 			else if (lcd_state == 2)
+            {
 				disp.Put_String(10, 10, "Hello world!");
+
+                // toto nutne vyvola data abort (pokus o cteni/zapis pameti, na kterou nemame prava dle tabulky stranek):
+                //volatile int* sr = (int*)(0xC0001000);
+                //*sr = 15;
+            }
 
 			disp.Flip();
 

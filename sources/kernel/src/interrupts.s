@@ -30,15 +30,12 @@ enable_irq:
 
     bx lr
 
-undefined_instruction_handler:
-	b hang
-
 .global _internal_software_interrupt_handler
 software_interrupt_handler:
 	mov r12, lr					;@ pouzijeme scratch registr pro ulozeni LR (nemeni se pri prechodu do jineho rezimu)
 
 	srsdb #CPSR_MODE_SYS!		;@ ekvivalent k push lr a push spsr --> uklada do zasobniku specifikovaneho rezimu!
-	cpsid if, #CPSR_MODE_SYS	;@ prechod do supervisor modu + zakazeme preruseni
+	cpsid if, #CPSR_MODE_SYS	;@ prechod do SYS modu + zakazeme preruseni
 	push {r3-r12}				;@ ulozime registry (pro ted proste vsechny krome tech, ktere nebudeme vracet)
 	push {lr}
 
@@ -76,13 +73,33 @@ irq_handler:
 	pop {r0-r12}		    	;@ obnovime registry
 	rfeia sp!					;@ vracime se do puvodniho stavu (ktery ulozila instrukce srsdb, takze vlastne delame pop cpsr, pop lr)
 
+.global generic_abort_handler
+
+;@ momentalne se budeme ke vsem abortum chovat stejne - nejspis maji jedinou pricinu, kterou je pristup do pameti, ktera neni namapovana
+;@ v tabulce stranek, nebo je, ale proces na ni nema prava
+
+;@ prefetch a data abort by v systemu se swapem nejprve overil, zda neni stranka jen odlozena na disk (a pripadne ji nahral a vratil se
+;@ korektne zpet); my swap ale nemame a asi ani mit nebudeme, a tak proste jen ukoncime proces, protoze nejspis dela neplechu
+
+undefined_instruction_handler:
+	b generic_abort_handler
+
 prefetch_abort_handler:
-	;@ tady pak muzeme osetrit, kdyz program zasahne do mista, ktere nema mapovane ve svem virtualnim adr. prostoru
-	;@ a treba vyvolat nasi obdobu segfaultu
-	b hang
+	b generic_abort_handler
 
 data_abort_handler:
-	;@ tady pak muzeme osetrit, kdyz program zasahne do mista, ktere nema mapovane ve svem virtualnim adr. prostoru
-	;@ a treba vyvolat nasi obdobu segfaultu
+	b generic_abort_handler
+
+generic_abort_handler:
+	;@ Pozn.: tyto instrukce jsou stejne, jako v handleru IRQ a supervisor callu; hodily by se v pripade, ze bychom meli swap a chteli se
+	;@        z abortu jeste vratit. Swap ale nemame, a tak proste jen zavolame terminate a task ukoncime
+	;@srsdb #CPSR_MODE_SYS!
+	;@cpsid if, #CPSR_MODE_SYS
+	;@push {r0-r12}
+	;@push {lr}
+
+	mov r0, #64			;@ nejaky navratovy kod, abychom mohli treba ladit
+	svc #1
+
 	b hang
 
