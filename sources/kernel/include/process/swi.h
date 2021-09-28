@@ -76,6 +76,11 @@ enum class NSWI_Filesystem_Service
     // IN:  r0 = identifikator operace (NMutex_Operation), r1 a r2 specificke pro operaci
     // OUT: r0 = specificke pro operaci
     Mutex           = 5,
+
+    // Cekani na udalost nad souborem (nejaky zapis, notifikace, ...)
+    // IN:  r0 = handle otevreneho souboru
+    // OUT: r0 = indikator uspechu (NSWI_Result_Code)
+    Wait            = 6,
 };
 
 // mozne IOCtl operace nad souborem
@@ -83,6 +88,8 @@ enum class NIOCtl_Operation
 {
     Get_Params      = 0,        // zjisti parametry (nakopiruje do poskytnute prepravky)
     Set_Params      = 1,        // nastavi parametry (z poskytnute prepravky)
+    Enable_Event_Detection  = 2,    // povoli detekci udalosti (specifikovanych v r2)
+    Disable_Event_Detection = 3,    // zakaze detekci udalosti (specifikovanych v r2)
 };
 
 // mozne operace nad mutexem

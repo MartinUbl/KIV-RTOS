@@ -2,6 +2,7 @@
 #include <hal/peripherals.h>
 
 #include <interrupt_controller.h>
+#include <drivers/gpio.h>
 #include <drivers/timer.h>
 #include <process/process_manager.h>
 #include <process/swi.h>
@@ -42,6 +43,9 @@ extern "C" void _internal_irq_handler()
 {
     // jelikoz ARM nerozlisuje zdroje IRQ implicitne, ani nezarucuje, ze se navzajen nemaskuji, musime
     // projit vsechny mozne zdroje a podivat se (poll), zda nebylo vyvolano preruseni
+
+    // GPIO (samo si overi, zda k nejakemu doslo)
+    sGPIO.Handle_IRQ();
 
     // casovac
     if (sTimer.Is_Timer_IRQ_Pending())

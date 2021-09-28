@@ -3,6 +3,8 @@
 #include <hal/intdef.h>
 #include <hal/peripherals.h>
 
+constexpr uint32_t Invalid_Pin = static_cast<uint32_t>(-1);
+
 // funkce GPIO pinu
 enum class NGPIO_Function : unsigned int
 {
@@ -21,6 +23,15 @@ enum class NGPIO_Function : unsigned int
 	Unspecified = 0b1000, // 1000 - deska takove nezna, je to jen pro nas
 };
 
+// zdroj preruseni
+enum class NGPIO_Interrupt_Type
+{
+	Rising_Edge,	// vzestupna hrana signalu
+	Falling_Edge,	// sestupna hrana signalu
+	High,			// vysoka uroven napeti
+	Low,			// nizka uroven napeti
+};
+
 /*
  * Trida obstaravajici komunikaci s GPIO piny
  */
@@ -34,6 +45,16 @@ class CGPIO_Handler
 		uint32_t mPin_Reservations_Read[1 + (hal::GPIO_Pin_Count / 32)];
 		// rezervace pinu pro zapis
 		uint32_t mPin_Reservations_Write[1 + (hal::GPIO_Pin_Count / 32)];
+
+		struct TWaiting_Process
+		{
+			uint32_t pid;
+			uint32_t pin_idx;
+			TWaiting_Process* prev;
+			TWaiting_Process* next;
+		};
+
+		TWaiting_Process* mWaiting_Processes;
 		
 	protected:
 		// vybira GPFSEL registr a pozici bitu pro dany pin
@@ -44,6 +65,16 @@ class CGPIO_Handler
 		bool Get_GPSET_Location(uint32_t pin, uint32_t& reg, uint32_t& bit_idx) const;
 		// vybira GPLEV registr a pozici bitu pro dany pin
 		bool Get_GPLEV_Location(uint32_t pin, uint32_t& reg, uint32_t& bit_idx) const;
+		// vybira GPEDS registr a pozici bitu pro dany pin
+		bool Get_GPEDS_Location(uint32_t pin, uint32_t& reg, uint32_t& bit_idx) const;
+		// vybira registr pro nastaveni/vymazani priznaku pro vyvolani preruseni
+		bool Get_GP_IRQ_Detect_Location(uint32_t pin, NGPIO_Interrupt_Type type, uint32_t& reg, uint32_t& bit_idx) const;
+
+		// vraci pin, na kterem byla detekovana udalost - nic nemaze, vnejsi kod musi volat Clear. Pokud uz neni zadny
+		// pin s detekovanou udalosti, vraci hodnotu Invalid_Pin
+		uint32_t Get_Detected_Event_Pin() const;
+		// vymaze priznak z event detect registru pro dany pin
+		void Clear_Detected_Event(uint32_t pin);
 	
 	public:
 		CGPIO_Handler(unsigned int gpio_base_addr);
@@ -63,6 +94,17 @@ class CGPIO_Handler
 		bool Reserve_Pin(uint32_t pin, bool read, bool write);
 		// zrusi rezervaci na pin
 		bool Free_Pin(uint32_t pin, bool read, bool write);
+
+		// povoli detekci udalosti na danem pinu - nekontroluje, zda je pin v nejakem stavu (napr. zda je vstupni)
+		void Enable_Event_Detect(uint32_t pin, NGPIO_Interrupt_Type type);
+		// zakaze detekci udalosti na danem pinu - nekontroluje, zda je pin v nejakem stavu (napr. zda je vstupni)
+		void Disable_Event_Detect(uint32_t pin, NGPIO_Interrupt_Type type);
+
+		// handluje IRQ (pokud vubec k nejakemu doslo)
+		void Handle_IRQ();
+
+		// pocka na udalost (zablokuje proces)
+		void Wait_For_Event(uint32_t pin);
 };
 
 // globalni instance pro hlavni GPIO port

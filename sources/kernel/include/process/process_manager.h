@@ -47,6 +47,11 @@ class CProcess_Manager
         // vrati strukturu procesu se zadanym PID, nebo nullptr, pokud proces neexistuje
         TTask_Struct* Get_Process_By_PID(uint32_t pid) const;
 
+        // blokuje soucasny proces (zatim v generickem stavu "Blocked"), preplanuje na jiny proces
+        void Block_Current_Process();
+        // notifikuje blokovany proces (napr. spici nad mutexem, souborem, ...)
+        bool Notify_Process(uint32_t pid);
+
         // namapuje otevreny soubor na handle
         uint32_t Map_File_To_Current(IFile* file);
 

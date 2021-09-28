@@ -55,6 +55,8 @@ class IFile
         virtual bool Close() { return true; };
         // zmeni nastaveni/ziska nastaveni souvisejici s danym souborem; ctlptr je vzdy specificka prepravka pro typ souboru
         virtual bool IOCtl(NIOCtl_Operation dir, void* ctlptr) { return false; };
+        // vycka na udalost nad timto souborem (specificke pro danou implementaci)
+        virtual bool Wait() { return true; };
 
         // zjisti typ souboru
         NFile_Type_Major Get_File_Type() const { return mType; };

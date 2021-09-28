@@ -47,6 +47,27 @@ TTask_Struct* CProcess_Manager::Get_Process_By_PID(uint32_t pid) const
     return nullptr;
 }
 
+void CProcess_Manager::Block_Current_Process()
+{
+    TTask_Struct* cur = Get_Current_Process();
+
+    cur->state = NTask_State::Blocked;
+
+    Schedule();
+}
+
+bool CProcess_Manager::Notify_Process(uint32_t pid)
+{
+    TTask_Struct* task = Get_Process_By_PID(pid);
+    if (!task || task->state != NTask_State::Blocked)
+        return false;
+
+    // ve slozitejsich planovacich by tady mohl byt treba i presun do jine fronty procesu, apod.
+    task->state = NTask_State::Runnable;
+
+    return true;
+}
+
 uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned int elf_file_length, bool is_system)
 {
     CProcess_List_Node* procnode = sKernelMem.Alloc<CProcess_List_Node>();
@@ -376,6 +397,14 @@ void CProcess_Manager::Handle_Filesystem_SWI(NSWI_Filesystem_Service svc_idx, ui
                     break;
                 }
             }
+            break;
+        }
+        case NSWI_Filesystem_Service::Wait:
+        {
+            if (r0 > Max_Process_Opened_Files || !mCurrent_Task_Node->task->opened_files[r0])
+                return;
+
+            target.r0 = mCurrent_Task_Node->task->opened_files[r0]->Wait();
             break;
         }
     }

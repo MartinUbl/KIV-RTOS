@@ -3,6 +3,7 @@
 #include <stdmutex.h>
 
 #include <drivers/bridges/uart_defs.h>
+#include <drivers/gpio.h>
 
 int main(int argc, char** argv)
 {
@@ -37,8 +38,14 @@ int main(int argc, char** argv)
 
 	mutex_t mtx = mutex_create("test_mtx");
 
+	uint32_t btnfile = open("DEV:gpio/16", NFile_Open_Mode::Read_Only);
+	NGPIO_Interrupt_Type irtype = NGPIO_Interrupt_Type::Rising_Edge;
+	ioctl(btnfile, NIOCtl_Operation::Enable_Event_Detection, &irtype);
+
 	while (true)
 	{
+		wait(btnfile);
+
 		write(f, msg, strlen(msg));
 
 		for (i = 0; i < 0x20000; i++)

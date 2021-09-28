@@ -66,10 +66,27 @@ class CGPIO_File : public IFile
             return true;
         }
 
-        virtual bool IOCtl(NIOCtl_Operation dir, void* ctlptr) override
+        virtual bool IOCtl(NIOCtl_Operation op, void* ctlptr) override
         {
-            // GPIO (zatim?) neumime nijak nastavovat
+            NGPIO_Interrupt_Type evtype = *reinterpret_cast<NGPIO_Interrupt_Type*>(ctlptr);
+
+            switch (op)
+            {
+                case NIOCtl_Operation::Enable_Event_Detection:
+                    sGPIO.Enable_Event_Detect(mPinNo, evtype);
+                    return true;
+                case NIOCtl_Operation::Disable_Event_Detection:
+                    sGPIO.Disable_Event_Detect(mPinNo, evtype);
+                    return true;
+            }
+
             return false;
+        }
+
+        virtual bool Wait() override
+        {
+            sGPIO.Wait_For_Event(mPinNo);
+            return true;
         }
 };
 

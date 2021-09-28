@@ -1,15 +1,21 @@
 #include <hal/peripherals.h>
 #include <drivers/gpio.h>
+#include <process/process_manager.h>
+#include <interrupt_controller.h>
 
 #include <stdstring.h>
 
 CGPIO_Handler sGPIO(hal::GPIO_Base);
 
 CGPIO_Handler::CGPIO_Handler(unsigned int gpio_base_addr)
-	: mGPIO(reinterpret_cast<unsigned int*>(gpio_base_addr))
+	: mGPIO(reinterpret_cast<unsigned int*>(gpio_base_addr)), mWaiting_Processes(nullptr)
 {
 	bzero(&mPin_Reservations_Read, sizeof(mPin_Reservations_Read));
 	bzero(&mPin_Reservations_Write, sizeof(mPin_Reservations_Write));
+
+	// projistotu promazeme detekovane udalosti
+	mGPIO[static_cast<uint32_t>(hal::GPIO_Reg::GPEDS0)] = 0;
+	mGPIO[static_cast<uint32_t>(hal::GPIO_Reg::GPEDS1)] = 0;
 }
 
 bool CGPIO_Handler::Get_GPFSEL_Location(uint32_t pin, uint32_t& reg, uint32_t& bit_idx) const
@@ -63,6 +69,45 @@ bool CGPIO_Handler::Get_GPLEV_Location(uint32_t pin, uint32_t& reg, uint32_t& bi
 	reg = static_cast<uint32_t>((pin < 32) ? hal::GPIO_Reg::GPLEV0 : hal::GPIO_Reg::GPLEV1);
 	bit_idx = pin % 32;
 	
+	return true;
+}
+
+bool CGPIO_Handler::Get_GPEDS_Location(uint32_t pin, uint32_t& reg, uint32_t& bit_idx) const
+{
+	if (pin > hal::GPIO_Pin_Count)
+		return false;
+	
+	reg = static_cast<uint32_t>((pin < 32) ? hal::GPIO_Reg::GPEDS0 : hal::GPIO_Reg::GPEDS1);
+	bit_idx = pin % 32;
+	
+	return true;
+}
+
+bool CGPIO_Handler::Get_GP_IRQ_Detect_Location(uint32_t pin, NGPIO_Interrupt_Type type, uint32_t& reg, uint32_t& bit_idx) const
+{
+	if (pin > hal::GPIO_Pin_Count)
+		return false;
+
+	bit_idx = pin % 32;
+
+	switch (type)
+	{
+		case NGPIO_Interrupt_Type::Rising_Edge:
+			reg = static_cast<uint32_t>((pin < 32) ? hal::GPIO_Reg::GPREN0 : hal::GPIO_Reg::GPREN1);
+			break;
+		case NGPIO_Interrupt_Type::Falling_Edge:
+			reg = static_cast<uint32_t>((pin < 32) ? hal::GPIO_Reg::GPFEN0 : hal::GPIO_Reg::GPFEN1);
+			break;
+		case NGPIO_Interrupt_Type::High:
+			reg = static_cast<uint32_t>((pin < 32) ? hal::GPIO_Reg::GPHEN0 : hal::GPIO_Reg::GPHEN1);
+			break;
+		case NGPIO_Interrupt_Type::Low:
+			reg = static_cast<uint32_t>((pin < 32) ? hal::GPIO_Reg::GPLEN0 : hal::GPIO_Reg::GPLEN1);
+			break;
+		default:
+			return false;
+	}
+
 	return true;
 }
 		
@@ -148,4 +193,125 @@ bool CGPIO_Handler::Free_Pin(uint32_t pin, bool read, bool write)
 		mPin_Reservations_Write[bank_idx] &= ~(1ULL << bit_idx);
 
 	return true;
+}
+
+void CGPIO_Handler::Enable_Event_Detect(uint32_t pin, NGPIO_Interrupt_Type type)
+{
+	uint32_t reg, bit;
+	if (!Get_GP_IRQ_Detect_Location(pin, type, reg, bit))
+		return;
+
+	mGPIO[reg] = (1 << bit);
+
+	// TODO: vyresit tohle trochu lepe
+	sInterruptCtl.Enable_IRQ(hal::IRQ_Source::GPIO_0);
+	sInterruptCtl.Enable_IRQ(hal::IRQ_Source::GPIO_1);
+	sInterruptCtl.Enable_IRQ(hal::IRQ_Source::GPIO_2);
+	sInterruptCtl.Enable_IRQ(hal::IRQ_Source::GPIO_3);
+}
+
+void CGPIO_Handler::Disable_Event_Detect(uint32_t pin, NGPIO_Interrupt_Type type)
+{
+	uint32_t reg, bit;
+	if (!Get_GP_IRQ_Detect_Location(pin, type, reg, bit))
+		return;
+
+	uint32_t val = mGPIO[reg];
+	val &= ~(1 << bit);
+	mGPIO[reg] = val;
+}
+
+uint32_t CGPIO_Handler::Get_Detected_Event_Pin() const
+{
+	uint32_t reg, bit;
+	for (uint32_t i = 0; i < hal::GPIO_Pin_Count; i++)
+	{
+		if (!Get_GPEDS_Location(i, reg, bit))
+			return Invalid_Pin;
+
+		if ((mGPIO[reg] >> bit) & 0x1)
+			return i;
+	}
+
+	return Invalid_Pin;
+}
+
+void CGPIO_Handler::Clear_Detected_Event(uint32_t pin)
+{
+	uint32_t reg, bit;
+	if (!Get_GPEDS_Location(pin, reg, bit))
+		return;
+
+	// BCM2835 manual: "The bit is cleared by writing a '1' to the relevant bit."
+	mGPIO[reg] = 1 << bit;
+}
+
+void CGPIO_Handler::Wait_For_Event(uint32_t pin)
+{
+	TWaiting_Process* proc = new TWaiting_Process;
+	proc->pid = sProcessMgr.Get_Current_Process()->pid;
+	proc->pin_idx = pin;
+	proc->prev = nullptr;
+	proc->next = mWaiting_Processes;
+
+	mWaiting_Processes = proc;
+
+	// zablokujeme, probudi nas az notify z handleru nize
+	sProcessMgr.Block_Current_Process();
+}
+
+void CGPIO_Handler::Handle_IRQ()
+{
+	TWaiting_Process* proc, *tmpproc;
+
+	// NOTE: kdybychom meli mala casova kvanta a timer by tikal velice casto, tak by se na nasledujici kus kodu
+	//       spotrebovalo obrovske mnozstvi casu zbytecne
+	// lepsi by pak bylo rozdelit kod na bottom a top half, napr. tak, ze:
+	// - bottom half: zde pouze koukat do registru GPEDS0 a 1, a pokud by v nich neco bylo, jejich obsah naORovat do nejakeho bufferu a notifikovat systemovy proces (top half)
+	// - top half: atomicky "vybirat" z bufferu notifikovane piny a probouzet procesy, ktere cekaji
+	// pro ted mejme vetsi casova kvanta, ale na problem bychom narazili hned, jak by vice driveru vyzadovalo svoje obsluhy
+
+	uint32_t reg, bit, pin;
+	// projdeme vsechny piny a podivame se, zda byla detekovana udalost
+	for (pin = 0; pin < hal::GPIO_Pin_Count; pin++)
+	{
+		if (!Get_GPEDS_Location(pin, reg, bit))
+			continue;
+
+		// byla na tomto pinu detekovana udalost?
+		if ((mGPIO[reg] >> bit) & 0x1)
+		{
+			// zkusime najit proces, ktery na udalost na tomto pinu ceka
+			proc = mWaiting_Processes;
+			while (proc != nullptr)
+			{
+				if (proc->pin_idx == pin)
+				{
+					// probudime proces
+					sProcessMgr.Notify_Process(proc->pid);
+
+					// prelinkujeme spojovy seznam atd.
+
+					if (proc->prev)
+						proc->prev->next = proc->next;
+					if (proc->next)
+						proc->next->prev = proc->prev;
+
+					tmpproc = proc;
+
+					if (mWaiting_Processes == proc)
+						mWaiting_Processes = proc->next;
+
+					proc = proc->next;
+
+					delete tmpproc;
+				}
+				else
+					proc = proc->next;
+			}
+
+			// nesmime zapomenout vycistit udalost, jinak by priznak zustal a my "detekovali" udalost stale dokola
+			Clear_Detected_Event(pin);
+		}
+	}
 }

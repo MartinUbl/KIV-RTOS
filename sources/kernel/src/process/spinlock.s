@@ -36,4 +36,3 @@ spinlock_unlock:
     mov r12, #Lock_Unlocked
     str r12, [r0]
     bx lr
-    

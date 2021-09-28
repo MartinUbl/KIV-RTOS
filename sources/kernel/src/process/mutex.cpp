@@ -20,10 +20,6 @@ bool CMutex::Lock()
 
     while (spinlock_try_lock(&mLock_State) == Lock_Locked) // try_lock vraci puvodni hodnotu zamku - pokud vrati "zamceno", zamknout se jiste nepovedlo
     {
-        // zablokujeme proces
-        cur->state = NTask_State::Blocked;
-        // NOTE: tady by mohlo byt vhodne zavest podstav pro blokovany stav nad mutexem
-
         // vlozime ho do fronty cekajicich
         TProcess_Queue_Node* nd = new TProcess_Queue_Node;
         nd->pid = cpid;
@@ -32,8 +28,8 @@ bool CMutex::Lock()
         mWaiting_Processes = nd;
         nd->next->prev = nd;
 
-        // preplanujeme na proces jiny
-        sProcessMgr.Schedule();
+        // NOTE: tady by mohlo byt vhodne zavest podstav pro blokovany stav nad mutexem (a volat pak s parametrem)
+        sProcessMgr.Block_Current_Process();
     }
 
     mHolder_PID = cpid;
@@ -77,9 +73,8 @@ bool CMutex::Unlock()
         if (mWaiting_Processes == nd)
             mWaiting_Processes = nullptr;
 
-        auto* next = sProcessMgr.Get_Process_By_PID(nd->pid);
-        // jiz muzeme proces zase planovat - ma sanci ziskat zamek
-        next->state = NTask_State::Runnable;
+        // nechame proces prejit do stavu "runnable"
+        sProcessMgr.Notify_Process(nd->pid);
 
         // nalinkujeme okolni uzly v seznamu, abychom mohli soucasny smazat
         if (nd->prev)

@@ -77,3 +77,14 @@ uint32_t ioctl(uint32_t file, NIOCtl_Operation operation, void* param)
 
     return retcode;
 }
+
+uint32_t wait(uint32_t file)
+{
+    uint32_t retcode;
+
+    asm volatile("mov r0, %0" : : "r" (file));
+    asm volatile("swi 70");
+    asm volatile("mov %0, r0" : "=r" (retcode));
+
+    return retcode;
+}
