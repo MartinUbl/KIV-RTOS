@@ -14,7 +14,7 @@ class CShift_Register_File : public IFile
 
     public:
         CShift_Register_File()
-            : mOpened(true)
+            : IFile(NFile_Type_Major::Character), mOpened(true)
         {
             //
         }

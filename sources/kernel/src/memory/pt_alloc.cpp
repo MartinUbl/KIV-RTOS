@@ -11,16 +11,19 @@ CPage_Table_Allocator::CPage_Table_Allocator()
 
 uint32_t* CPage_Table_Allocator::Alloc()
 {
+    // alokovat stranku pro tabulky, pokud to jeste nikdo neudelal
     if (!PT_Page)
     {
         PT_Page = reinterpret_cast<uint8_t*>(sPage_Manager.Alloc_Page());
         if (!PT_Page)
             return nullptr;
 
+        // vynulujeme - jeste nic neni alokovano
         for (unsigned int i = 0; i < sizeof(PT_Bitmap); i++)
             PT_Bitmap[i] = 0;
     }
 
+    // najdeme first-fit
     for (unsigned int i = 0; i < sizeof(PT_Bitmap); i++)
     {
         if (PT_Bitmap[i] != 0xFF)

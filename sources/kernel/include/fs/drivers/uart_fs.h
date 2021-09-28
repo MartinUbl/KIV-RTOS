@@ -15,7 +15,7 @@ class CUART_File : public IFile
 
     public:
         CUART_File(int channel)
-            : mChannel(channel)
+            : IFile(NFile_Type_Major::Character), mChannel(channel)
         {
             //
         }

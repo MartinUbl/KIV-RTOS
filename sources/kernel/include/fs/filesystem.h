@@ -11,6 +11,13 @@ constexpr const uint32_t MaxPathLength = 128;
 
 constexpr const uint32_t NoFilesystemDriver = static_cast<uint32_t>(-1);
 
+enum class NFile_Type_Major
+{
+    Unspecified     = 0, // unspecified by implementor
+    Character       = 1, // memory-only character file
+    Mutex           = 2, // mutex virtual file
+};
+
 enum class NFile_Open_Mode
 {
     Read_Only,              // jen pro cteni
@@ -33,7 +40,11 @@ enum class NFile_Open_Mode
 
 class IFile
 {
+    private:
+        const NFile_Type_Major mType;
+
     public:
+        IFile(NFile_Type_Major type) : mType(type) { };
         virtual ~IFile() = default;
 
         // cte ze souboru do bufferu, num je velikost bufferu (maximalni pocet bytu k precteni); vraci skutecne precteny pocet znaku
@@ -44,6 +55,9 @@ class IFile
         virtual bool Close() { return true; };
         // zmeni nastaveni/ziska nastaveni souvisejici s danym souborem; ctlptr je vzdy specificka prepravka pro typ souboru
         virtual bool IOCtl(NIOCtl_Operation dir, void* ctlptr) { return false; };
+
+        // zjisti typ souboru
+        NFile_Type_Major Get_File_Type() const { return mType; };
         
         // TODO: seek, atd...
 };

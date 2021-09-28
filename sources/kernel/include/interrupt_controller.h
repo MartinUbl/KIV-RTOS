@@ -23,6 +23,19 @@ class CInterrupt_Controller
         void Enable_IRQ(hal::IRQ_Source source_idx);
         // zakaze IRQ se zadanym indexem
         void Disable_IRQ(hal::IRQ_Source source_idx);
+
+        // nastavi (globalni) stav maskovani IRQ pro aktualni procesorovy rezim
+        void Set_Mask_IRQ(bool state);
+};
+
+class CIRQ_Mask_Guard
+{
+    private:
+        static unsigned int gMask_Counter;
+
+    public:
+        CIRQ_Mask_Guard();
+        ~CIRQ_Mask_Guard();
 };
 
 extern CInterrupt_Controller sInterruptCtl;

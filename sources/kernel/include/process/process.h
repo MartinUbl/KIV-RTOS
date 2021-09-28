@@ -9,7 +9,7 @@ enum class NTask_State
     New,                // novy - zatim nenaplanovany, neinicializovany, stav na jiny se zmeni jeste behem vytvareni
     Runnable,           // pripraveny k naplanovani (uz mohl v minulosti bezet)
     Running,            // prave naplanovany
-    //Blocked,          // blokovany - genericky stav pro proces, ktery by sice mohl byt naplanovan, ale ceka na nejaky prostredek
+    Blocked,            // blokovany - genericky stav pro proces, ktery by sice mohl byt naplanovan, ale ceka na nejaky prostredek
                         // pro prakticke ucely se stav "Blokovany" deli jeste na podstavy, aby bylo jasne, na jaky prostredek se ceka (mutex, cteni z disku, jine I/O, ...)
     Zombie,             // proces je ukonceny a ceka na to, az si nekdo precte navratovy kod
 };

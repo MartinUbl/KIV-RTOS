@@ -44,6 +44,9 @@ class CProcess_Manager
         // vrati strukturu procesu, ktery je v tento moment naplanovan
         TTask_Struct* Get_Current_Process() const;
 
+        // vrati strukturu procesu se zadanym PID, nebo nullptr, pokud proces neexistuje
+        TTask_Struct* Get_Process_By_PID(uint32_t pid) const;
+
         // namapuje otevreny soubor na handle
         uint32_t Map_File_To_Current(IFile* file);
 

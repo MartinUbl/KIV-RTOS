@@ -14,9 +14,6 @@
 #include <stdstring.h>
 #include <stdfile.h>
 
-// externi funkce pro povoleni IRQ
-extern "C" void enable_irq();
-
 extern "C" void Timer_Callback()
 {
 	sProcessMgr.Schedule();
@@ -51,9 +48,10 @@ extern "C" int _kernel_main(void)
 	// povolime IRQ casovace
 	sInterruptCtl.Enable_Basic_IRQ(hal::IRQ_Basic_Source::Timer);
 
-	// povolime IRQ a od tohoto momentu je vse v rukou planovace
-	enable_irq();
+	// povolime IRQ (nebudeme je maskovat) a od tohoto momentu je vse v rukou planovace
+	sInterruptCtl.Set_Mask_IRQ(false);
 
+	// vynutime prvni spusteni planovace
 	sProcessMgr.Schedule();
 
 	// tohle uz se mockrat nespusti - dalsi IRQ preplanuje procesor na nejaky z tasku (bud systemovy nebo uzivatelsky)

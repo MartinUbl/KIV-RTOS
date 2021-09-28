@@ -18,17 +18,17 @@
 hang:
     b hang
 
+;@ povoleni preruseni (IRQ)
 .global enable_irq
 enable_irq:
-	;@ kompletni sekvence instrukci:
-    mrs r0, cpsr		;@ presun ridiciho registru (CPSR) do general purpose registru (R0)
-    bic r0, r0, #0x80	;@ vypne bit 7 v registru r0 ("IRQ mask bit")
-    msr cpsr_c, r0		;@ nacteme upraveny general purpose (R0) registr do ridiciho (CPSR)
-
-	;@ nebo lze udelat jen tohle:
-    cpsie i				;@ povoli preruseni
-
+    cpsie i				;@ povoli preruseni v danem rezimu
     bx lr
+
+;@ zakazani preruseni (IRQ)
+.global disable_irq
+disable_irq:
+	cpsid i				;@ zakaze preruseni v danem rezimu
+	bx lr
 
 .global _internal_software_interrupt_handler
 software_interrupt_handler:

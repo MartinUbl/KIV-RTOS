@@ -6,6 +6,14 @@
 #include <process/process_manager.h>
 #include <process/swi.h>
 
+extern "C"
+{
+    void enable_irq();
+    void disable_irq();
+}
+
+unsigned int CIRQ_Mask_Guard::gMask_Counter = 0;
+
 CInterrupt_Controller sInterruptCtl(hal::Interrupt_Controller_Base);
 
 // handlery jednotlivych zdroju preruseni
@@ -80,4 +88,24 @@ void CInterrupt_Controller::Disable_IRQ(hal::IRQ_Source source_idx)
     const unsigned int idx_base = static_cast<unsigned int>(source_idx);
 
     Regs(idx_base < 32 ? hal::Interrupt_Controller_Reg::IRQ_Disable_1 : hal::Interrupt_Controller_Reg::IRQ_Disable_1) = (1 << (idx_base % 32));
+}
+
+void CInterrupt_Controller::Set_Mask_IRQ(bool state)
+{
+    if (state)
+        disable_irq();
+    else
+        enable_irq();
+}
+
+CIRQ_Mask_Guard::CIRQ_Mask_Guard()
+{
+    if (gMask_Counter++ == 0)
+        sInterruptCtl.Set_Mask_IRQ(true);
+}
+
+CIRQ_Mask_Guard::~CIRQ_Mask_Guard()
+{
+    if (--gMask_Counter == 0)
+        sInterruptCtl.Set_Mask_IRQ(false);
 }

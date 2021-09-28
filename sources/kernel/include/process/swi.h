@@ -71,11 +71,40 @@ enum class NSWI_Filesystem_Service
     // IN:  r0 = handle otevreneho souboru, r1 = identifikator operace (NIOCtl_Operation), r2 = ukazatel na strukturu s nastavenim (specificka pro soubor)
     // OUT: r0 = indikator uspechu (NSWI_Result_Code)
     IOCtl           = 4,
+
+    // Manipulace s mutexem
+    // IN:  r0 = identifikator operace (NMutex_Operation), r1 a r2 specificke pro operaci
+    // OUT: r0 = specificke pro operaci
+    Mutex           = 5,
 };
 
 // mozne IOCtl operace nad souborem
 enum class NIOCtl_Operation
 {
     Get_Params      = 0,        // zjisti parametry (nakopiruje do poskytnute prepravky)
-    Set_Params      = 1,        // nastavy parametry (z poskytnute prepravky)
+    Set_Params      = 1,        // nastavi parametry (z poskytnute prepravky)
+};
+
+// mozne operace nad mutexem
+enum class NMutex_Operation
+{
+    // Vytvoreni mutexu
+    // IN:  r1 = nazev mutexu
+    // OUT: r0 = handle mutexu
+    Create          = 0,
+
+    // Zamceni mutexu
+    // IN:  r1 = handle mutexu
+    // OUT: r0 = indikator uspechu (NSWI_Result_Code)
+    Lock            = 1,
+
+    // Odemceni mutexu
+    // IN:  r1 = handle mutexu
+    // OUT: r0 = indikator uspechu (NSWI_Result_Code)
+    Unlock          = 2,
+
+    // Zniceni mutexu (resp. uvolneni od soucasneho procesu)
+    // IN:  r1 = handle mutexu
+    // OUT: r0 = indikator uspechu (NSWI_Result_Code)
+    Destroy         = 3,
 };

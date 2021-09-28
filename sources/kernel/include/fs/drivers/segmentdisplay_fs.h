@@ -14,7 +14,7 @@ class CSegment_Display_File : public IFile
 
     public:
         CSegment_Display_File()
-            : mOpened(true)
+            : IFile(NFile_Type_Major::Character), mOpened(true)
         {
             //
         }

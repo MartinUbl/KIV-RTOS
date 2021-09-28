@@ -1,5 +1,6 @@
 #include <stdstring.h>
 #include <stdfile.h>
+#include <stdmutex.h>
 
 #include <drivers/bridges/uart_defs.h>
 
@@ -20,6 +21,8 @@ int main(int argc, char** argv)
 	const int counter_rst = 10;
 	int counter = counter_rst;
 
+	mutex_t mtx = mutex_create("test_mtx");
+
 	while (true)
 	{
 		write(f, "1", 1);
@@ -27,9 +30,11 @@ int main(int argc, char** argv)
 		for (i = 0; i < 0x40000; i++)
 			;
 
+		mutex_lock(mtx);
+
 		write(f, "0", 1);
 
-		for (i = 0; i < 0x40000; i++)
+		for (i = 0; i < 0x800000; i++)
 			;
 
 		if (--counter == 0)
@@ -55,6 +60,8 @@ int main(int argc, char** argv)
 
 			lcd_state = (lcd_state + 1) % 3;
 		}
+
+		mutex_unlock(mtx);
 	}
 
 	close(f);

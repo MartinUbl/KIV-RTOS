@@ -1,5 +1,6 @@
 #include <stdstring.h>
 #include <stdfile.h>
+#include <stdmutex.h>
 
 #include <drivers/bridges/uart_defs.h>
 
@@ -32,11 +33,18 @@ int main(int argc, char** argv)
     srf = open("DEV:segd", NFile_Open_Mode::Write_Only);
     write(srf, "4", 1);
 
-	int p = 10;
+	int p = 0;
+
+	mutex_t mtx = mutex_create("test_mtx");
 
 	while (true)
 	{
 		write(f, msg, strlen(msg));
+
+		for (i = 0; i < 0x20000; i++)
+			;
+
+		mutex_lock(mtx);
 
         read(rndf, reinterpret_cast<char*>(&rdbuf), 4);
 
@@ -50,6 +58,8 @@ int main(int argc, char** argv)
 
 		for (i = 0; i < 0x80000; i++)
 			;
+
+		mutex_unlock(mtx);
 
 		// nasledujici instrukce v uzivatelskem rezimu neprojde
 		// v systemovem rezimu (tedy nez byly procesy presunuty do "userspace") by to zakazalo preruseni

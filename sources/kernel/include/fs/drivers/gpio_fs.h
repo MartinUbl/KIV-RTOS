@@ -19,7 +19,7 @@ class CGPIO_File : public IFile
 
     public:
         CGPIO_File(int pinNo, bool read, bool write)
-            : mPinNo(pinNo), mRead(read), mWrite(write)
+            : IFile(NFile_Type_Major::Character), mPinNo(pinNo), mRead(read), mWrite(write)
         {
             //
         }

@@ -13,7 +13,7 @@ class CTRNG_File : public IFile
         bool mOpened;
 
     public:
-        CTRNG_File()
+        CTRNG_File() : IFile(NFile_Type_Major::Character)
         {
             //
         }
