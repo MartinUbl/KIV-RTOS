@@ -96,10 +96,13 @@
 }
 \makeatother
 
+% NASTAVENI JAZYKA: #1 pro CZ, #2 pro EN
+\newcommand\lang[2]{#1}
+
 \title{KIV-DPP-01}
-\subtitle{Dokumentace rozšiřující desky}
+\subtitle{\lang{Dokumentace rozšiřující desky}{Expansion board documentation}}
 \author{Martin Úbl}
-\date{1. září 2021}
+\date{\lang{1. září 2021}{1 September 2021}}
 
 \begin{document}
 
@@ -107,131 +110,138 @@
 
 
 
-\section{Přehled}
+\section{\lang{Přehled}{Overview}}
 
 \begin{figure}[ht]
 	\centering
 	\includegraphics[width=1.0\linewidth]{kiv-dpp-01.png}
 \end{figure}
 
-Deska KIV-DPP-01 (KIV Deska Plná Periferií rev. 01) obsahuje následující sadu periferií:
+\lang{Deska KIV-DPP-01 (KIV Deska Plná Periferií rev. 01) obsahuje následující sadu periferií:}{The KIV-DPP-01 expansion board houses the following set of peripherals:}
 \begin{itemize}
-	\item Modrá LED (GPIO 18)
+	\item \lang{Modrá}{Blue} LED (GPIO 18)
 	\item UART header (GPIO 14, 15)
-	\item Senzor náklonu (GPIO 23)
-	\item Pasivní bzučák (GPIO 12)
-	\item Tlačítko (GPIO 16)
-	\item Sedmi-segmentový displej (přímo připojen na posuvný registr)
-	\item Posuvný registr 74HC595N (GPIO 27, 22, 10)
-	\item Polohový přepínač 1 (GPIO 4)
-	\item Polohový přepínač 2 (GPIO 17)
-	\item SSD1306 OLED displej (I2C1; GPIO 2, 3)
+	\item \lang{Senzor náklonu}{Tilt sensor} (GPIO 23)
+	\item \lang{Pasivní bzučák}{Passive buzzer} (GPIO 12)
+	\item \lang{Tlačítko}{Push button} (GPIO 16)
+	\item \lang{Sedmi-segmentový displej (přímo připojen na posuvný registr)}{7-segment display (directly connected to the shift register)}
+	\item \lang{Posuvný registr}{Shift register} 74HC595N (GPIO 27, 22, 10)
+	\item \lang{Polohový přepínač}{Switch} 1 (GPIO 4)
+	\item \lang{Polohový přepínač}{Switch} 2 (GPIO 17)
+	\item SSD1306 OLED \lang{displej}{display} (I2C1; GPIO 2, 3)
 \end{itemize}
 
 \newpage
 
-\section{Zapojení}
+\section{\lang{Zapojení}{Connection}}
 
-Deska obsahuje 2x20-pin header, který přímo pasuje do pinového protikusu na straně Raspberry Pi. Důležité je dodržet orientaci rozšiřující desky vůči Raspberry Pi -- LED na rozšiřující desce se musí nacházet na straně, kde se na hostitelské desce nachází slot na SD kartu. Posuvný registr a segmentový displej se pak nachází na straně, kde má hostitelská deska umístěné USB konektory.
+\lang{Deska obsahuje 2x20-pin header, který přímo pasuje do pinového protikusu na straně Raspberry Pi. Důležité je dodržet orientaci rozšiřující desky vůči Raspberry Pi -- LED na rozšiřující desce se musí nacházet na straně, kde se na hostitelské desce nachází slot na SD kartu. Posuvný registr a segmentový displej se pak nachází na straně, kde má hostitelská deska umístěné USB konektory.
+}
+{
+The board contains 2x20-pin F header, which is intended to be directly connected to M header on the Raspberry Pi side. It is important to rotate the board correctly -- LED on the expansion board must be on the same side, as the SD card slot on the host board. The shift register and segment display is then localized on the same side, as USB ports on the host board.
+}
 
 \section{LED}
 
 \begin{itemize}
-	\item Barva: modrá (455-465 nm)
+	\item \lang{Barva: modrá}{Color: blue} (455-465 nm)
 	\item GPIO: 18
-	\item Zapojení: IN - LED - GND
-	\item Spotřeba: max. 20 mA
-	\item Svítivost: max. 3000 mcd
+	\item \lang{Zapojení}{Wiring}: IN - LED - GND
+	\item \lang{Spotřeba}{Current}: max. 20 mA
+	\item \lang{Svítivost}{Luminosity}: max. 3000 mcd
 \end{itemize}
 
-Klasická modrá LED, anoda je vyvedená na GPIO pin 18, katoda na GND.
+\lang{Klasická modrá LED, anoda je vyvedená na GPIO pin 18, katoda na GND.}{Standard blue LED, anode is connected to GPIO 18, cathode is connected to GND.}
 
 \section{UART header}
 
 \begin{itemize}
 	\item GPIO: 14 (TXD), 15 (RXD)
-	\item Zapojení: přímé
+	\item \lang{Zapojení: přímé}{Wiring: direct}
 \end{itemize}
 
-Header pro připojení UART terminálu, např. USB-TTL převodník do hostitelského PC. Piny jsou zleva (od LED) zapojeny na: GND, TXD, RDX. Zapojení je přímé -- do hostitelského počítače tedy musí být překřížené.
+\lang{Header pro připojení UART terminálu, např. USB-TTL převodník do hostitelského PC. Piny jsou zleva (od LED) zapojeny na: GND, TXD, RDX. Zapojení je přímé -- do hostitelského počítače tedy musí být překřížené.}
+{Header for UART terminal connection, e.g. the USB-TTL converter to host PC. Pins are connected (from left to right) to: GND, TXD, RXD. The wiring is direct -- wiring should be crossed over to the other end.}
 
-\section{Senzor náklonu}
+\section{\lang{Senzor náklonu}{Tilt sensor}}
 
 \begin{itemize}
 	\item GPIO: 23
-	\item Zapojení: pull-up
+	\item \lang{Zapojení}{Wiring}: pull-up
 	\item Datasheet: \url{http://home.zcu.cz/~ublm/files/os/SW-520D.pdf}
 \end{itemize}
 
-Kuličkový senzor náklonu SW-520D, který je připájený úmyslně pod úhlem cca 15\degree, dovede detekovat, zda je zařízení v horizontální nebo vertikální poloze (resp. \uv{půl-poloze} vzhledem k povaze senzoru).
+\lang{Kuličkový senzor náklonu SW-520D, který je připájený úmyslně pod úhlem cca 15\degree, dovede detekovat, zda je zařízení v horizontální nebo vertikální poloze (resp. \uv{půl-poloze} vzhledem k povaze senzoru).}
+{Ball tilt sensor SW-520D, which is soldered to the expansion board under 15\degree angle. This sensor is able to sense, if the device is in horizontal or vertical position (or \uv{half-position} due to the sensor type).}
 
-\section{Pasivní bzučák}
+\section{\lang{Pasivní bzučák}{Passive buzzer}}
 
 \begin{itemize}
 	\item GPIO: 12
-	\item Zapojení: přímé
-	\item Odpor: 16 $\Omega$
+	\item \lang{Zapojení: přímé}{Wiring: direct}
+	\item \lang{Odpor}{Resistance}: 16 $\Omega$
 \end{itemize}
 
-Pasivní bzučák zapojený na GPIO 12. Bzučák je pasivní, takže nemá interní oscilátor -- je nutné ho tedy řídit PWM signálem.
+\lang{Pasivní bzučák zapojený na GPIO 12. Bzučák je pasivní, takže nemá interní oscilátor -- je nutné ho tedy řídit PWM signálem.}{Passive buzzer connected to GPIO 12. The buzzer is passive, so it does not have the internal oscilator -- the pulse-width modulation (PWM) is needed to drive the buzzer.}
 
-\section{Tlačítko}
+\section{\lang{Tlačítko}{Push button}}
 
 \begin{itemize}
 	\item GPIO: 16
-	\item Zapojení: pull-up
+	\item \lang{Zapojení: pull-up}{Wiring: pull-up}
 \end{itemize}
 
-Klasické tlačítko s plastovou čepičkou.
+\lang{Klasické tlačítko s plastovou čepičkou.}{Standard push button with plastic cap.}
 
-\section{Sedmi-segmentový displej}
+\section{\lang{Sedmi-segmentový displej}{7-segment display}}
 
 \begin{itemize}
 	\item GPIO: -
-	\item Zapojení: společná katoda, IN - LED - 3.3V
-	\item Spotřeba: max. 15 mA
+	\item \lang{Zapojení: společná katoda}{Wiring: common cathode}, IN - LED - 3.3V
+	\item \lang{Spotřeba}{Current}: max. 15 mA
 	\item Datasheet: \url{http://home.zcu.cz/~ublm/files/os/5161AS.pdf}
 \end{itemize}
 
-Sedmi-segmentový displej 5161AS je připojený na výstupy posuvného registru. Nelze jej tedy ovládat samostatně. Zapojení je se společnou katodou.
+\lang{Sedmi-segmentový displej 5161AS je připojený na výstupy posuvného registru. Nelze jej tedy ovládat samostatně. Zapojení je se společnou katodou.}{7-segment display 5161AS is connected directly to the outputs of the shift register. It's not possible to control it directly. It is wired with common cathode.}
 
-Zobrazovací jednotka je na výstupy posuvného registru připojena následovně:
+\lang{Zobrazovací jednotka je na výstupy posuvného registru připojena následovně:}{The display is connected to the shift register as follows:}
 \begin{figure}[ht!]
 	\centering
 	\includegraphics[width=0.3\linewidth]{kiv-dpp-01-segments.png}
 \end{figure}
 
-\section{Posuvný registr}
+\section{\lang{Posuvný registr}{Shift register}}
 
 \begin{itemize}
 	\item GPIO: 27 (data), 22 (latch), 10 (clock)
-	\item Zapojení: přímé
+	\item \lang{Zapojení: přímé}{Wiring: direct}
 	\item Datasheet: \url{http://home.zcu.cz/~ublm/files/os/74HC565.pdf}
 \end{itemize}
 
-Posuvný registr 74HC595N je vstupy zapojen přímo na GPIO 27 (datový pin), 22 (latch pin, přepnutí banku) a 10 (časovací signál). Výstupy jsou zapojeny na vstupy sedmi-segmentového displeje.
+\lang{Posuvný registr 74HC595N je vstupy zapojen přímo na GPIO 27 (datový pin), 22 (latch pin, přepnutí banku) a 10 (časovací signál). Výstupy jsou zapojeny na vstupy sedmi-segmentového displeje.}{The shift register 74HC595N is connected to GPIO 27 (data pin), 22 (latch pin, bank shift) and 10 (timing signal). Outputs are connected to inputs of the 7-segment display.}
 
-\section{Polohové přepínače}
+\section{\lang{Polohové přepínače}{Switches}}
 
 \begin{itemize}
-	\item GPIO: 4 (př. 1), 17 (př. 2)
+	\item GPIO: 4 (\lang{př.}{sw.} 1), 17 (\lang{př.}{sw.} 2)
 	\item Zapojení: pull-down
 \end{itemize}
 
-Běžné malé nezávisle zapojené polohové přepínače.
+\lang{Běžné malé nezávisle zapojené polohové přepínače.}{Common switches, connected independently.}
 
-\section{OLED displej}
+\section{OLED \lang{displej}{display}}
 
 \begin{itemize}
-	\item I2C: kanál 1
+	\item I2C: \lang{kanál}{channel} 1
 	\item GPIO: 2 (SDA), 3 (SCL)
-	\item Zapojení: přímé
-	\item Typ: monochromatický (modrá nebo bílá)
-	\item Velikost matice: 128x32 bodů
-	\item Datasheet: \item Datasheet: \url{http://home.zcu.cz/~ublm/files/os/SSD1306.pdf}
+	\item \lang{Zapojení: přímé}{Wiring: direct}
+	\item \lang{Typ: monochromatický (modrá nebo bílá)}{Type: monochromatic (blue or white)}
+	\item \lang{Velikost matice: 128x32 bodů}{Matrix size: 128x32 pixels}
+	\item Datasheet: \url{http://home.zcu.cz/~ublm/files/os/SSD1306.pdf}
 \end{itemize}
 
-Displej SSD1306 je přímo připojený na piny 2 a 3, na kterých na hostitelské desce operuje I2C kanál 1. Protokol pro ovládání displeje je shodný pro všechny displeje z řady SSD1306 (všechny rozměry). Body displeje mohou svítit buď bílou nebo modrou barvou.
+\lang{Displej SSD1306 je přímo připojený na piny 2 a 3, na kterých na hostitelské desce operuje I2C kanál 1. Protokol pro ovládání displeje je shodný pro všechny displeje z řady SSD1306 (všechny rozměry). Body displeje mohou svítit buď bílou nebo modrou barvou.}
+{The SSD1306 display is directly connected to pins 2 and 3, on which the host board operates I2C channel 1. The protocol is common for all SSD1306 displays (all variants and dimensions). Pixels glow either blue or white.}
 
 \end{document}
 

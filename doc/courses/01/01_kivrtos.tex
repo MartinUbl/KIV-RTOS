@@ -59,90 +59,93 @@
 
 \author{Martin Úbl}
 
-\title{KIV/OS - cvičení č. 1}
+% NASTAVENI JAZYKA: #1 pro CZ, #2 pro EN
+\newcommand\lang[2]{#1}
+
+\title{KIV/OS - \lang{cvičení č.}{course no.} 1}
 
 \begin{document}
 
 \maketitle
 
-\section{Orientační plán cvičení}
+\section{\lang{Orientační plán cvičení}{Course schedule}}
 
-Cvičení budou probíhat prezenčně v laboratoři UC-326. Studentům bude k dispozici potřebný hardware do skupin po 2-4 lidech (dle dostupnosti a obsazenosti cvičení). Plán cvičení:
+\lang{Cvičení budou probíhat prezenčně v laboratoři UC-326. Studentům bude k dispozici potřebný hardware do skupin po 2-4 lidech (dle dostupnosti a obsazenosti cvičení). Plán cvičení:}{Courses will be done in UC-326 lab. Students will be provided with needed hardware to groups of 2-4 people.}
 
 \begin{enumerate}
-	\item úvodní cvičení
+	\item \lang{úvodní cvičení}{initial course}
 	\begin{itemize}
-		\item seznámení s hardware, nastavení vývojového prostředí, základní pojmy
-		\item rozblikání LED na desce
+		\item \lang{seznámení s hardware, nastavení vývojového prostředí, základní pojmy}{getting to know the hardware, environment setup, basic terms}
+		\item \lang{rozblikání LED na desce}{blinking the onboard LED}
 	\end{itemize}
 
-	\item struktura projektu, bootloader, nahrávání kernelu z PC
+	\item \lang{struktura projektu, bootloader, nahrávání kernelu z PC}{project structure, bootloader, host loader}
 	\begin{itemize}
-		\item základní struktura projektu OS
-		\item miniUART a orientace v manuálu k BCM2835
+		\item \lang{základní struktura projektu OS}{basic structure of OS project}
+		\item \lang{miniUART a orientace v manuálu k BCM2835}{miniUART, reading the BCM2835 manual}
 		\item UART bootloader
 	\end{itemize}
 
-	\item AUX koprocesor, UART
+	\item AUX \lang{koprocesor}{coprocessor}, UART
 	\begin{itemize}
-		\item AUX koprocesor, komunikace přes UART
-		\item driver pro UART (miniUART)
+		\item \lang{AUX koprocesor, komunikace přes UART}{AUX coprocessor, UART communication}
+		\item \lang{driver pro}{driver for} UART (miniUART)
 	\end{itemize}
 
-	\item přerušení
+	\item \lang{přerušení}{interrupts}
 	\begin{itemize}
-		\item operační módy procesoru ARM1176
-		\item tabulka vektorů přerušení, IRQ
-		\item driver pro ARM timer, využití IRQ
+		\item \lang{operační módy procesoru}{operating modes of} ARM1176
+		\item \lang{tabulka vektorů přerušení}{interrupt vector table}, IRQ
+		\item driver \lang{pro}{for} ARM timer, \lang{využití}{using} IRQ
 	\end{itemize}
 
-	\item paměť a procesy
+	\item \lang{paměť a procesy}{memory and processes}
 	\begin{itemize}
-		\item alokátor paměti (bitmapový), kernel heap
-		\item procesy (tasky) a jejich implementace
-		\item time-slicing plánovač
+		\item \lang{alokátor paměti (bitmapový)}{memory allocator (bitmap)}, kernel heap
+		\item \lang{procesy (tasky) a jejich implementace}{processes (tasks) and their implementation}
+		\item time-slicing \lang{plánovač}{scheduler}
 	\end{itemize}
 
-	\item filesystem a systémová volání
+	\item \lang{filesystem a systémová volání}{filesystem and syscalls}
 	\begin{itemize}
-		\item filesystem manager, filesystem drivery
-		\item základní drivery pro FS (GPIO, UART)
-		\item systémová volání (open, read, write, close, ioctl), RTL
+		\item filesystem manager, filesystem \lang{drivery}{drivers}
+		\item \lang{základní drivery pro FS}{basic filessystem drivers} (GPIO, UART)
+		\item \lang{systémová volání}{syscalls} (open, read, write, close, ioctl), RTL
 	\end{itemize}
 
-	\item ovladače pro periferie desky KIV-DPP-01
+	\item \lang{ovladače pro periferie desky}{drivers for} KIV-DPP-01
 	\begin{itemize}
-		\item posuvný registr a 7-segmentový displej
-		\item generátor náhodných čísel (TRNG)
-		\item I2C a OLED displej
+		\item \lang{posuvný registr a 7-segmentový displej}{shift register and 7-segment display}
+		\item \lang{generátor náhodných čísel}{random number generator} (TRNG)
+		\item \lang{I2C a OLED displej}{I2C and OLED display}
 	\end{itemize}
 
-	\item stránkování, uživatelský režim tasků
+	\item \lang{stránkování, uživatelský režim tasků}{memory protection, paging and userspace}
 	\begin{itemize}
-		\item stránkování, TLB, správa tabulek stránek
+		\item \lang{stránkování, TLB, správa tabulek stránek}{paging, TLB and page table management}
 		\item data abort, prefetch abort
-		\item vedlejší: RTL support pro OLED displej
+		\item \lang{vedlejší: RTL support pro OLED displej}{optional: RTL support for OLED display}
 	\end{itemize}
 
 	\item real-time
 	\begin{itemize}
-		\item GPIO přerušení
-		\item periodické a aperiodické tasky
-		\item EDF plánovač
-		\item semafory, mutexy, podmínkové proměnné
-		\item základy power managementu (WFI, WFE)
+		\item \lang{GPIO přerušení}{GPIO interrupts}
+		\item \lang{periodické a aperiodické tasky}{periodic and aperiodic tasks}
+		\item \lang{EDF plánovač}{EDF scheduler}
+		\item \lang{semafory, mutexy, podmínkové proměnné}{semaphores, mutexes, condition variables}
+		\item \lang{základy power managementu}{basic power management} (WFI, WFE)
 	\end{itemize}
 
-	\item eMMC a SD karta
+	\item \lang{eMMC a SD karta}{eMMC and SD card}
 	\begin{itemize}
-		\item převzatý eMMC driver a driver pro SD kartu
-		\item čtení bloků z karty, vlastní jednoduchý filesystém
+		\item \lang{převzatý eMMC driver a driver pro SD kartu}{opensource eMMC driver, SD card driver}
+		\item \lang{čtení bloků z karty, vlastní jednoduchý filesystém}{reading from SD card, simple filesystem}
 	\end{itemize}
 
-	\item co zbylo
+	\item \lang{co zbylo}{the rest}
 	\begin{itemize}
 		\item WiFi, USB
-		\item co se jinam nevešlo
+		\item \lang{co se jinam nevešlo}{the rest what we didn't cover}
 	\end{itemize}
 \end{enumerate}
 
@@ -167,7 +170,7 @@ Budeme tedy určitě potřebovat dokumentaci:
 	\item ARM1176JZFS: \url{https://developer.arm.com/documentation/ddi0301/h?lang=en}
 	\item příručku ARM assembly (UAL): \url{https://www.keil.com/support/man/docs/armasm/armasm_dom1359731145130.htm}
 	\item RPi Zero pinout: \url{https://pinout.xyz/}
-	\item KIV-DPP-01: \url{http://home.zcu.cz/~ublm/files/os/kiv-dpp-01.pdf}
+	\item KIV-DPP-01: \url{http://home.zcu.cz/~ublm/files/os/kiv-dpp-01-cz.pdf}
 \end{itemize}
 
 \section{Seznámení s hardware}
@@ -287,6 +290,8 @@ My bychom chtěli ve fázi vývoje neustále nahrávat nový kód do našeho za�
 
 Lepší nápad bude mít právě jeden \texttt{kernel.img}, který bude sloužit jen jako již zmíněná \uv{stage 2} bootovacího procesu. Tento kód bude čekat, až mu po nějakém komunikačním rozhraní skutečný kernel odešleme z našeho vývojového počítače, \uv{stage 2} ho pak nahraje do paměti a spustí. O tom ale až ve cvičení číslo 2.
 
+Základní soubory pro bootování (vložte je do zmíněného FAT32 oddílu na SD kartě) můžete stahnout zde: \url{https://home.zcu.cz/~ublm/files/os/sdcard_base.zip}
+
 \subsection{Volací konvence}
 
 Ještě je třeba zmínit, jak probíhá volání funkcí od momentu předávání parametrů až po návrat včetně předání návratové hodnoty. Volání se týká všech registrů následovně:
@@ -316,7 +321,7 @@ Více o volací konvenci ARM zde: \url{https://developer.arm.com/documentation/i
 
 Jediné, co pro vývoj explicitně budeme potřebovat je překladač jazyka C/C++ a ARM assembly a sadu nástrojů pro převod výstupu do přenositelné podoby. Na to je k dispozici na různých distribucích Linuxu sada \texttt{gcc-arm-none-eabi}, která vlastně obsahuje vše, co budeme potřebovat.
 
-Pro Debian-based (apt-based) distribuce stačí tedy použít příkaz (volitelně prefixovaný \texttt{sudo}):\\
+Pro Debian-based (apt-based) distribuce stačí tedy použít příkaz (dle nutnosti prefixovaný \texttt{sudo}):\\
 
 \texttt{apt install gcc-arm-none-eabi}\\
 
