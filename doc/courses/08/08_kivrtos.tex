@@ -1042,12 +1042,168 @@ abort_hang:
 
 \section{Userspace}
 
-% crt0
-% "main"
-% terminate
-% kompilace -> dump do znaku
+Izolaci procesů máme kompletní. Zavaděč procesů umí zavést ELF soubor prozatím velmi jednoduchým (a do budoucna neudržitelným) způsobem. Teď jen musíme izolovat i proces překladu, kdy uživatelské programy budeme kompilovat odděleně od jádra.
 
+Každý proces proto musí mít svoje:
+\begin{itemize}
+	\item crt0
+	\item linkování RTL a standardní knihovny (naší, ne té co je k dispozici)
+	\item sestavovací recepty (Makefile, CMakeLists.txt, ...)
+	\item linker skript
+\end{itemize}
 
+Každý program nyní bude velmi podobný tomu, jak vypadalo naše jádro na začátku -- vzhledem k tomu, že předpokládá souvislou paměť (virtuální, ale to je mu jedno) a také je relokovaný na {\tt 0x8000}. Jediným rozdílem bude linkáž RTL a standardní knihovny, která volá systémová volání. Konverzi RTL do samostatného projektu staticky linkované knihovny ponecháme fantazii čtenáře.
+
+Proces musí rovněž obsahovat nějaké \emph{crt0}. V podstatě půjde jen o vstupní funkci, která zavolá a provede to, co už známe -- vynuluje \texttt{bss} sekci, zavolá konstruktory globálních instancí tříd, zavolá funkci \texttt{main}, zavolá destruktory globálních instancí tříd a následně zavolá systémové volání \texttt{Terminate} s návratovým kódem funkce \texttt{main}.
+
+První část \emph{crt0} implementujme v assembly v souboru \texttt{crt0.s} jako minimální stub, který ihned zavolá implementaci v jazyce C:
+\begin{lstlisting}[language={[ARM]Assembler}]
+.section .text
+
+.global _start
+
+_start:
+  bl __crt0_run
+_hang:
+  b _hang
+\end{lstlisting}
+
+Funkci \texttt{\_\_crt0\_run} pak definujme v souboru \texttt{crt0.c} dle výše uvedeného výčtu úkonů:
+\begin{lstlisting}
+void __crt0_run()
+{
+  __crt0_init_bss();
+
+  _cpp_startup();
+
+  int result = main(0, 0);
+	
+  _cpp_shutdown();
+	
+  asm volatile("mov r0, %0" : : "r" (result));
+  asm volatile("svc #1");
+}
+\end{lstlisting}
+Dále dodefinujme funkci pro inicializaci \texttt{bss} sekce:
+\begin{lstlisting}
+extern unsigned int __bss_start;
+extern unsigned int __bss_end;
+
+void __crt0_init_bss()
+{
+  unsigned int* begin = (unsigned int*)__bss_start;
+  for (; begin < (unsigned int*)__bss_end; begin++)
+    *begin = 0;
+}
+\end{lstlisting}
+
+Funkce {\tt \_cpp\_startup()} a {\tt \_cpp\_shutdown()} převezmeme z již hotové implementace v jádře -- jde o funkce, které volají konstruktory a destruktory globálních instancí tříd. Stejně tak zakompilujme minimalistickou podporu C++ ABI (\texttt{cxxabi.cpp}) z projektu jádra.
+
+Dále vytvořme linker skript, který opět nápadně připomíná linker skript z prvnich cvičení:
+\begin{lstlisting}
+ENTRY(_start)
+
+MEMORY
+{
+  main : ORIGIN = 0x8000, LENGTH = 0x10000
+}
+
+SECTIONS
+{
+  .text :
+  {
+    *(.text*)
+  } > main
+
+  .rodata :
+  {
+    *(.rodata*)
+  } > main
+
+  .data :
+  {
+    __CTOR_LIST__ = .; *(.ctors) *(.init_array) __CTOR_END__ = .; 
+    __DTOR_LIST__ = .; *(.dtors) *(.fini_array) __DTOR_END__ = .;
+    data = .;
+    _data = .;
+    __data = .;
+    *(.data)
+  } > main
+
+  .bss :
+  {
+    __bss_start = .;
+    *(.bss*)
+    *(COMMON)
+    __bss_end = .;
+  } > main
+}
+\end{lstlisting}
+
+Vytvoříme si pro teď 3 programy -- idle task, a dva testovací tasky. Idle task bude výhledově obstarávat šetření energií, ale pro teď bude prostě jen cyklit v prázdné smyčce. Dva ostatní tasky prostě jen budou cyklicky provádět nějaké věci, abychom poznali, že se korektně provádějí.
+
+Zatím ještě je nutné programy nějak \uv{přibalit} k jádru -- zvolíme způsob velice přímočarý, a sice uložení programu do řetězce vč. jeho délky. Na to můžeme použít například nástroj \texttt{xxd}, který udělá dump souboru do řetězce včetně oblení do C konstruktů (pole znaků a velikost).
+
+CMakeLists.txt pro tyto projekty bude vypadat nějak takto:
+\begin{lstlisting}
+CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
+
+PROJECT(kiv_os_rpios_userspace CXX C ASM)
+
+SET(LINKER_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/link.ld")
+SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -T ${LINKER_SCRIPT}")
+
+INCLUDE_DIRECTORIES("${CMAKE_CURRENT_SOURCE_DIR}/../kernel/include/")
+INCLUDE_DIRECTORIES("${CMAKE_CURRENT_SOURCE_DIR}/../stdlib/include/")
+INCLUDE_DIRECTORIES("${CMAKE_CURRENT_SOURCE_DIR}/../stdutils/include/")
+INCLUDE_DIRECTORIES("${CMAKE_CURRENT_SOURCE_DIR}/../kernel/include/board/rpi0/")
+ADD_DEFINITIONS(-DRPI0)
+
+SET(ABI_FILES cxxabi.cpp)
+SET(CRT_FILES crt0.s crt0.c)
+SET(STDLIB_FILES ${CMAKE_CURRENT_SOURCE_DIR}/../build/libkivrtos_stdlib.a)
+
+FUNCTION(ADD_USERSPACE_EXECUTABLE target_name file_list)
+  SET(file_list ${ARGV})
+  LIST(REMOVE_AT file_list 0)
+
+  ADD_EXECUTABLE(${target_name} ${CRT_FILES} ${ABI_FILES} ${file_list})
+  TARGET_LINK_LIBRARIES(${target_name} ${STDLIB_FILES})
+
+  ADD_CUSTOM_COMMAND(
+    TARGET ${target_name} POST_BUILD
+    COMMAND ${CMAKE_OBJCOPY} ./${target_name}${CMAKE_EXECUTABLE_SUFFIX} -O binary ./${target_name}.bin
+    COMMAND xxd -i ./${target_name}${CMAKE_EXECUTABLE_SUFFIX} > ./src_${target_name}.h
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+ENDFUNCTION(ADD_USERSPACE_EXECUTABLE)
+
+ADD_USERSPACE_EXECUTABLE(proc_test_1 test_process_1/main.cpp)
+ADD_USERSPACE_EXECUTABLE(proc_test_2 test_process_2/main.cpp)
+ADD_USERSPACE_EXECUTABLE(idle_process idle_process/main.cpp)
+\end{lstlisting}
+
+Výsledkem budou pochopitelně binární a ELF soubory v podsložce \texttt{build}, ale i přepis do řetězce v podobě souborů \texttt{src\_proc\_test\_1.h}, \texttt{src\_proc\_test\_2.h} a \texttt{src\_idle\_process.h}. V nich jsou definovány pole \texttt{\_\_proc\_test\_1}, \texttt{\_\_proc\_test\_2]} a \texttt{\_\_idle\_process} včetně celočíselných konstant (se suffixem \texttt{\_len}). Ty můžeme v jádře použít.
+
+V jádře pak v souboru \texttt{test\_processes.cpp} zůstane pouze:
+\begin{lstlisting}
+#include "../../userspace/build/src_proc_test_1.h"
+#include "../../userspace/build/src_proc_test_2.h"
+#include "../../userspace/build/src_idle_process.h"
+\end{lstlisting}
+
+A v hlavním kódu jádra po inicializaci všeho potřebného pak lze provést spuštění těchto procesů, např. takto:
+\begin{lstlisting}
+extern "C" unsigned char __idle_process[];
+extern "C" unsigned char __proc_test_1[];
+extern "C" unsigned char __proc_test_2[];
+extern "C" unsigned int __idle_process_len;
+extern "C" unsigned int __proc_test_1_len;
+extern "C" unsigned int __proc_test_2_len;
+
+sProcessMgr.Create_Process(__idle_process, __idle_process_len, true);
+sProcessMgr.Create_Process(__proc_test_1, __proc_test_1_len, false);
+sProcessMgr.Create_Process(__proc_test_2, __proc_test_2_len, false);
+\end{lstlisting}
 
 
 \section{Úkol za body}
