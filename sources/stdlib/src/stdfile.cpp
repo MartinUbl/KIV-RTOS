@@ -1,5 +1,7 @@
 #include <stdfile.h>
 
+#include <process/process_manager.h>
+
 uint32_t getpid()
 {
     uint32_t pid;
@@ -87,4 +89,60 @@ uint32_t wait(uint32_t file)
     asm volatile("mov %0, r0" : "=r" (retcode));
 
     return retcode;
+}
+
+bool sleep(uint32_t ticks)
+{
+    uint32_t retcode;
+
+    asm volatile("mov r0, %0" : : "r" (ticks));
+    asm volatile("swi 3");
+    asm volatile("mov %0, r0" : "=r" (retcode));
+
+    return retcode;
+}
+
+uint32_t get_active_process_count()
+{
+    const NGet_Sched_Info_Type req = NGet_Sched_Info_Type::Active_Process_Count;
+    uint32_t retval;
+
+    asm volatile("mov r0, %0" : : "r" (req));
+    asm volatile("mov r1, %0" : : "r" (&retval));
+    asm volatile("swi 4");
+
+    return retval;
+}
+
+uint32_t get_tick_count()
+{
+    const NGet_Sched_Info_Type req = NGet_Sched_Info_Type::Tick_Count;
+    uint32_t retval;
+
+    asm volatile("mov r0, %0" : : "r" (req));
+    asm volatile("mov r1, %0" : : "r" (&retval));
+    asm volatile("swi 4");
+
+    return retval;
+}
+
+void set_task_deadline(uint32_t tick_count_required)
+{
+    const NDeadline_Subservice req = NDeadline_Subservice::Set_Relative;
+
+    asm volatile("mov r0, %0" : : "r" (req));
+    asm volatile("mov r1, %0" : : "r" (&tick_count_required));
+    asm volatile("swi 5");
+}
+
+uint32_t get_task_ticks_to_deadline()
+{
+    const NDeadline_Subservice req = NDeadline_Subservice::Get_Remaining;
+    uint32_t ticks;
+
+    asm volatile("mov r0, %0" : : "r" (req));
+    asm volatile("mov r1, %0" : : "r" (&ticks));
+    asm volatile("swi 5");
+
+    return ticks;
 }

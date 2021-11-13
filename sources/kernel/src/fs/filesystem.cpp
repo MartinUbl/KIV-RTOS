@@ -1,6 +1,7 @@
 #include <fs/filesystem.h>
 
 #include <memory/kernel_heap.h>
+#include <process/process_manager.h>
 
 #include <stdstring.h>
 
@@ -153,4 +154,51 @@ IFile* CFilesystem::Open(const char* path, NFile_Open_Mode mode)
 
     // zadny filesystem se tohoto uzlu "neujal" -> soubor neexistuje
     return nullptr;
+}
+
+void IFile::Wait_Enqueue_Current()
+{
+    TWaiting_Task* task = new TWaiting_Task;
+    task->pid = sProcessMgr.Get_Current_Process()->pid;
+    task->prev = nullptr;
+    task->next = nullptr;
+
+    if (!mWaiting_Tasks)
+        mWaiting_Tasks = task;
+    else
+    {
+        mWaiting_Tasks->prev = task;
+        task->next = mWaiting_Tasks;
+        mWaiting_Tasks = task;
+    }
+}
+
+uint32_t IFile::Notify(uint32_t count)
+{
+    TWaiting_Task* tmp;
+    TWaiting_Task* itr = mWaiting_Tasks;
+    while (itr && itr->next)
+        itr = itr->next;
+
+    uint32_t notified_count = 0;
+    while (itr && notified_count < count)
+    {
+        sProcessMgr.Notify_Process(itr->pid);
+
+        tmp = itr;
+
+        itr = itr->prev;
+        delete tmp;
+        notified_count++;
+
+        if (itr)
+            itr->next = nullptr;
+        else
+        {
+            mWaiting_Tasks = nullptr;
+            break;
+        }
+    }
+
+    return notified_count;
 }

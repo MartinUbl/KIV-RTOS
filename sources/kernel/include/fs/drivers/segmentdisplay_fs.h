@@ -7,7 +7,7 @@
 #include <stdstring.h>
 
 // virtualni soubor pro segmentovy displej
-class CSegment_Display_File : public IFile
+class CSegment_Display_File final : public IFile
 {
     private:
         bool mOpened;
@@ -53,7 +53,7 @@ class CSegment_Display_File : public IFile
             sSegment_Display.Close();
             mOpened = false;
 
-            return true;
+            return IFile::Close();
         }
 
         virtual bool IOCtl(NIOCtl_Operation dir, void* ctlptr) override

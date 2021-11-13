@@ -7,7 +7,7 @@
 #include <stdstring.h>
 
 // virtualni soubor pro OLED displej
-class COLED_Display_File : public IFile
+class COLED_Display_File final : public IFile
 {
     private:
         bool mOpened;
@@ -46,7 +46,7 @@ class COLED_Display_File : public IFile
             sDisplay_SSD1306.Close();
             mOpened = false;
 
-            return true;
+            return IFile::Close();
         }
 
         virtual bool IOCtl(NIOCtl_Operation dir, void* ctlptr) override

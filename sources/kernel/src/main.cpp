@@ -19,12 +19,23 @@ extern "C" void Timer_Callback()
 	sProcessMgr.Schedule();
 }
 
-extern "C" unsigned char __idle_process[];
-extern "C" unsigned char __proc_test_1[];
-extern "C" unsigned char __proc_test_2[];
-extern "C" unsigned int __idle_process_len;
-extern "C" unsigned int __proc_test_1_len;
-extern "C" unsigned int __proc_test_2_len;
+extern "C" unsigned char __init_task[];
+extern "C" unsigned int __init_task_len;
+
+extern "C" unsigned char __sos_task[];
+extern "C" unsigned int __sos_task_len;
+
+extern "C" unsigned char __oled_task[];
+extern "C" unsigned int __oled_task_len;
+
+extern "C" unsigned char __logger_task[];
+extern "C" unsigned int __logger_task_len;
+
+extern "C" unsigned char __counter_task[];
+extern "C" unsigned int __counter_task_len;
+
+extern "C" unsigned char __tilt_task[];
+extern "C" unsigned int __tilt_task_len;
 
 extern "C" int _kernel_main(void)
 {
@@ -32,18 +43,21 @@ extern "C" int _kernel_main(void)
 	sFilesystem.Initialize();
 
 	// vytvoreni hlavniho systemoveho (idle) procesu
-	sProcessMgr.Create_Process(__idle_process, __idle_process_len, true);
+	sProcessMgr.Create_Process(__init_task, __init_task_len, true);
 
-	// vytvoreni jednoho testovaciho procesu
-	sProcessMgr.Create_Process(__proc_test_1, __proc_test_1_len, false);
-	// vytvoreni druheho testovaciho procesu
-	sProcessMgr.Create_Process(__proc_test_2, __proc_test_2_len, false);
+	// vytvoreni vsech tasku
+	// TODO: presunuti do init procesu a nejake inicializacni sekce
+	sProcessMgr.Create_Process(__sos_task, __sos_task_len, false);
+	sProcessMgr.Create_Process(__oled_task, __oled_task_len, false);
+	sProcessMgr.Create_Process(__logger_task, __logger_task_len, false);
+	sProcessMgr.Create_Process(__counter_task, __counter_task_len, false);
+	sProcessMgr.Create_Process(__tilt_task, __tilt_task_len, false);
 
 	// zatim zakazeme IRQ casovace
 	sInterruptCtl.Disable_Basic_IRQ(hal::IRQ_Basic_Source::Timer);
 
 	// nastavime casovac - v callbacku se provadi planovani procesu
-	sTimer.Enable(Timer_Callback, 0x100, NTimer_Prescaler::Prescaler_1);
+	sTimer.Enable(Timer_Callback, 0x80, NTimer_Prescaler::Prescaler_1);
 
 	// povolime IRQ casovace
 	sInterruptCtl.Enable_Basic_IRQ(hal::IRQ_Basic_Source::Timer);

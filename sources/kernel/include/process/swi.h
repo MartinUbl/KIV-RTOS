@@ -43,6 +43,21 @@ enum class NSWI_Process_Service
     // IN:  -
     // OUT: -
     Yield           = 2,
+
+    // Uspi proces na dobu (ne)urcitou
+    // IN:  r0 = pocet tiku casovace, na kolik uspat proces
+    // OUT: r0 = indikator uspechu (NSWI_Result_Code), OK pokud se probudil po casovem useku, Fail pokud ho probudilo neco jineho
+    Sleep           = 3,
+
+    // Ziska info z planovace
+    // IN:  r0 = typ veliciny (NGet_Sched_Info_Type), r1 = ukazatel na pamet, ktera se ma naplnit vysledkem
+    // OUT: - (naplnena prepravka v r1)
+    Get_Sched_Info  = 4,
+
+    // Nastavi deadline splneni tasku
+    // IN:  r0 = subservice (NDeadline_Subservice), r1 = ukazatel na prepravku dle druhu pozadavku
+    // OUT: r0 = infikator uspechu (NSWI_Result_Code)
+    Deadline        = 5,
 };
 
 enum class NSWI_Filesystem_Service

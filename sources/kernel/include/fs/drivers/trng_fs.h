@@ -7,7 +7,7 @@
 #include <stdstring.h>
 
 // virtualni TRNG soubor
-class CTRNG_File : public IFile
+class CTRNG_File final : public IFile
 {
     private:
         bool mOpened;
@@ -56,7 +56,7 @@ class CTRNG_File : public IFile
             sTRNG.Close();
             mOpened = false;
 
-            return true;
+            return IFile::Close();
         }
 
         virtual bool IOCtl(NIOCtl_Operation dir, void* ctlptr) override

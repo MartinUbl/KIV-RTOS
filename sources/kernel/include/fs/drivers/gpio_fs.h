@@ -5,9 +5,10 @@
 #include <memory/kernel_heap.h>
 #include <fs/filesystem.h>
 #include <stdstring.h>
+#include <process/process_manager.h>
 
 // virtualni soubor pro GPIO pin
-class CGPIO_File : public IFile
+class CGPIO_File final : public IFile
 {
     private:
         // ulozeny ID pinu
@@ -63,7 +64,7 @@ class CGPIO_File : public IFile
             sGPIO.Free_Pin(mPinNo, mRead, mWrite);
             mRead = mWrite = false;
 
-            return true;
+            return IFile::Close();
         }
 
         virtual bool IOCtl(NIOCtl_Operation op, void* ctlptr) override
@@ -85,7 +86,11 @@ class CGPIO_File : public IFile
 
         virtual bool Wait() override
         {
-            sGPIO.Wait_For_Event(mPinNo);
+            Wait_Enqueue_Current();
+            sGPIO.Wait_For_Event(this, mPinNo);
+            
+            // zablokujeme, probudi nas az notify 
+	        sProcessMgr.Block_Current_Process();
             return true;
         }
 };

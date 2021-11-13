@@ -2,6 +2,7 @@
 
 #include <hal/intdef.h>
 #include <hal/peripherals.h>
+#include <fs/filesystem.h>
 
 constexpr uint32_t Invalid_Pin = static_cast<uint32_t>(-1);
 
@@ -46,15 +47,15 @@ class CGPIO_Handler
 		// rezervace pinu pro zapis
 		uint32_t mPin_Reservations_Write[1 + (hal::GPIO_Pin_Count / 32)];
 
-		struct TWaiting_Process
+		struct TWaiting_File
 		{
-			uint32_t pid;
+			IFile* file;
 			uint32_t pin_idx;
-			TWaiting_Process* prev;
-			TWaiting_Process* next;
+			TWaiting_File* prev;
+			TWaiting_File* next;
 		};
 
-		TWaiting_Process* mWaiting_Processes;
+		TWaiting_File* mWaiting_Files;
 		
 	protected:
 		// vybira GPFSEL registr a pozici bitu pro dany pin
@@ -104,7 +105,7 @@ class CGPIO_Handler
 		void Handle_IRQ();
 
 		// pocka na udalost (zablokuje proces)
-		void Wait_For_Event(uint32_t pin);
+		void Wait_For_Event(IFile* file, uint32_t pin);
 };
 
 // globalni instance pro hlavni GPIO port

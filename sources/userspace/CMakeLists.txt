@@ -33,6 +33,12 @@ FUNCTION(ADD_USERSPACE_EXECUTABLE target_name file_list)
 		WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 ENDFUNCTION(ADD_USERSPACE_EXECUTABLE)
 
-ADD_USERSPACE_EXECUTABLE(proc_test_1 test_process_1/main.cpp)
-ADD_USERSPACE_EXECUTABLE(proc_test_2 test_process_2/main.cpp)
-ADD_USERSPACE_EXECUTABLE(idle_process idle_process/main.cpp)
+# init task - systemovy task, musi byt pritomen
+ADD_USERSPACE_EXECUTABLE(init_task init_task/main.cpp)
+
+# volitelne tasky pro ruzne ulohy
+ADD_USERSPACE_EXECUTABLE(sos_task sos_task/main.cpp)
+ADD_USERSPACE_EXECUTABLE(oled_task oled_task/main.cpp)
+ADD_USERSPACE_EXECUTABLE(logger_task logger_task/main.cpp)
+ADD_USERSPACE_EXECUTABLE(counter_task counter_task/main.cpp)
+ADD_USERSPACE_EXECUTABLE(tilt_task tilt_task/main.cpp)

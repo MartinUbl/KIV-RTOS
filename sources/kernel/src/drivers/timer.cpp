@@ -26,7 +26,7 @@ struct TTimer_Ctl_Flags
 #pragma pack(pop)
 
 CTimer::CTimer(unsigned long timer_reg_base)
-    : mTimer_Regs(reinterpret_cast<unsigned int*>(timer_reg_base)), mCallback(nullptr)
+    : mTimer_Regs(reinterpret_cast<unsigned int*>(timer_reg_base)), mCallback(nullptr), mTick_Count(0)
 {
     //
 }
@@ -65,6 +65,8 @@ void CTimer::IRQ_Callback()
 {
     Regs(hal::Timer_Reg::IRQ_Clear) = 1;
 
+    mTick_Count++;
+
     if (mCallback)
         mCallback();
 }
@@ -72,4 +74,9 @@ void CTimer::IRQ_Callback()
 bool CTimer::Is_Timer_IRQ_Pending()
 {
     return Regs(hal::Timer_Reg::IRQ_Masked);
+}
+
+uint32_t CTimer::Get_Tick_Count() const
+{
+    return mTick_Count;
 }

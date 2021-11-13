@@ -11,6 +11,8 @@ constexpr const uint32_t MaxPathLength = 128;
 
 constexpr const uint32_t NoFilesystemDriver = static_cast<uint32_t>(-1);
 
+constexpr const uint32_t NotifyAll = static_cast<uint32_t>(-1);
+
 enum class NFile_Type_Major
 {
     Unspecified     = 0, // unspecified by implementor
@@ -43,6 +45,18 @@ class IFile
     private:
         const NFile_Type_Major mType;
 
+        struct TWaiting_Task
+        {
+            uint32_t pid;
+            TWaiting_Task* next;
+            TWaiting_Task* prev;
+        };
+
+        TWaiting_Task* mWaiting_Tasks = nullptr;
+
+    protected:
+        void Wait_Enqueue_Current();
+
     public:
         IFile(NFile_Type_Major type) : mType(type) { };
         virtual ~IFile() = default;
@@ -57,6 +71,9 @@ class IFile
         virtual bool IOCtl(NIOCtl_Operation dir, void* ctlptr) { return false; };
         // vycka na udalost nad timto souborem (specificke pro danou implementaci)
         virtual bool Wait() { return true; };
+
+        // notifikuje <count> cekajici nad timto souborem (pokud nejaky cekajici je)
+        uint32_t Notify(uint32_t count);
 
         // zjisti typ souboru
         NFile_Type_Major Get_File_Type() const { return mType; };

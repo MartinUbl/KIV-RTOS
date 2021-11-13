@@ -7,7 +7,7 @@
 #include <stdstring.h>
 
 // virtualni UART soubor
-class CUART_File : public IFile
+class CUART_File final : public IFile
 {
     private:
         // UART kanal
@@ -55,7 +55,7 @@ class CUART_File : public IFile
                 sUART0.Close();
             mChannel = -1;
 
-            return true;
+            return IFile::Close();
         }
 
         virtual bool IOCtl(NIOCtl_Operation dir, void* ctlptr) override

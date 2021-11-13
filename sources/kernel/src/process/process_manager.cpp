@@ -10,6 +10,7 @@
 #include <fs/filesystem.h>
 
 #include <drivers/uart.h>
+#include <drivers/timer.h>
 
 // "importovane" funkce z asm
 extern "C"
@@ -62,8 +63,16 @@ bool CProcess_Manager::Notify_Process(uint32_t pid)
     if (!task || task->state != NTask_State::Blocked)
         return false;
 
+    return Notify_Process(task);
+}
+
+bool CProcess_Manager::Notify_Process(TTask_Struct* proc)
+{
+    if (!proc)
+        return false;
+
     // ve slozitejsich planovacich by tady mohl byt treba i presun do jine fronty procesu, apod.
-    task->state = NTask_State::Runnable;
+    proc->state = NTask_State::Runnable;
 
     return true;
 }
@@ -88,6 +97,7 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
     task->sched_static_priority = 5;    // TODO: pro ted je to jen hardcoded hodnota, do budoucna urcite bude nutne dovolit specifikovat
     task->sched_counter = task->sched_static_priority;
     task->state = NTask_State::New;
+    task->deadline = Indefinite; // task si zatim nestanovil deadline, udela to az to bude aktualni v deadline syscallu
 
     // lr = co zacit vykonavat po bootstrapu, 0x8000 je misto, kam je relokovany v kazde nasi binarce symbol _start, tedy vstupni bod programu
     task->cpu_context.lr = 0x8000;
@@ -135,6 +145,21 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
 
 void CProcess_Manager::Schedule()
 {
+    // projdeme vsechny uspane procesy, zda je na case je vzbudit
+    {
+        CProcess_List_Node* node = mProcess_List_Head;
+        while (node)
+        {
+            if (node->task->state == NTask_State::Interruptable_Sleep)
+            {
+                if (node->task->sleep_timer != Indefinite && node->task->sleep_timer <= sTimer.Get_Tick_Count())
+                    Notify_Process(node->task);
+            }
+
+            node = node->next;
+        }
+    }
+
     // je nejaky proces naplanovany? pokud je ve stavu running, budeme snizovat citac, pokud ne, musime okamzite preplanovat
     if (mCurrent_Task_Node && mCurrent_Task_Node->task->state == NTask_State::Running)
     {
@@ -260,6 +285,31 @@ void CProcess_Manager::Handle_Process_SWI(NSWI_Process_Service svc_idx, uint32_t
         case NSWI_Process_Service::Yield:
             Schedule();
             break;
+        case NSWI_Process_Service::Sleep:
+            mCurrent_Task_Node->task->sched_counter = 1;
+            mCurrent_Task_Node->task->state = NTask_State::Interruptable_Sleep;
+            mCurrent_Task_Node->task->sleep_timer = sTimer.Get_Tick_Count() + ( (r0 == Indefinite) ? r0 + 1 : r0 );
+            Schedule();
+            break;
+        case NSWI_Process_Service::Get_Sched_Info:
+            Get_Scheduler_Info(static_cast<NGet_Sched_Info_Type>(r0), reinterpret_cast<void*>(r1));
+            break;
+        case NSWI_Process_Service::Deadline:
+        {
+            NDeadline_Subservice dtype = static_cast<NDeadline_Subservice>(r0);
+            uint32_t* r1ptr = reinterpret_cast<uint32_t*>(r1);
+            switch (dtype)
+            {
+                case NDeadline_Subservice::Set_Relative:
+                    mCurrent_Task_Node->task->deadline = *r1ptr;
+                    break;
+                case NDeadline_Subservice::Get_Remaining:
+                    // TODO: co kdybychom prosvihli deadline?
+                    *r1ptr = (mCurrent_Task_Node->task->deadline == Indefinite) ? Indefinite : mCurrent_Task_Node->task->deadline - sTimer.Get_Tick_Count();
+                    break;
+            }
+            break;
+        }
     }
 }
 
@@ -408,4 +458,38 @@ void CProcess_Manager::Handle_Filesystem_SWI(NSWI_Filesystem_Service svc_idx, ui
             break;
         }
     }
+}
+
+bool CProcess_Manager::Get_Scheduler_Info(NGet_Sched_Info_Type type, void* target)
+{
+    if (!target)
+        return false;
+
+    switch (type)
+    {
+        case NGet_Sched_Info_Type::Active_Process_Count:
+        {
+            CProcess_List_Node* node = mProcess_List_Head;
+            uint32_t procCnt = 0;
+            while (node)
+            {
+                if (node->task->state == NTask_State::Running || node->task->state == NTask_State::Runnable)
+                    procCnt++;
+
+                node = node->next;
+            }
+
+            *reinterpret_cast<uint32_t*>(target) = procCnt;
+            break;
+        }
+        case NGet_Sched_Info_Type::Tick_Count:
+        {
+            *reinterpret_cast<uint32_t*>(target) = sTimer.Get_Tick_Count();
+            break;
+        }
+        default:
+            return false;
+    }
+
+    return true;
 }

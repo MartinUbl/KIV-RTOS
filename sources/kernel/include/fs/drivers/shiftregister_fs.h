@@ -7,7 +7,7 @@
 #include <stdstring.h>
 
 // virtualni soubor pro posuvny registr
-class CShift_Register_File : public IFile
+class CShift_Register_File final : public IFile
 {
     private:
         bool mOpened;
@@ -49,7 +49,7 @@ class CShift_Register_File : public IFile
             sShift_Register.Close();
             mOpened = false;
 
-            return true;
+            return IFile::Close();
         }
 
         virtual bool IOCtl(NIOCtl_Operation dir, void* ctlptr) override

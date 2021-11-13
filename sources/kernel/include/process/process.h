@@ -3,6 +3,9 @@
 // maximalni pocet otevrenych souboru
 constexpr uint32_t Max_Process_Opened_Files = 16;
 
+// hodnota, ktera znamena, ze proces nema casovy limit na vzbuzeni / deadline
+constexpr uint32_t Indefinite = static_cast<uint32_t>(-1);
+
 // vycet stavu procesu
 enum class NTask_State
 {
@@ -11,6 +14,7 @@ enum class NTask_State
     Running,            // prave naplanovany
     Blocked,            // blokovany - genericky stav pro proces, ktery by sice mohl byt naplanovan, ale ceka na nejaky prostredek
                         // pro prakticke ucely se stav "Blokovany" deli jeste na podstavy, aby bylo jasne, na jaky prostredek se ceka (mutex, cteni z disku, jine I/O, ...)
+    Interruptable_Sleep,// uspany proces - ceka az vyprsi nejaky casovy interval, popr. pokud ceka na podminkove promenne, tak ho muze probudit jeste notifikace
     Zombie,             // proces je ukonceny a ceka na to, az si nekdo precte navratovy kod
 };
 
@@ -39,4 +43,7 @@ struct TTask_Struct
     unsigned int sched_static_priority;         // staticka priorita procesu (dana pri jeho vytvareni)
     IFile* opened_files[Max_Process_Opened_Files];  // otevrene soubory; index je zaroven handle
     int exit_code;                              // navratovy kod procesu; nastaveny pri volani terminate nebo pri vyvolanem data/prefetch abortu a jinych
+    uint32_t sleep_timer;                       // casovac pro uspane procesy - jakmile systemovy citac prekroci tuto hodnotu, proces je odblokovan
+                                                // maximalni podporovany rozsah cekani je 0x7FFFFFFF, jelikoz muze citac pretect; diference je vzdy pocitana i s moznosti preteceni
+    uint32_t deadline;                          // deadline dokonceni tasku; 
 };

@@ -8,7 +8,7 @@
 CGPIO_Handler sGPIO(hal::GPIO_Base);
 
 CGPIO_Handler::CGPIO_Handler(unsigned int gpio_base_addr)
-	: mGPIO(reinterpret_cast<unsigned int*>(gpio_base_addr)), mWaiting_Processes(nullptr)
+	: mGPIO(reinterpret_cast<unsigned int*>(gpio_base_addr)), mWaiting_Files(nullptr)
 {
 	bzero(&mPin_Reservations_Read, sizeof(mPin_Reservations_Read));
 	bzero(&mPin_Reservations_Write, sizeof(mPin_Reservations_Write));
@@ -246,23 +246,20 @@ void CGPIO_Handler::Clear_Detected_Event(uint32_t pin)
 	mGPIO[reg] = 1 << bit;
 }
 
-void CGPIO_Handler::Wait_For_Event(uint32_t pin)
+void CGPIO_Handler::Wait_For_Event(IFile* file, uint32_t pin)
 {
-	TWaiting_Process* proc = new TWaiting_Process;
-	proc->pid = sProcessMgr.Get_Current_Process()->pid;
-	proc->pin_idx = pin;
-	proc->prev = nullptr;
-	proc->next = mWaiting_Processes;
+	TWaiting_File* wf = new TWaiting_File;
+	wf->file = file;
+	wf->pin_idx = pin;
+	wf->prev = nullptr;
+	wf->next = mWaiting_Files;
 
-	mWaiting_Processes = proc;
-
-	// zablokujeme, probudi nas az notify z handleru nize
-	sProcessMgr.Block_Current_Process();
+	mWaiting_Files = wf;
 }
 
 void CGPIO_Handler::Handle_IRQ()
 {
-	TWaiting_Process* proc, *tmpproc;
+	TWaiting_File* wf, *tmpwf;
 
 	// NOTE: kdybychom meli mala casova kvanta a timer by tikal velice casto, tak by se na nasledujici kus kodu
 	//       spotrebovalo obrovske mnozstvi casu zbytecne
@@ -282,32 +279,32 @@ void CGPIO_Handler::Handle_IRQ()
 		if ((mGPIO[reg] >> bit) & 0x1)
 		{
 			// zkusime najit proces, ktery na udalost na tomto pinu ceka
-			proc = mWaiting_Processes;
-			while (proc != nullptr)
+			wf = mWaiting_Files;
+			while (wf != nullptr)
 			{
-				if (proc->pin_idx == pin)
+				if (wf->pin_idx == pin)
 				{
 					// probudime proces
-					sProcessMgr.Notify_Process(proc->pid);
+					wf->file->Notify(NotifyAll);
 
 					// prelinkujeme spojovy seznam atd.
 
-					if (proc->prev)
-						proc->prev->next = proc->next;
-					if (proc->next)
-						proc->next->prev = proc->prev;
+					if (wf->prev)
+						wf->prev->next = wf->next;
+					if (wf->next)
+						wf->next->prev = wf->prev;
 
-					tmpproc = proc;
+					tmpwf = wf;
 
-					if (mWaiting_Processes == proc)
-						mWaiting_Processes = proc->next;
+					if (mWaiting_Files == wf)
+						mWaiting_Files = wf->next;
 
-					proc = proc->next;
+					wf = wf->next;
 
-					delete tmpproc;
+					delete tmpwf;
 				}
 				else
-					proc = proc->next;
+					wf = wf->next;
 			}
 
 			// nesmime zapomenout vycistit udalost, jinak by priznak zustal a my "detekovali" udalost stale dokola
