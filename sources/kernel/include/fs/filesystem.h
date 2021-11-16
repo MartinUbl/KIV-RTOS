@@ -2,6 +2,7 @@
 
 #include <hal/intdef.h>
 #include <process/swi.h>
+#include <process/spinlock.h>
 
 constexpr const uint32_t MaxFSDriverNameLength = 16;
 
@@ -18,6 +19,9 @@ enum class NFile_Type_Major
     Unspecified     = 0, // unspecified by implementor
     Character       = 1, // memory-only character file
     Mutex           = 2, // mutex virtual file
+    Semaphore       = 3, // semaphore virtual file
+    Condition_Var   = 4, // podminkova promenna
+    Pipe            = 5, // roura
 };
 
 enum class NFile_Open_Mode
@@ -54,11 +58,13 @@ class IFile
 
         TWaiting_Task* mWaiting_Tasks = nullptr;
 
+        spinlock_t mWait_Lock;
+
     protected:
         void Wait_Enqueue_Current();
 
     public:
-        IFile(NFile_Type_Major type) : mType(type) { };
+        IFile(NFile_Type_Major type) : mType(type) { spinlock_init(&mWait_Lock); };
         virtual ~IFile() = default;
 
         // cte ze souboru do bufferu, num je velikost bufferu (maximalni pocet bytu k precteni); vraci skutecne precteny pocet znaku
@@ -70,10 +76,10 @@ class IFile
         // zmeni nastaveni/ziska nastaveni souvisejici s danym souborem; ctlptr je vzdy specificka prepravka pro typ souboru
         virtual bool IOCtl(NIOCtl_Operation dir, void* ctlptr) { return false; };
         // vycka na udalost nad timto souborem (specificke pro danou implementaci)
-        virtual bool Wait() { return true; };
+        virtual bool Wait(uint32_t count) { return true; };
 
         // notifikuje <count> cekajici nad timto souborem (pokud nejaky cekajici je)
-        uint32_t Notify(uint32_t count);
+        virtual uint32_t Notify(uint32_t count);
 
         // zjisti typ souboru
         NFile_Type_Major Get_File_Type() const { return mType; };

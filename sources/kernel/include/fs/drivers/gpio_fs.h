@@ -84,11 +84,11 @@ class CGPIO_File final : public IFile
             return false;
         }
 
-        virtual bool Wait() override
+        virtual bool Wait(uint32_t count) override
         {
             Wait_Enqueue_Current();
             sGPIO.Wait_For_Event(this, mPinNo);
-            
+
             // zablokujeme, probudi nas az notify 
 	        sProcessMgr.Block_Current_Process();
             return true;

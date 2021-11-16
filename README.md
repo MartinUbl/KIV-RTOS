@@ -15,15 +15,16 @@ This software is developed as a demonstration project for operating systems cour
 - paging support
 - userspace process isolation
 - spinlocks, mutexes
+- semaphores
+- condition variables
+- named pipes
 
 ### Planned features
 - ELF loader (now the files are just loaded as-is)
 - real-time process scheduler (EDF)
-- semaphores, condition variables
 - eMMC driver
 - FAT32 support
 - WiFi and Bluetooth driver
-- named pipes
 
 ## License
 

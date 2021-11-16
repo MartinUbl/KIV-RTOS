@@ -158,6 +158,8 @@ IFile* CFilesystem::Open(const char* path, NFile_Open_Mode mode)
 
 void IFile::Wait_Enqueue_Current()
 {
+    spinlock_lock(&mWait_Lock);
+
     TWaiting_Task* task = new TWaiting_Task;
     task->pid = sProcessMgr.Get_Current_Process()->pid;
     task->prev = nullptr;
@@ -171,10 +173,14 @@ void IFile::Wait_Enqueue_Current()
         task->next = mWaiting_Tasks;
         mWaiting_Tasks = task;
     }
+
+    spinlock_unlock(&mWait_Lock);
 }
 
 uint32_t IFile::Notify(uint32_t count)
 {
+    spinlock_lock(&mWait_Lock);
+
     TWaiting_Task* tmp;
     TWaiting_Task* itr = mWaiting_Tasks;
     while (itr && itr->next)
@@ -199,6 +205,8 @@ uint32_t IFile::Notify(uint32_t count)
             break;
         }
     }
+
+    spinlock_unlock(&mWait_Lock);
 
     return notified_count;
 }

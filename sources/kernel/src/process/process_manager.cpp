@@ -377,76 +377,12 @@ void CProcess_Manager::Handle_Filesystem_SWI(NSWI_Filesystem_Service svc_idx, ui
             target.r0 = mCurrent_Task_Node->task->opened_files[r0]->IOCtl(static_cast<NIOCtl_Operation>(r1), reinterpret_cast<void*>(r2));
             break;
         }
-        case NSWI_Filesystem_Service::Mutex:
+        case NSWI_Filesystem_Service::Notify:
         {
-            NMutex_Operation op = static_cast<NMutex_Operation>(r0);
-            CMutex* mtx = nullptr;
-            switch (op)
-            {
-                case NMutex_Operation::Create:
-                {
-                    mtx = sProcess_Resource_Manager.Alloc_Mutex(reinterpret_cast<const char*>(r1));
-                    target.r0 = Invalid_Handle;
-                    if (!mtx)
-                        return;
+            if (r0 > Max_Process_Opened_Files || !mCurrent_Task_Node->task->opened_files[r0])
+                return;
 
-                    target.r0 = Map_File_To_Current(mtx);
-
-                    if (target.r0 == Invalid_Handle)
-                        return;
-
-                    break;
-                }
-                case NMutex_Operation::Lock:
-                {
-                    if (r1 > Max_Process_Opened_Files || !mCurrent_Task_Node->task->opened_files[r1])
-                        return;
-
-                    if (mCurrent_Task_Node->task->opened_files[r1]->Get_File_Type() != NFile_Type_Major::Mutex)
-                        return;
-
-                    mtx = static_cast<CMutex*>(mCurrent_Task_Node->task->opened_files[r1]); // static_cast, protoze uz vime, ze soubor je mutex
-
-                    if (mtx->Lock())
-                        target.r0 = static_cast<uint32_t>(NSWI_Result_Code::OK);
-                    else
-                        target.r0 = static_cast<uint32_t>(NSWI_Result_Code::Fail);
-
-                    break;
-                }
-                case NMutex_Operation::Unlock:
-                {
-                    if (r1 > Max_Process_Opened_Files || !mCurrent_Task_Node->task->opened_files[r1])
-                        return;
-
-                    if (mCurrent_Task_Node->task->opened_files[r1]->Get_File_Type() != NFile_Type_Major::Mutex)
-                        return;
-
-                    mtx = static_cast<CMutex*>(mCurrent_Task_Node->task->opened_files[r1]); // static_cast, protoze uz vime, ze soubor je mutex
-
-                    if (mtx->Unlock())
-                        target.r0 = static_cast<uint32_t>(NSWI_Result_Code::OK);
-                    else
-                        target.r0 = static_cast<uint32_t>(NSWI_Result_Code::Fail);
-
-                    break;
-                }
-                case NMutex_Operation::Destroy:
-                {
-                    if (r1 > Max_Process_Opened_Files || !mCurrent_Task_Node->task->opened_files[r1])
-                        return;
-
-                    if (mCurrent_Task_Node->task->opened_files[r1]->Get_File_Type() != NFile_Type_Major::Mutex)
-                        return;
-
-                    mtx = static_cast<CMutex*>(mCurrent_Task_Node->task->opened_files[r1]); // static_cast, protoze uz vime, ze soubor je mutex
-
-                    sProcess_Resource_Manager.Free_Mutex(mtx);
-
-                    target.r0 = static_cast<uint32_t>(NSWI_Result_Code::OK);
-                    break;
-                }
-            }
+            target.r0 = mCurrent_Task_Node->task->opened_files[r0]->Notify(r1);
             break;
         }
         case NSWI_Filesystem_Service::Wait:
@@ -454,7 +390,7 @@ void CProcess_Manager::Handle_Filesystem_SWI(NSWI_Filesystem_Service svc_idx, ui
             if (r0 > Max_Process_Opened_Files || !mCurrent_Task_Node->task->opened_files[r0])
                 return;
 
-            target.r0 = mCurrent_Task_Node->task->opened_files[r0]->Wait();
+            target.r0 = mCurrent_Task_Node->task->opened_files[r0]->Wait(r1);
             break;
         }
     }

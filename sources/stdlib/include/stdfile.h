@@ -17,5 +17,6 @@ uint32_t read(uint32_t file, char* const buffer, uint32_t size);
 uint32_t write(uint32_t file, const char* buffer, uint32_t size);
 void close(uint32_t file);
 uint32_t ioctl(uint32_t file, NIOCtl_Operation operation, void* param);
-uint32_t wait(uint32_t file);
+uint32_t notify(uint32_t file, uint32_t count = 1);
+NSWI_Result_Code wait(uint32_t file, uint32_t count = 1);
 bool sleep(uint32_t ticks);

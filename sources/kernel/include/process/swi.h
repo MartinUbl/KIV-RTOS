@@ -87,13 +87,13 @@ enum class NSWI_Filesystem_Service
     // OUT: r0 = indikator uspechu (NSWI_Result_Code)
     IOCtl           = 4,
 
-    // Manipulace s mutexem
-    // IN:  r0 = identifikator operace (NMutex_Operation), r1 a r2 specificke pro operaci
-    // OUT: r0 = specificke pro operaci
-    Mutex           = 5,
+    // Notifikace souboru
+    // IN:  r0 = handle otevreneho souboru, r1 = pocet zdroju
+    // OUT: r0 = pocet skutecne notifikovanych zdroju
+    Notify          = 5,
 
     // Cekani na udalost nad souborem (nejaky zapis, notifikace, ...)
-    // IN:  r0 = handle otevreneho souboru
+    // IN:  r0 = handle otevreneho souboru, r1 = pocet zdroju
     // OUT: r0 = indikator uspechu (NSWI_Result_Code)
     Wait            = 6,
 };
@@ -105,28 +105,4 @@ enum class NIOCtl_Operation
     Set_Params      = 1,        // nastavi parametry (z poskytnute prepravky)
     Enable_Event_Detection  = 2,    // povoli detekci udalosti (specifikovanych v r2)
     Disable_Event_Detection = 3,    // zakaze detekci udalosti (specifikovanych v r2)
-};
-
-// mozne operace nad mutexem
-enum class NMutex_Operation
-{
-    // Vytvoreni mutexu
-    // IN:  r1 = nazev mutexu
-    // OUT: r0 = handle mutexu
-    Create          = 0,
-
-    // Zamceni mutexu
-    // IN:  r1 = handle mutexu
-    // OUT: r0 = indikator uspechu (NSWI_Result_Code)
-    Lock            = 1,
-
-    // Odemceni mutexu
-    // IN:  r1 = handle mutexu
-    // OUT: r0 = indikator uspechu (NSWI_Result_Code)
-    Unlock          = 2,
-
-    // Zniceni mutexu (resp. uvolneni od soucasneho procesu)
-    // IN:  r1 = handle mutexu
-    // OUT: r0 = indikator uspechu (NSWI_Result_Code)
-    Destroy         = 3,
 };

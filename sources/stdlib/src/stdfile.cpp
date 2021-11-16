@@ -80,11 +80,24 @@ uint32_t ioctl(uint32_t file, NIOCtl_Operation operation, void* param)
     return retcode;
 }
 
-uint32_t wait(uint32_t file)
+uint32_t notify(uint32_t file, uint32_t count)
 {
-    uint32_t retcode;
+    uint32_t retcnt;
 
     asm volatile("mov r0, %0" : : "r" (file));
+    asm volatile("mov r1, %0" : : "r" (count));
+    asm volatile("swi 69");
+    asm volatile("mov %0, r0" : "=r" (retcnt));
+
+    return retcnt;
+}
+
+NSWI_Result_Code wait(uint32_t file, uint32_t count)
+{
+    NSWI_Result_Code retcode;
+
+    asm volatile("mov r0, %0" : : "r" (file));
+    asm volatile("mov r1, %0" : : "r" (count));
     asm volatile("swi 70");
     asm volatile("mov %0, r0" : "=r" (retcode));
 
