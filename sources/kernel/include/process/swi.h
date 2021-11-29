@@ -45,7 +45,7 @@ enum class NSWI_Process_Service
     Yield           = 2,
 
     // Uspi proces na dobu (ne)urcitou
-    // IN:  r0 = pocet tiku casovace, na kolik uspat proces
+    // IN:  r0 = pocet tiku casovace, na kolik uspat proces, r1 = nova deadline po probuzeni (nebo Deadline_Unchanged pokud se nema menit, nebo Indefinite pokud se ma zrusit)
     // OUT: r0 = indikator uspechu (NSWI_Result_Code), OK pokud se probudil po casovem useku, Fail pokud ho probudilo neco jineho
     Sleep           = 3,
 
@@ -93,7 +93,7 @@ enum class NSWI_Filesystem_Service
     Notify          = 5,
 
     // Cekani na udalost nad souborem (nejaky zapis, notifikace, ...)
-    // IN:  r0 = handle otevreneho souboru, r1 = pocet zdroju
+    // IN:  r0 = handle otevreneho souboru, r1 = pocet zdroju, r2 = nova deadline po probuzeni (nebo Deadline_Unchanged pokud se nema menit, nebo Indefinite pokud se ma zrusit)
     // OUT: r0 = indikator uspechu (NSWI_Result_Code)
     Wait            = 6,
 };

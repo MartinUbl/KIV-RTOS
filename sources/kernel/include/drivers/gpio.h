@@ -3,6 +3,7 @@
 #include <hal/intdef.h>
 #include <hal/peripherals.h>
 #include <fs/filesystem.h>
+#include <process/spinlock.h>
 
 constexpr uint32_t Invalid_Pin = static_cast<uint32_t>(-1);
 
@@ -56,6 +57,8 @@ class CGPIO_Handler
 		};
 
 		TWaiting_File* mWaiting_Files;
+
+		spinlock_t mLock;
 		
 	protected:
 		// vybira GPFSEL registr a pozici bitu pro dany pin

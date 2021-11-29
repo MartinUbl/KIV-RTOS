@@ -83,7 +83,7 @@ CSemaphore* CProcess_Resource_Manager::Alloc_Semaphore(const char* name, uint32_
         if (mSemaphores[i].alloc_count == 0)
         {
             strncpy(mSemaphores[i].name, name, Max_Semaphore_Name_Length);
-            mSemaphores[i].semaphore.Reset(initial_res_count);
+            mSemaphores[i].semaphore.Reset(initial_res_count, initial_res_count);
             mSemaphores[i].alloc_count++;
             return &mSemaphores[i].semaphore;
         }
@@ -153,7 +153,7 @@ CPipe* CProcess_Resource_Manager::Alloc_Pipe(const char* name, uint32_t pipe_siz
     {
         if (mPipes[i].alloc_count > 0)
         {
-            if (strncmp(mPipes[i].name, name, Max_Pipe_Name_Length) == 0)
+            //if (strncmp(mPipes[i].name, name, Max_Pipe_Name_Length) == 0)
             {
                 mPipes[i].alloc_count++;
                 return &mPipes[i].pipe;

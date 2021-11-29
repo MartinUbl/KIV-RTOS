@@ -26,7 +26,8 @@ CProcess_Manager sProcessMgr;
 CProcess_Manager::CProcess_Manager()
     : mLast_PID(0), mProcess_List_Head(nullptr), mCurrent_Task_Node(nullptr)
 {
-    //
+    //mSchedule_Fnc = &CProcess_Manager::Schedule_RR;
+    mSchedule_Fnc = &CProcess_Manager::Schedule_EDF;
 }
 
 TTask_Struct* CProcess_Manager::Get_Current_Process() const
@@ -54,6 +55,10 @@ void CProcess_Manager::Block_Current_Process()
 
     cur->state = NTask_State::Blocked;
 
+    // TODO: doopravdy to takto chceme?
+    //if (cur->notified_deadline != Deadline_Unchanged)
+    //    cur->deadline = Indefinite;
+
     Schedule();
 }
 
@@ -73,6 +78,12 @@ bool CProcess_Manager::Notify_Process(TTask_Struct* proc)
 
     // ve slozitejsich planovacich by tady mohl byt treba i presun do jine fronty procesu, apod.
     proc->state = NTask_State::Runnable;
+
+    // pokud byla nastavena "budouci" deadline, nastavime skutecnou deadline
+    if (proc->notified_deadline != Deadline_Unchanged)
+        proc->deadline = sTimer.Get_Tick_Count() + proc->notified_deadline;
+    // pozor: tady nesmime mazat budouci deadline - co kdyby byl proces probuzen falesne? (stolen wakeup)
+    //        v kernelu by se to sice stavat uplne nemelo, ale co kdybychom se nekde upsali
 
     return true;
 }
@@ -98,6 +109,7 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
     task->sched_counter = task->sched_static_priority;
     task->state = NTask_State::New;
     task->deadline = Indefinite; // task si zatim nestanovil deadline, udela to az to bude aktualni v deadline syscallu
+    task->notified_deadline = Indefinite;
 
     // lr = co zacit vykonavat po bootstrapu, 0x8000 je misto, kam je relokovany v kazde nasi binarce symbol _start, tedy vstupni bod programu
     task->cpu_context.lr = 0x8000;
@@ -145,7 +157,7 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
 
 void CProcess_Manager::Schedule()
 {
-    // projdeme vsechny uspane procesy, zda je na case je vzbudit
+    // projdeme vsechny uspane (sleep) procesy, zda je na case je vzbudit
     {
         CProcess_List_Node* node = mProcess_List_Head;
         while (node)
@@ -160,46 +172,17 @@ void CProcess_Manager::Schedule()
         }
     }
 
-    // je nejaky proces naplanovany? pokud je ve stavu running, budeme snizovat citac, pokud ne, musime okamzite preplanovat
-    if (mCurrent_Task_Node && mCurrent_Task_Node->task->state == NTask_State::Running)
-    {
-        // snizime citac planovace
-        mCurrent_Task_Node->task->sched_counter--;
-        // pokud je citac vetsi nez 0, zatim nebudeme preplanovavat (a zaroven je proces stale ve stavu Running - nezablokoval se nad necim)
-        if (mCurrent_Task_Node->task->sched_counter > 0)
-            return;
-    }
-
-    // najdeme dalsi proces na planovani
-
-    // vybereme dalsi proces v rade
-    CProcess_List_Node* next = mCurrent_Task_Node ? mCurrent_Task_Node->next : mProcess_List_Head;
+    // invokujeme skutecny planovac
+    CProcess_List_Node* next = (this->*mSchedule_Fnc)();
     if (!next)
-        next = mProcess_List_Head;
-
-    // proces k naplanovani musi bud byt ve stavu runnable (jiz nekdy bezel a muze bezet znovu) nebo running (pak jde o stavajici proces)
-    // a nebo new (novy proces, ktery jeste nebyl planovany)
-    while (next->task->state != NTask_State::Runnable && next->task->state != NTask_State::Running && next->task->state != NTask_State::New)
-    {
-        if (!next)
-        {
-            next = mCurrent_Task_Node;
-            break;
-        }
-        else
-            next = next->next;
-    }
+        return;
 
     // tady bychom jeste meli osetrit nejakou hranicni situaci, kdy by nebylo co naplanovat - to se sice nesmi stat a byla by to chyba programatora kernelu,
     // ale kdyby k tomu doslo, obtizne by se to diagnostikovalo
 
-    // stavajici proces je jediny planovatelny - nemusime nic preplanovavat
+    // planovac usoudil, ze ma byt naplanovany proces, ktery zrovna ma CPU pro sebe - nemusime nic menit
     if (next == mCurrent_Task_Node)
-    {
-        // nastavime mu zase zpatky jeho pridel casovych kvant a vracime se
-        mCurrent_Task_Node->task->sched_counter = mCurrent_Task_Node->task->sched_static_priority;
         return;
-    }
 
     Switch_To(next);
 }
@@ -288,6 +271,7 @@ void CProcess_Manager::Handle_Process_SWI(NSWI_Process_Service svc_idx, uint32_t
         case NSWI_Process_Service::Sleep:
             mCurrent_Task_Node->task->sched_counter = 1;
             mCurrent_Task_Node->task->state = NTask_State::Interruptable_Sleep;
+            mCurrent_Task_Node->task->notified_deadline = r1;
             mCurrent_Task_Node->task->sleep_timer = sTimer.Get_Tick_Count() + ( (r0 == Indefinite) ? r0 + 1 : r0 );
             Schedule();
             break;
@@ -301,7 +285,8 @@ void CProcess_Manager::Handle_Process_SWI(NSWI_Process_Service svc_idx, uint32_t
             switch (dtype)
             {
                 case NDeadline_Subservice::Set_Relative:
-                    mCurrent_Task_Node->task->deadline = *r1ptr;
+                    mCurrent_Task_Node->task->deadline = ((*r1ptr == Indefinite) ? Indefinite : (sTimer.Get_Tick_Count() + *r1ptr));
+                    mCurrent_Task_Node->task->notified_deadline = Indefinite;
                     break;
                 case NDeadline_Subservice::Get_Remaining:
                     // TODO: co kdybychom prosvihli deadline?
@@ -390,7 +375,16 @@ void CProcess_Manager::Handle_Filesystem_SWI(NSWI_Filesystem_Service svc_idx, ui
             if (r0 > Max_Process_Opened_Files || !mCurrent_Task_Node->task->opened_files[r0])
                 return;
 
+            mCurrent_Task_Node->task->notified_deadline = r2;
+
+            // nastavme deadline, kdyby Wait nahodou neblokoval
+            if (r2 != Deadline_Unchanged)
+                mCurrent_Task_Node->task->deadline = r2;
+
             target.r0 = mCurrent_Task_Node->task->opened_files[r0]->Wait(r1);
+
+            // v tento moment uz lze "budouci" deadline vymazat, uz je nastavena ve skutecne deadline bud shora nebo z notify kodu
+            mCurrent_Task_Node->task->notified_deadline = Deadline_Unchanged;
             break;
         }
     }

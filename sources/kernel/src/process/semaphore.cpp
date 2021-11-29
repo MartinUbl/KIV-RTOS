@@ -40,21 +40,32 @@ bool CSemaphore::Close()
 
 bool CSemaphore::Wait(uint32_t count)
 {
+    spinlock_lock(&mLock);
+
     // TODO: kdyz count > 1, pak musi byt fronta trochu slozitejsi (nelze pak vzdy probouzet vrchni proces)
 
     while (mSemaphore_Count < count)
     {
         Wait_Enqueue_Current();
+
+        spinlock_unlock(&mLock);
+
 	    sProcessMgr.Block_Current_Process();
+
+        spinlock_lock(&mLock);
     }
 
     mSemaphore_Count -= count;
+
+    spinlock_unlock(&mLock);
 
     return true;
 }
 
 uint32_t CSemaphore::Notify(uint32_t count)
 {
+    spinlock_lock(&mLock);
+
     // orez na maximalni pocet zdroju
     if (mSemaphore_Count + count > mSemaphore_Max_Count)
         count = mSemaphore_Max_Count - mSemaphore_Count;
@@ -65,12 +76,16 @@ uint32_t CSemaphore::Notify(uint32_t count)
     // zdroje pricteme k semaforu (probuzene tasky si je zase odectou dle potreby)
     mSemaphore_Count += count;
 
+    spinlock_unlock(&mLock);
+
     // vracime pocet probuzenych
     return real_notify_cnt;
 }
 
-void CSemaphore::Reset(uint32_t count)
+void CSemaphore::Reset(uint32_t count, uint32_t initial_count)
 {
     mSemaphore_Max_Count = count;
-    mSemaphore_Count = count;
+    mSemaphore_Count = initial_count;
+
+    spinlock_init(&mLock);
 }

@@ -33,12 +33,10 @@ int main(int argc, char** argv)
 	uint32_t trng_file = open("DEV:trng", NFile_Open_Mode::Read_Only);
 	uint32_t num = 0;
 
-	sleep(0x800);
+	sleep(0x800, 0x800);
 
 	while (true)
 	{
-		set_task_deadline(0x800);
-
 		// ziskame si nahodne cislo a vybereme podle toho zpravu
 		read(trng_file, reinterpret_cast<char*>(&num), sizeof(num));
 		const char* msg = messages[num % (sizeof(messages) / sizeof(const char*))];
@@ -47,8 +45,7 @@ int main(int argc, char** argv)
 		disp.Put_String(0, 0, msg);
 		disp.Flip();
 
-		set_task_deadline(Indefinite);
-		sleep(0x4000); // TODO: z tohohle bude casem cekani na podminkove promenne (na eventu) s timeoutem
+		sleep(0x4000, 0x800); // TODO: z tohohle bude casem cekani na podminkove promenne (na eventu) s timeoutem
 	}
 
     return 0;

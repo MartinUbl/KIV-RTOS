@@ -21,7 +21,7 @@ class CPipe_FS_Driver : public IFilesystem_Driver
             // SYS:pipe/roura#?
             // SYS:pipe/roura
 
-            char pipename[Max_Pipe_Name_Length];
+            /*char pipename[Max_Pipe_Name_Length];
             strncpy(pipename, path, Max_Pipe_Name_Length);
 
             const int len = strlen(pipename);
@@ -38,9 +38,9 @@ class CPipe_FS_Driver : public IFilesystem_Driver
                     pipesize = atoi(&pipename[i + 1]);
                     break;
                 }
-            }
+            }*/
 
-            return sProcess_Resource_Manager.Alloc_Pipe(pipename, pipesize);
+            return sProcess_Resource_Manager.Alloc_Pipe("roura", 32/*pipename, pipesize*/);
         }
 };
 

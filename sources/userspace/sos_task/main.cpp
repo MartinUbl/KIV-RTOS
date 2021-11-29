@@ -34,14 +34,21 @@ int main(int argc, char** argv)
 	NGPIO_Interrupt_Type irtype = NGPIO_Interrupt_Type::Rising_Edge;
 	ioctl(button, NIOCtl_Operation::Enable_Event_Detection, &irtype);
 
+	uint32_t logpipe = pipe("log", 32);
+
 	while (true)
 	{
-		set_task_deadline(Indefinite);
-
 		// pockame na stisk klavesy
-		wait(button);
-		// nastavime nejaky deadline, do kdy je treba vyblikat SOS
-		set_task_deadline(0x200000);
+		wait(button, 1, 0x300);
+
+		// tady by se mohla hodit inverze priorit:
+		// 1) pipe je plna
+		// 2) my mame deadline 0x300
+		// 3) log task ma deadline 0x1000
+		// 4) jiny task ma deadline 0x500
+		// jiny task dostane prednost pred log taskem, a pokud nesplni v kratkem case svou ulohu, tento task prekroci deadline
+		// TODO: inverzi priorit bychom docasne zvysili prioritu (zkratili deadline) log tasku, aby vyprazdnil pipe a my se mohli odblokovat co nejdrive
+		write(logpipe, "SOS!", 5);
 
 		blink(true);
 		sleep(symbol_tick_delay);

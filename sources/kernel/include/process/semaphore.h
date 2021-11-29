@@ -1,6 +1,7 @@
 #pragma once
 
 #include <fs/filesystem.h>
+#include <process/spinlock.h>
 
 class CSemaphore final : public IFile
 {
@@ -8,11 +9,13 @@ class CSemaphore final : public IFile
         uint32_t mSemaphore_Count = 0;
         uint32_t mSemaphore_Max_Count = 0;
 
+        spinlock_t mLock;
+
     public:
         CSemaphore();
         ~CSemaphore();
 
-        void Reset(uint32_t count = 0);
+        void Reset(uint32_t count = 0, uint32_t initial_count = 0);
 
         uint32_t Get_Current_Count() const
         {

@@ -16,6 +16,8 @@ CGPIO_Handler::CGPIO_Handler(unsigned int gpio_base_addr)
 	// projistotu promazeme detekovane udalosti
 	mGPIO[static_cast<uint32_t>(hal::GPIO_Reg::GPEDS0)] = 0;
 	mGPIO[static_cast<uint32_t>(hal::GPIO_Reg::GPEDS1)] = 0;
+
+	spinlock_init(&mLock);
 }
 
 bool CGPIO_Handler::Get_GPFSEL_Location(uint32_t pin, uint32_t& reg, uint32_t& bit_idx) const
@@ -248,6 +250,8 @@ void CGPIO_Handler::Clear_Detected_Event(uint32_t pin)
 
 void CGPIO_Handler::Wait_For_Event(IFile* file, uint32_t pin)
 {
+	spinlock_lock(&mLock);
+
 	TWaiting_File* wf = new TWaiting_File;
 	wf->file = file;
 	wf->pin_idx = pin;
@@ -255,6 +259,8 @@ void CGPIO_Handler::Wait_For_Event(IFile* file, uint32_t pin)
 	wf->next = mWaiting_Files;
 
 	mWaiting_Files = wf;
+
+	spinlock_unlock(&mLock);
 }
 
 void CGPIO_Handler::Handle_IRQ()
@@ -278,6 +284,8 @@ void CGPIO_Handler::Handle_IRQ()
 		// byla na tomto pinu detekovana udalost?
 		if ((mGPIO[reg] >> bit) & 0x1)
 		{
+			spinlock_lock(&mLock);
+
 			// zkusime najit proces, ktery na udalost na tomto pinu ceka
 			wf = mWaiting_Files;
 			while (wf != nullptr)
@@ -306,6 +314,8 @@ void CGPIO_Handler::Handle_IRQ()
 				else
 					wf = wf->next;
 			}
+
+			spinlock_unlock(&mLock);
 
 			// nesmime zapomenout vycistit udalost, jinak by priznak zustal a my "detekovali" udalost stale dokola
 			Clear_Detected_Event(pin);

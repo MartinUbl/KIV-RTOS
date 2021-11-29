@@ -3,6 +3,7 @@
 #include <hal/intdef.h>
 #include <process/swi.h>
 #include <fs/filesystem.h>
+#include <process/process_manager.h>
 
 uint32_t getpid();
 void terminate(int exitcode);
@@ -18,5 +19,7 @@ uint32_t write(uint32_t file, const char* buffer, uint32_t size);
 void close(uint32_t file);
 uint32_t ioctl(uint32_t file, NIOCtl_Operation operation, void* param);
 uint32_t notify(uint32_t file, uint32_t count = 1);
-NSWI_Result_Code wait(uint32_t file, uint32_t count = 1);
-bool sleep(uint32_t ticks);
+NSWI_Result_Code wait(uint32_t file, uint32_t count = 1, uint32_t notified_deadline = Deadline_Unchanged);
+bool sleep(uint32_t ticks, uint32_t notified_deadline = Deadline_Unchanged);
+
+uint32_t pipe(const char* name, uint32_t buf_size);

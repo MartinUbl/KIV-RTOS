@@ -48,6 +48,14 @@ class CProcess_Manager
 
         bool Notify_Process(TTask_Struct* proc);
 
+    protected:
+        // round-robin planovac (se statickou prioritou)
+        CProcess_List_Node* Schedule_RR();
+        // earliest deadline first (real-time) planovac
+        CProcess_List_Node* Schedule_EDF();
+
+        CProcess_List_Node* (CProcess_Manager::*mSchedule_Fnc)() = nullptr;
+
     public:
         CProcess_Manager();
 

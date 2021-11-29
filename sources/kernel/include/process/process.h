@@ -6,6 +6,9 @@ constexpr uint32_t Max_Process_Opened_Files = 16;
 // hodnota, ktera znamena, ze proces nema casovy limit na vzbuzeni / deadline
 constexpr uint32_t Indefinite = static_cast<uint32_t>(-1);
 
+// hodnota, ktera znamena, ze procesu se nema menit deadline
+constexpr uint32_t Deadline_Unchanged = static_cast<uint32_t>(-2);
+
 // vycet stavu procesu
 enum class NTask_State
 {
@@ -45,5 +48,6 @@ struct TTask_Struct
     int exit_code;                              // navratovy kod procesu; nastaveny pri volani terminate nebo pri vyvolanem data/prefetch abortu a jinych
     uint32_t sleep_timer;                       // casovac pro uspane procesy - jakmile systemovy citac prekroci tuto hodnotu, proces je odblokovan
                                                 // maximalni podporovany rozsah cekani je 0x7FFFFFFF, jelikoz muze citac pretect; diference je vzdy pocitana i s moznosti preteceni
-    uint32_t deadline;                          // deadline dokonceni tasku; 
+    uint32_t deadline;                          // deadline dokonceni tasku
+    uint32_t notified_deadline;                 // deadline nastavena po nasledujicim probuzeni procesu
 };

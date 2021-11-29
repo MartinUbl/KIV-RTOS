@@ -1,6 +1,5 @@
 #include <stdfile.h>
-
-#include <process/process_manager.h>
+#include <stdstring.h>
 
 uint32_t getpid()
 {
@@ -92,23 +91,25 @@ uint32_t notify(uint32_t file, uint32_t count)
     return retcnt;
 }
 
-NSWI_Result_Code wait(uint32_t file, uint32_t count)
+NSWI_Result_Code wait(uint32_t file, uint32_t count, uint32_t notified_deadline)
 {
     NSWI_Result_Code retcode;
 
     asm volatile("mov r0, %0" : : "r" (file));
     asm volatile("mov r1, %0" : : "r" (count));
+    asm volatile("mov r2, %0" : : "r" (notified_deadline));
     asm volatile("swi 70");
     asm volatile("mov %0, r0" : "=r" (retcode));
 
     return retcode;
 }
 
-bool sleep(uint32_t ticks)
+bool sleep(uint32_t ticks, uint32_t notified_deadline)
 {
     uint32_t retcode;
 
     asm volatile("mov r0, %0" : : "r" (ticks));
+    asm volatile("mov r1, %0" : : "r" (notified_deadline));
     asm volatile("swi 3");
     asm volatile("mov %0, r0" : "=r" (retcode));
 
@@ -158,4 +159,21 @@ uint32_t get_task_ticks_to_deadline()
     asm volatile("swi 5");
 
     return ticks;
+}
+
+const char Pipe_File_Prefix[] = "SYS:pipe/";
+
+uint32_t pipe(const char* name, uint32_t buf_size)
+{
+    char fname[64];
+    strncpy(fname, Pipe_File_Prefix, sizeof(Pipe_File_Prefix));
+    strncpy(fname + sizeof(Pipe_File_Prefix), name, sizeof(fname) - sizeof(Pipe_File_Prefix) - 1);
+
+    int ncur = sizeof(Pipe_File_Prefix) + strlen(name);
+
+    fname[ncur++] = '#';
+
+    itoa(buf_size, &fname[ncur], 10);
+
+    return open(fname, NFile_Open_Mode::Read_Write);
 }
