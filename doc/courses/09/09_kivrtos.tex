@@ -1,0 +1,141 @@
+\documentclass{article}
+
+\usepackage[pdftex]{graphicx}
+\usepackage[czech]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{enumitem}
+\usepackage{amsmath}
+\usepackage{url}
+\usepackage{listings}
+\usepackage{caption}
+\usepackage[usenames,dvipsnames,svgnames,table]{xcolor}
+
+\usepackage[pdftex]{hyperref}
+\hypersetup{colorlinks=true,
+  unicode=true,
+  linkcolor=black,
+  citecolor=black,
+  urlcolor=black,
+  bookmarksopen=true}
+
+\usepackage{xcolor}
+\colorlet{mygray}{black!30}
+\colorlet{mygreen}{green!60!blue}
+\colorlet{mymauve}{red!60!blue}
+\lstset{
+	backgroundcolor=\color{gray!10},  
+	basicstyle=\ttfamily,
+	columns=fullflexible,
+	breakatwhitespace=false,      
+	breaklines=true,                
+	captionpos=b,                    
+	commentstyle=\color{mygreen}, 
+	extendedchars=true,              
+	frame=single,                   
+	keepspaces=true,             
+	keywordstyle=\color{blue},      
+	language=c++,                 
+	numbers=none,                
+	numbersep=5pt,                   
+	numberstyle=\tiny\color{blue}, 
+	rulecolor=\color{mygray},        
+	showspaces=false,               
+	showtabs=false,                 
+	stepnumber=5,                  
+	stringstyle=\color{mymauve},    
+	tabsize=3,                      
+	title=\lstname                
+}
+
+\usepackage[numbers,sort&compress]{natbib}
+
+\newcommand*\justify{
+  \fontdimen2\font=0.4em
+  \fontdimen3\font=0.2em
+  \fontdimen4\font=0.1em
+  \fontdimen7\font=0.1em
+  \hyphenchar\font=`\-
+}
+
+\author{Martin Úbl}
+
+\title{KIV/OS - cvičení č. 9}
+
+\begin{document}
+
+\maketitle
+
+\section{Obsah cvičení}
+
+\begin{itemize}
+	\item awaitable soubory (Wait a Notify)
+	\item GPIO přerušení
+	\item spinlock, mutex, semafor
+	\item podmínková proměnná
+	\item pojmenovaná roura
+	\item EDF plánovač (soft real-time)
+\end{itemize}
+
+\section{Úlohy, deadline, awaitable soubory}
+
+V typickém systému reálného času obvykle chceme reagovat na vnější podněty, často z důvodu jeho nasazení na embedded zařízení, které na tyto podněty reaguje příslušnou akcí (která musí být vykonána do určitého času -- deadline). Tyto akce provádí jednotlivé procesy, které jsou tomuto účelu vyhrazené. Ty čekají na příchod podnětu, provedou příslušnou akci,  opět se uspí a to stále dokola opakují. Ve vyšší abstrakci pak lze hovořit o tom, že příchodem podnětu vzniká \emph{task}, který musí být zpracován typicky právě do nějakého shora omezeného času.
+
+\subsection{Model úloh}
+
+Každý systém reálného času může tyto úlohy implementovat různými způsoby. Třeba může na tyto podněty souhrnně čekat jeden \uv{rodičovský} proces, a ten po příchodu vytvoří proces specifický, který danou úlohu zpracuje. Vzhledem k tomu, že primárním požadavkem jakéhokoliv systému reálného času je minimální odezva, může toto řešení být nevyhovující. Prakticky proto můžeme procesy pro každou úlohu vytvořit rovnou a každý individuálně nechat čekat na daný podnět. V našem systému zvolíme tento druhý model.
+
+V momentě, kdy podnět přijde, je třeba nastavit deadline. Deadline, tedy horní omezení času zpracování daného podnětu, je třeba nastavit v momentě, kdy task vzniká. Prakticky v námi zvoleném modelu jde o moment probuzení procesu.
+
+Deadline je důležitým parametrem plánování procesu -- o plánování procesů na základě deadline více pojednává jedna z posledních kapitol.
+
+\subsection{Rozhraní}
+
+Zmínili jsme, že proces bude čekat na podnět -- zbývá tedy jen vyřešit konkrétní způsob, jakým se bude proces uspávat, a jakým bude probuzen. V kontextu našeho systému se nabízí pro tento mechanismus čekání využít souborový systém, k němuž jsme již v minulosti vytvořili rozhraní v podobě systémových volání \texttt{open}, \texttt{close}, \texttt{read} a \texttt{write}. To by ve své podstatě stačilo i pro tyto účely za předpokladu, že dovolíme \texttt{read} blokovat. Pro lepší definici sémantiky však dodefinujme dvě další operace -- \texttt{wait} a \texttt{notify}.
+
+Operace \texttt{wait} uspí proces nad souborem, pokud to bude nutné. Sémanticky tedy bude proces čekat na zdroj, až bude dostupný. Pokud zdroj dostupný je, proces blokovat (uspávat) nebude.
+
+Operace \texttt{notify} notifikuje čekající procesy nad souborem, pokud nějaké jsou. Sémantika bude závislá na druhu souboru -- buď může jít čistě o notifikaci procesu (např. podmínková proměnná), nebo může jít o přidání zdrojů (např. roura).
+
+% awaitable soubor
+% wait + notify do IFile
+% wait + notify syscall (s deadline)
+% sleep (s deadline) --> periodicke tasky
+
+% GPIO preruseni (ioctl) --> rozsireni GPIO driveru a GPIO file
+
+% spinlock
+% mutex + filesystem
+% semafor + filesystem
+% podminkova promenna + filesystem
+% pojmenovana roura + filesystem
+
+% EDF planovac
+
+% power management - idle proces a WFE
+
+
+
+\end{document}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
