@@ -737,14 +737,29 @@ class CMutex : public IFile
 	
 		unsigned int Get_Holder_PID() const { return mHolder_PID; }
 
-		virtual uint32_t Read(char* buffer, uint32_t num) override { return 0; }
-		virtual uint32_t Write(const char* buffer, uint32_t num) override { return 0; }
+		virtual uint32_t Read(char* buffer, uint32_t num) override
+		{
+			return 0;
+		}
+		virtual uint32_t Write(const char* buffer, uint32_t num)
+		       override {
+			return 0;
+		}
 	
-		virtual bool Close() override { return true; }
-		virtual bool IOCtl(NIOCtl_Operation dir, void* ctlptr) override { return false; }
+		virtual bool Close() override {
+			return true;
+		}
+		virtual bool IOCtl(NIOCtl_Operation dir, void* ctlptr)
+		       override {
+			return false;
+		}
 	
-		virtual bool Wait(uint32_t count) override { return Lock(); }
-		virtual uint32_t Notify(uint32_t count) { return Unlock(); }
+		virtual bool Wait(uint32_t count) override {
+			return Lock();
+		}
+		virtual uint32_t Notify(uint32_t count) {
+			return Unlock();
+		}
 };
 \end{lstlisting}
 Jak je vidět, mutex má jak metodu \texttt{Lock}, tak \texttt{Wait} (jak \texttt{Unlock}, tak \texttt{Notify}) -- jedno rozhraní zveřejníme pro jádro, a jedno pro uživatelské procesy.
@@ -821,15 +836,20 @@ uint32_t notified_deadline;
 \end{lstlisting}
 Navíc ještě definujme dvě pomocné hodnoty:
 \begin{lstlisting}
-constexpr uint32_t Indefinite = static_cast<uint32_t>(-1);
-constexpr uint32_t Deadline_Unchanged = static_cast<uint32_t>(-2);
+constexpr uint32_t Indefinite
+                       = static_cast<uint32_t>(-1);
+constexpr uint32_t Deadline_Unchanged
+                       = static_cast<uint32_t>(-2);
 \end{lstlisting}
 Konstanta \texttt{Indefinite} označuje v kontextu deadline takový proces, který deadline vůbec nemá. Konstanta \texttt{Deadline\_Unchanged} dává řídicímu kódu najevo, že nemá s deadline vůbec hýbat.
 
 Rozhodně je třeba v inicializaci procesu nastavovat \texttt{deadline} na \texttt{Indefinite} -- na začátku žádný proces žádnou nemá. Rozšiřme metodu \texttt{Notify\_Process} tak, aby po notifikaci (probuzení) deadline nastavovala:
 \begin{lstlisting}
 if (proc->notified_deadline != Deadline_Unchanged)
-	proc->deadline = sTimer.Get_Tick_Count() + proc->notified_deadline;
+{
+	proc->deadline = sTimer.Get_Tick_Count()
+	                  + proc->notified_deadline;
+}
 \end{lstlisting}
 
 Nyní ještě potřebujeme tuto \uv{odloženou} deadline nastavovat. Rozšiřme proto systémové volání \texttt{wait} a \texttt{sleep} o další parametr -- v registru \texttt{r2} (\texttt{wait}) a \texttt{r1} (\texttt{sleep}) vyžadujme relativní čas, do kterého má úloha být zpracována po probuzení procesu (tedy po přijetí podnětu). Tak jsme schopni docílit efektu, kdy specifikujeme deadline ještě před uspáním, a není tedy nutné řešit dodatečné nastavování, až když k události dojde. Takhle je deadline nastavena současně s momentem, kdy dojde k probuzení.
@@ -848,7 +868,6 @@ case NSWI_Filesystem_Service::Wait:
 	
 	target.r0 = mCurrent_Task_Node->task->opened_files[r0]->Wait(r1);
 	
-	// v tento moment uz lze "budouci" deadline vymazat, uz je nastavena ve skutecne deadline bud shora nebo z notify kodu
 	mCurrent_Task_Node->task->notified_deadline = Deadline_Unchanged;
 	break;
 }
@@ -939,6 +958,10 @@ Nakonec zbývá nastavit ve správci procesů v konstruktoru plánovací funkci 
 mSchedule_Fnc = &CProcess_Manager::Schedule_EDF;
 \end{lstlisting}
 
+Co je ovšem také nutné brát v potaz je to, kdy vlastně plánovač spouštět. Doteď jsme ho spouštěli vždy při tiknutí časovače nebo explicitně při blokování procesu. EDF bychom měli rovněž spouštět periodicky (kvůli periodickým taskům a možnosti, že se nějaký proces probudí), při blokování procesu, ale nově i při notifikování procesu -- probouzený proces může mít kratší deadline (a tedy vyšší prioritu).
+
+Dále je pochopitelně velice dobře možné, že si jeden task s nižší prioritou bude držet systémové zdroje, které vyžaduje task s prioritou vyšší. Pak by mohlo dojít k nesplnění deadline jen proto, že se plánovač neuměl zařídit tak, aby se procesy vystřídaly. Z tohoto důvodu je zaváděn princip \emph{inverze priorit}. Ten dovolí dočasně tasku s nízkou prioritou převzít prioritu tasku jiného (s prioritou vyšší), aby měl šanci zdroj předat dříve, než dojde k nedodržení deadline. Tento problém pochopitelně není vidět, jsou-li v plánovači jen dva procesy -- tam task s nižší prioritou poběží vždy, když ten druhý nemůže být plánován. Problém zviditelní až přítomnost procesu dalšího, který má například prioritu přesně mezi těmito dvěma kritickýmu procesy (tedy má deadline někde mezi). Problémem inverze priorit se ale pro teď zaobírat nebudeme -- možná v dalších cvičeních.
+
 % vazba na wait (aperiodické) a sleep (periodické) tasky
 % deadline do wait a sleep syscallu
 % EDF planovac
@@ -947,9 +970,29 @@ mSchedule_Fnc = &CProcess_Manager::Schedule_EDF;
 
 Klíčovou vlastností embedded zařízení (tedy typických hostitelských zařízení systémů reálného času) je i schopnost do značné míry šetřit elektrickou energii. Toho pochopitelně musí docílit hlavně sám programátor jádra systému, jelikož musí zajistit, aby se včas všechny součásti systému vypínaly nebo se přepínaly do režimu s nízkou spotřebou.
 
-Kromě periferií (což je tedy záležitost driverů) jde jednoznačně o pasivitu systému v momentě, kdy se nic neděje. V tomto případě by pouze idle proces donekonečna cyklil v nekonečné smyčce a bral by tedy čas procesoru na neužitečnou práci.
+Kromě periferií a jejich uspávání (což je tedy záležitost driverů) jde jednoznačně o pasivitu systému v momentě, kdy se nic neděje. V tomto případě by pouze \emph{idle} task donekonečna cyklil v nekonečné smyčce a bral by tedy čas procesoru na neužitečnou práci, což pochopitelně znamená plný odběr elektrické energie jádrem procesoru.
 
-ARM ale obsahuje dvě důležité power-management instrukce: \texttt{WFI} (\emph{wait for interrupt}) a \texttt{WFE}.  
+ARM ale obsahuje dvě důležité power-management instrukce: \texttt{WFI} (\emph{wait for interrupt}) a \texttt{WFE} (\emph{wait for event}). Ty dovolí jádro procesoru uspat do momentu, než nastane přerušení (\texttt{WFI}) nebo událost (\texttt{WFE}). Událost je v tomto kontextu jakousi nadmnožinou, takže zahrnuje i přerušení -- \texttt{WFE} je tedy \uv{obecnější}, než \texttt{WFI}. Nutno dodat, že specifikace ARM neukládá povinnost tyto instrukce podporovat, ale spousty moderních implementací je obsahuje.
+
+Vzhledem k tomu, že implementujeme uniprocesorový kernel se soustřeďme hlavně na \texttt{WFI}. To uspí procesorové jádro do doby, než přijde nějaké přerušení (IRQ, FIQ, data abort a jiné). Jak jsme naznačili, probouzení procesu je vždy podmíněno nějakým přerušením, a to buď přerušením externí periferie (GPIO, komunikační sběrnice, ...) (uspání na \texttt{wait}), nebo přerušením časovače (uspání na \texttt{sleep}).
+
+Kdybychom dělali multiprocesorový (SMP) kernel, určitě bychom chtěli implementovat \texttt{WFE}, a to pro všechna procesorová jádra -- například naplánovat idle task s afinitou pro každé jádro. \texttt{WFE} je zde potřebným nástrojem proto, že to navíc umožňuje probouzet procesor na žádost jiného procesoru, který signalizuje událost instrukcí \texttt{SEV}.
+
+Můžeme tedy směle modifikovat \emph{idle} task tak, aby pokud není v systému plánovatelný jiný proces, aby spustil instrukci \texttt{WFI}. Pokud ano, předá pouze zbytek časového kvanta jinému procesu systémovým voláním \texttt{yield}:
+\begin{lstlisting}
+while (true)
+{
+	if (get_active_process_count() == 1)
+		asm volatile("wfi");
+
+	sched_yield();
+}
+\end{lstlisting}
+Volání \texttt{get\_active\_process\_count} snadno implementujeme jako systémové volání (ponecháno na fantazii čtenáře), které vrátí počet procesů, které jsou momentálně ve stavu \texttt{New}, \texttt{Runnable} nebo \texttt{Running}. Logicky pak vyplývá, že pokud toto volání vrátí číslo 1, je \emph{idle} task jediným plánovatelným a lze tedy bezpečně procesor uspat instrukcí \texttt{WFI}. V každém případě (i kdyby po probuzení) task předá časové kvantum dalšímu tasku, pokud nějaký je.
+
+Tímto jsme schopni docílit relativně snadno výrazné úspory -- u systémů reálného času bývá typické, že ve spoustě praktických aplikací většinu času spí, a tedy by měly šetřit elektrickou energii. Obzvláště pak pokud jsou napájeny z baterie nebo jiného omezeného zdroje energie.
+
+Prakticky je třeba ještě doladit i frekvenci tikání časovače, aby vůbec mělo smysl procesor uspávat, když by mělo za zlomek času následovat přerušení časovače (který třeba vůbec nemá v úmyslu jakýkoliv proces probudit). Toto nastavení bývá pak silně specifické pro konkrétní aplikace.
 
 % power management - idle proces a WFE
 
@@ -966,6 +1009,8 @@ Připomeňme pro referenci Coffmannovy podmínky uvíznutí:
 \end{enumerate}
 
 Rovněž připomínám, že nejde o řešení uvíznutí, ale pouze jeho detekci. Pokuste se tedy navrhnout základní algoritmus detekce uvíznutí pro náš operační systém.
+
+Odpovězte tedy na 2 základní otázky: \emph{kdy? jak?}
 
 Za tento úkol můžete získat až 2 body.
 
