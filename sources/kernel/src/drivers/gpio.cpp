@@ -270,8 +270,8 @@ void CGPIO_Handler::Handle_IRQ()
 	// NOTE: kdybychom meli mala casova kvanta a timer by tikal velice casto, tak by se na nasledujici kus kodu
 	//       spotrebovalo obrovske mnozstvi casu zbytecne
 	// lepsi by pak bylo rozdelit kod na bottom a top half, napr. tak, ze:
-	// - bottom half: zde pouze koukat do registru GPEDS0 a 1, a pokud by v nich neco bylo, jejich obsah naORovat do nejakeho bufferu a notifikovat systemovy proces (top half)
-	// - top half: atomicky "vybirat" z bufferu notifikovane piny a probouzet procesy, ktere cekaji
+	// - top half: zde pouze koukat do registru GPEDS0 a 1, a pokud by v nich neco bylo, jejich obsah naORovat do nejakeho bufferu a notifikovat systemovy proces (bottom half)
+	// - bottom half: atomicky "vybirat" z bufferu notifikovane piny a probouzet procesy, ktere cekaji
 	// pro ted mejme vetsi casova kvanta, ale na problem bychom narazili hned, jak by vice driveru vyzadovalo svoje obsluhy
 
 	uint32_t reg, bit, pin;
