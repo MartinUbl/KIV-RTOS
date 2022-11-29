@@ -109,6 +109,8 @@ V repozitáři je připraven {\tt Makefile} a konfigurační skript. Za předpok
 make
 \end{verbatim}
 
+\emph{Pozn.: může být třeba doinstalovat balíky {\tt ninja-build}, {\tt libpixman-1-dev}, {\tt libglib2.0-dev} a další, dle Vaší platformy.}
+
 U skriptu {\tt configure} vidíte přepínač, kterým jej instruujeme, aby sestavil pouze emulaci pro {\tt arm-softmmu} architekturu. Je to jediná, která podporuje emulaci Raspberry Pi Zero, a tedy jediná užitečná pro naše potřeby.
 
 Volitelně pak lze přidat k příkazu {\tt make} i přepínač {\tt -j} s počtem sestavovacích paralelních procesů, např. {\tt make -j4}.

@@ -221,7 +221,7 @@ Pokud používáte nějaký ze standardních USB-TTL převodníků, port se obje
 
 \section{Úkol za body}
 
-Jak bylo psáno výše - Vaším úkolem bude implementovat alespoň základ ovladače pro miniUART tak, abyste byli schopni přenést řetězec a číslo do hostitelského počítače. Přenos opačným směrem momentálně neřešte -- na to bude čas a prostor jindy.
+Jak bylo psáno výše - Vaším úkolem bude implementovat alespoň základ ovladače pro miniUART tak, abyste byli schopni přenést řetězec a číslo do hostitelského počítače, a také přijmout znak z něj.
 
 Bude tedy pak možné zavolat něco jako:
 
@@ -231,9 +231,18 @@ UART_Write("Cislo je: ");
 int a = 15;
 UART_Write(a);
 UART_Write("\r\n");
+UART_Write("Zadej znak: ");
+
+char c;
+UART_Read(&c);
+
+c += 1;
+UART_Write(c);
 \end{lstlisting}
 
-Vzhledem k nedostatku hardware můžete psát kód i bez otestování na RPi Zero -- hodnotit budeme to, jak jste pracovali s manuálem a jakým způsobem přistupujete k periferii.
+Kód otestujte v qemu. Driver implementujte tak, abyste ho ideálně mohli použít v semestrální práci -- tak či tak se objevuje ve všech zadáních.
+
+\emph{Pozn.: tento úkol se dá splnit jen vykucháním kódu ze cv. 3 dostupného na home a SREC bootloaderu, který jsme kompilovali na 1. cvičení.}
 
 \end{document}
 

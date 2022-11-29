@@ -870,9 +870,9 @@ Výsledkem by mělo být cyklické vypisování řetězce \texttt{Hello!} na UAR
 
 \section{Úkol za body}
 
-Implementujte GPIO FS driver, který podporuje čtení i zápis a vyhrazení pinů. Cesta bude odpovídat definici v první kapitole, tedy \texttt{DEV:gpio/<cislo pinu>} (např. \texttt{DEV:gpio/24}).
+Implementujte podporu pro miniUART filesystem driver -- jednak umožněte zápis, ale zároveň i čtení pomocí mezilehlého bufferu. Pokud jste neimplementovali čtení z UARTu v minulých úlohách, předpokládejte, že do tohoto bufferu by něco zapisovalo (přerušení).
 
-Implementaci ověřte v rámci nějakého procesu a blikání LED buď na desce (ACT LED) nebo na rozšiřující desce KIV-DPP-01. Rovněž můžete ověřit vstupy čtením z pinu, který je přiřazen nějaké jednoduché spínačové periferii z desky KIV-DPP-01 (tlačítko, polohový přepínač nebo senzor náklonu).
+Buffer realizujte jako kruhový a implementujte ho v driveru UARTu. Filesystem by pak měl z tohoto bufferu umět číst dostupné znaky. Pro teď předpokládejte neblokující čtení, čili pokud v bufferu nic není, indikujte to patřičným způsobem (návratová hodnota) do uživatelského procesu.
 
 \end{document}
 
