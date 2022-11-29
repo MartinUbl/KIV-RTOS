@@ -53,7 +53,7 @@ uint32_t CPipe::Read(char* buffer, uint32_t num)
 {
     spinlock_lock(&mBuffer_Lock);
 
-    num = num > mSem_Busy->Get_Current_Count() ? mSem_Busy->Get_Current_Count() : num;
+    num = (num > mSem_Busy->Get_Current_Count()) ? mSem_Busy->Get_Current_Count() : num;
 
     spinlock_unlock(&mBuffer_Lock);
 

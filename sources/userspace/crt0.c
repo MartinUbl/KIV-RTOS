@@ -8,9 +8,8 @@ extern unsigned int __bss_end;
 
 void __crt0_init_bss()
 {
-    unsigned int* begin = (unsigned int*)__bss_start;
-    for (; begin < (unsigned int*)__bss_end; begin++)
-        *begin = 0;
+    for (unsigned int* cur = &__bss_start; cur < &__bss_end; cur++)
+        *cur = 0;
 }
 
 void __crt0_run()
