@@ -23,8 +23,8 @@ const CFilesystem::TFS_Driver CFilesystem::gFS_Drivers[] = {
     { "OLED_Disp_FS", "DEV:oled", &fsOLED_Display_FS_Driver },
 
     // virtualni zarizeni
-    { "Mutex", "SYS:mtx", &fsSemaphore_FS_Driver },
-    { "Semaphore", "SYS:sem", &fsMutex_FS_Driver },
+    { "Mutex", "SYS:mtx", &fsMutex_FS_Driver },
+    { "Semaphore", "SYS:sem", &fsSemaphore_FS_Driver },
     { "CondVar", "SYS:cv", &fsCond_Var_FS_Driver },
     { "Pipe", "SYS:pipe", &fsPipe_FS_Driver },
 };
