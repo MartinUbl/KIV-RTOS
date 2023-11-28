@@ -153,7 +153,7 @@ CPipe* CProcess_Resource_Manager::Alloc_Pipe(const char* name, uint32_t pipe_siz
     {
         if (mPipes[i].alloc_count > 0)
         {
-            //if (strncmp(mPipes[i].name, name, Max_Pipe_Name_Length) == 0)
+            if (strncmp(mPipes[i].name, name, Max_Pipe_Name_Length) == 0)
             {
                 mPipes[i].alloc_count++;
                 return &mPipes[i].pipe;
