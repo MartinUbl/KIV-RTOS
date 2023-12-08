@@ -54,5 +54,5 @@ void CPage_Manager::Free_Page(uint32_t fa)
 {
     // pro vyssi bezpecnost v nejakych safe systemech lze tady data stranky premazavat napr. nulami po dealokaci
 
-    Mark(fa / mem::PageSize - LowMemoryPhys, false);
+    Mark( (fa - LowMemoryPhys) / mem::PageSize, false);
 }
