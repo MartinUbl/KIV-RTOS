@@ -49,9 +49,10 @@ uint32_t CPage_Manager::Alloc_Page()
     return 0;
 }
 
+constexpr uint32_t LowMemoryPhys = mem::LowMemory - mem::MemoryVirtualBase;
 void CPage_Manager::Free_Page(uint32_t fa)
 {
     // pro vyssi bezpecnost v nejakych safe systemech lze tady data stranky premazavat napr. nulami po dealokaci
 
-    Mark(fa / mem::PageSize, false);
+    Mark(fa / mem::PageSize - LowMemoryPhys, false);
 }
