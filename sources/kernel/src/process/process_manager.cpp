@@ -272,7 +272,7 @@ void CProcess_Manager::Handle_Process_SWI(NSWI_Process_Service svc_idx, uint32_t
             mCurrent_Task_Node->task->sched_counter = 1;
             mCurrent_Task_Node->task->state = NTask_State::Interruptable_Sleep;
             mCurrent_Task_Node->task->notified_deadline = r1;
-            mCurrent_Task_Node->task->sleep_timer = sTimer.Get_Tick_Count() + ( (r0 == Indefinite) ? r0 + 1 : r0 );
+            mCurrent_Task_Node->task->sleep_timer =  ( (r0 == Indefinite) ? r0 : sTimer.Get_Tick_Count() + r0 );
             Schedule();
             break;
         case NSWI_Process_Service::Get_Sched_Info:
