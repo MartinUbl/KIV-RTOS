@@ -124,6 +124,14 @@ kernel_mode_start:
     msr cpsr_c, r0
     add sp, r4, #0x4000
 
+    ;@ povoleni float koprocesoru
+    mov sp, #1024
+    mrc p15, 0, r6, c1, c0, 2
+    orr r6, r6, #0x300000
+    mcr p15, 0, r6, c1, c0, 2
+    mov r6, #0x40000000
+    fmxr fpexc, r6
+
     bl _cpp_startup			;@ C++ startup kod (volani globalnich konstruktoru, ...)
     bl _kernel_main			;@ skocime do hlavniho kodu jadra (v C)
     bl _cpp_shutdown		;@ C++ shutdown kod (volani globalnich destruktoru, ...)
