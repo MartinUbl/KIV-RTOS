@@ -9,7 +9,7 @@ mutex_t mutex_create(const char* name)
 {
     char mtxfile[64];
     strncpy(mtxfile, Mutex_File_Prefix, sizeof(Mutex_File_Prefix));
-    strncpy(mtxfile + sizeof(Mutex_File_Prefix), name, sizeof(mtxfile) - sizeof(Mutex_File_Prefix) - 1);
+    strncpy(mtxfile + sizeof(Mutex_File_Prefix) - 1, name, sizeof(mtxfile) - sizeof(Mutex_File_Prefix) - 1);
 
     mutex_t mtx = static_cast<mutex_t>(open(mtxfile, NFile_Open_Mode::Read_Write));
 
@@ -39,7 +39,7 @@ semaphore_t sem_create(const char* name)
 {
     char semfile[64];
     strncpy(semfile, Sem_File_Prefix, sizeof(Sem_File_Prefix));
-    strncpy(semfile + sizeof(Sem_File_Prefix), name, sizeof(semfile) - sizeof(Sem_File_Prefix) - 1);
+    strncpy(semfile + sizeof(Sem_File_Prefix) - 1, name, sizeof(semfile) - sizeof(Sem_File_Prefix) - 1);
 
     semaphore_t sem = static_cast<semaphore_t>(open(semfile, NFile_Open_Mode::Read_Write));
 

@@ -32,7 +32,7 @@ class CSemaphore_FS_Driver : public IFilesystem_Driver
                 {
                     semname[i] = '\0';
                     // explicitne receno, ze nevime, kolik zdroju ma semafor mit
-                    if (semname[i + 1 == '?'])
+                    if (semname[i + 1] == '?')
                         break;
 
                     rescnt = atoi(&semname[i + 1]);
