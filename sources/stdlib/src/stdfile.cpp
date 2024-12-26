@@ -166,10 +166,11 @@ const char Pipe_File_Prefix[] = "SYS:pipe/";
 uint32_t pipe(const char* name, uint32_t buf_size)
 {
     char fname[64];
+    int name_len = strlen(name);
     strncpy(fname, Pipe_File_Prefix, sizeof(Pipe_File_Prefix));
-    strncpy(fname + sizeof(Pipe_File_Prefix), name, sizeof(fname) - sizeof(Pipe_File_Prefix) - 1);
-
-    int ncur = sizeof(Pipe_File_Prefix) + strlen(name);
+    strncpy(fname + sizeof(Pipe_File_Prefix) - 1, name, name_len);
+    
+    int ncur = sizeof(Pipe_File_Prefix) + name_len - 1;
 
     fname[ncur++] = '#';
 
