@@ -34,7 +34,7 @@ ADD_LIBRARY(kivrtos_stdlib STATIC ${stdlib_src} ${stdutils_src})
 ADD_EXECUTABLE(kernel ${kernel_src})
 
 # prilinkujeme standardni knihovnu do kernelu
-TARGET_LINK_LIBRARIES(kernel kivrtos_stdlib)
+TARGET_LINK_LIBRARIES(kernel kivrtos_stdlib gcc)
 
 # po dokonceni sestaveni musime jeste zkonvertovat vystupy
 # 1) zkompilovany ELF soubor na surovou binarni mapu pro RPi bootloader (kernel.img)

@@ -48,6 +48,11 @@ inline void *operator new(uint32_t, void *p)
     return p;
 }
 
+inline void *operator new[](uint32_t size)
+{
+	return sKernelMem.Alloc(size);
+}
+
 inline void *operator new[](uint32_t, void *p)
 {
     return p;

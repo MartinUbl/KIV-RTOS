@@ -23,7 +23,7 @@ FUNCTION(ADD_USERSPACE_EXECUTABLE target_name file_list)
 	LIST(REMOVE_AT file_list 0)
 
 	ADD_EXECUTABLE(${target_name} ${CRT_FILES} ${ABI_FILES} ${file_list})
-	TARGET_LINK_LIBRARIES(${target_name} ${STDLIB_FILES})
+	TARGET_LINK_LIBRARIES(${target_name} ${STDLIB_FILES} gcc)
 	
 	ADD_CUSTOM_COMMAND(
 		TARGET ${target_name} POST_BUILD

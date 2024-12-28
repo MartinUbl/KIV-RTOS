@@ -44,6 +44,11 @@ extern "C" void __aeabi_unwind_cpp_pr1()
 		;
 }
 
+extern "C" int __aeabi_atexit(void *arg, void (*func) (void *), void *d)
+{
+  return 0;
+}
+
 using ctor_ptr = void (*)(void);
 using dtor_ptr = void (*)(void);
 

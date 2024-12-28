@@ -43,3 +43,8 @@ extern "C" void __aeabi_unwind_cpp_pr1()
 	while (true)
 		;
 }
+
+extern "C" int __aeabi_atexit(void *arg, void (*func) (void *), void *d)
+{
+  return 0;
+}
