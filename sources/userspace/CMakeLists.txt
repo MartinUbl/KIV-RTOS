@@ -16,7 +16,12 @@ ADD_DEFINITIONS(-DRPI0)
 
 SET(ABI_FILES cxxabi.cpp)
 SET(CRT_FILES crt0.s crt0.c)
-SET(STDLIB_FILES ${CMAKE_CURRENT_SOURCE_DIR}/../build/libkivrtos_stdlib.a)
+
+IF(NOT COMPLETE_BUILD)
+	SET(STDLIB_FILES ${CMAKE_CURRENT_SOURCE_DIR}/../build/stdlib/libkivrtos_stdlib.a)
+ELSE()
+	SET(STDLIB_FILES kivrtos_stdlib)
+ENDIF()
 
 FUNCTION(ADD_USERSPACE_EXECUTABLE target_name file_list)
 	SET(file_list ${ARGV})
@@ -24,13 +29,27 @@ FUNCTION(ADD_USERSPACE_EXECUTABLE target_name file_list)
 
 	ADD_EXECUTABLE(${target_name} ${CRT_FILES} ${ABI_FILES} ${file_list})
 	TARGET_LINK_LIBRARIES(${target_name} ${STDLIB_FILES} gcc)
-	
-	ADD_CUSTOM_COMMAND(
-		TARGET ${target_name} POST_BUILD
-		COMMAND ${CMAKE_OBJCOPY} ./${target_name}${CMAKE_EXECUTABLE_SUFFIX} -O binary ./${target_name}.bin
-		COMMAND ${CMAKE_OBJDUMP} -l -S -D ./${target_name}${CMAKE_EXECUTABLE_SUFFIX} > ./${target_name}.asm
-		COMMAND xxd -i ./${target_name}${CMAKE_EXECUTABLE_SUFFIX} > ./src_${target_name}.h
-		WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+
+	IF (COMPLETE_BUILD)
+		ADD_CUSTOM_COMMAND(
+			TARGET ${target_name} POST_BUILD
+			COMMAND ${CMAKE_OBJCOPY} ./userspace/${target_name}${CMAKE_EXECUTABLE_SUFFIX} -O binary ./${target_name}.bin
+			COMMAND ${CMAKE_OBJDUMP} -l -S -D ./userspace/${target_name}${CMAKE_EXECUTABLE_SUFFIX} > ./${target_name}.asm
+			COMMAND cd ./userspace && xxd -i ./${target_name}${CMAKE_EXECUTABLE_SUFFIX} > ./src_${target_name}.h
+			COMMAND cp ./userspace/src_${target_name}.h ../userspace/build/
+			WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+	ELSE()
+		ADD_CUSTOM_COMMAND(
+			TARGET ${target_name} POST_BUILD
+			COMMAND ${CMAKE_OBJCOPY} ./${target_name}${CMAKE_EXECUTABLE_SUFFIX} -O binary ./${target_name}.bin
+			COMMAND ${CMAKE_OBJDUMP} -l -S -D ./${target_name}${CMAKE_EXECUTABLE_SUFFIX} > ./${target_name}.asm
+			COMMAND xxd -i ./${target_name}${CMAKE_EXECUTABLE_SUFFIX} > ./src_${target_name}.h
+			WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+	ENDIF()
+
+	IF(COMPLETE_BUILD)
+	    ADD_DEPENDENCIES(kernel ${target_name})
+	ENDIF()
 ENDFUNCTION(ADD_USERSPACE_EXECUTABLE)
 
 # init task - systemovy task, musi byt pritomen

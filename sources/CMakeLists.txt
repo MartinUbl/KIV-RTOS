@@ -2,6 +2,10 @@ CMAKE_MINIMUM_REQUIRED(VERSION 3.14)
 
 PROJECT(kiv_os_rpios CXX C ASM)
 
+IF (NOT STANDALONE_BUILD)
+    SET(COMPLETE_BUILD ON CACHE INTERNAL "Complete build with standard library and userspace")
+ENDIF()
+
 # specifikujeme linker skript - potrebujeme vlastni definici pametoveho layoutu
 SET(LINKER_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/kernel/link.ld")
 SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -T ${LINKER_SCRIPT}")
@@ -21,17 +25,17 @@ ADD_DEFINITIONS(-DRPI0)
 # rekurzivne pridame vsechny zdrojaky z kernel podslozky
 FILE(GLOB_RECURSE kernel_src "kernel/*.cpp" "kernel/*.c" "kernel/*.h" "kernel/*.hpp" "kernel/*.s")
 
-# pridame standardni knihovnu (nas minimalni stub knihovny)
-FILE(GLOB_RECURSE stdlib_src "stdlib/*.cpp" "stdlib/*.c" "stdlib/*.h" "stdlib/*.hpp" "stdlib/*.s")
-
 # pridame knihovnu utilit (ovladani zarizeni z userspace, apod)
 FILE(GLOB_RECURSE stdutils_src "stdutils/*.cpp" "stdutils/*.c" "stdutils/*.h" "stdutils/*.hpp" "stdutils/*.s")
 
-# pridame cil - sestavujeme standardni knihovnu (minimalni)
-ADD_LIBRARY(kivrtos_stdlib STATIC ${stdlib_src} ${stdutils_src})
-
 # pridame cil - sestavujeme jen kernel
 ADD_EXECUTABLE(kernel ${kernel_src})
+
+# pridame podslozku - standardni knihovnu
+ADD_SUBDIRECTORY(stdlib)
+
+# pridame userspace
+ADD_SUBDIRECTORY(userspace)
 
 # prilinkujeme standardni knihovnu do kernelu
 TARGET_LINK_LIBRARIES(kernel kivrtos_stdlib gcc)
