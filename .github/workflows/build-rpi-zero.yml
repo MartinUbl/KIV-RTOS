@@ -16,6 +16,6 @@ jobs:
     - name: Install dependencies
       run: sudo apt update && sudo apt install build-essential gcc-arm-none-eabi cmake
     - name: Create temporary/build directories
-      run: mkdir -p build && mkdir -p userspace/build
+      run: mkdir -p sources/build && mkdir -p sources/userspace/build
     - name: Build
       run: cd sources && chmod +x build.sh && ./build.sh
