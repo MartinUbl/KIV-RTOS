@@ -16,4 +16,4 @@ jobs:
     - name: Install dependencies
       run: sudo apt update && sudo apt install build-essential gcc-arm-none-eabi cmake
     - name: Build
-      run: cd sources && ./build.sh
+      run: cd sources && chmod +x build.sh && ./build.sh
