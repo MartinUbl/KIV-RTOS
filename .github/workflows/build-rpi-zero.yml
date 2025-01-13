@@ -15,5 +15,7 @@ jobs:
     - uses: actions/checkout@v4
     - name: Install dependencies
       run: sudo apt update && sudo apt install build-essential gcc-arm-none-eabi cmake
+    - name: Create temporary/build directories
+      run: mkdir -p build && mkdir -p userspace/build
     - name: Build
       run: cd sources && chmod +x build.sh && ./build.sh
