@@ -1,18 +1,8 @@
-#include <drivers/gpio.h>
-#include <drivers/uart.h>
-#include <drivers/timer.h>
-#include <drivers/oled_ssd1306.h>
 #include <interrupt_controller.h>
 
-#include <memory/memmap.h>
-#include <memory/kernel_heap.h>
-
+#include <drivers/timer.h>
 #include <process/process_manager.h>
-
 #include <fs/filesystem.h>
-
-#include <stdstring.h>
-#include <stdfile.h>
 
 extern "C" void Timer_Callback()
 {

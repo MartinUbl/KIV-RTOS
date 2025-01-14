@@ -21,7 +21,7 @@ CInterrupt_Controller sInterruptCtl(hal::Interrupt_Controller_Base);
 
 static TSWI_Result _SWI_Result;
 
-extern "C" TSWI_Result* _internal_software_interrupt_handler(uint32_t register r0, uint32_t register r1, uint32_t register r2, uint32_t register /*r3*/ service_identifier)
+extern "C" TSWI_Result* _internal_software_interrupt_handler(uint32_t r0, uint32_t r1, uint32_t r2, uint32_t /*r3*/ service_identifier)
 {
     // facility jsou horni 2 bity, zbytek je cislo sluzby v dane facility
     NSWI_Facility facility = static_cast<NSWI_Facility>(service_identifier >> 6);
@@ -52,9 +52,9 @@ extern "C" void _internal_irq_handler()
         sTimer.IRQ_Callback();
 }
 
-extern "C" void __attribute__((interrupt("FIQ"))) fast_interrupt_handler()
+extern "C" void _internal_fiq_handler()
 {
-    // zatim nepouzivame
+    // zatim nepouzivame, v budoucnu se muze hodit pro rychlejsi obsluhu preruseni, tj. napriklad obsluhu DMA, atp.
 }
 
 // implementace controlleru

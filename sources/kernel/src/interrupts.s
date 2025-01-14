@@ -2,17 +2,17 @@
 .equ    CPSR_MODE_IRQ,          0x12
 .equ    CPSR_MODE_SVR,          0x13
 .equ    CPSR_MODE_SYS,          0x1F
+.equ    CPSR_MODE_ABT,          0x17
 .equ    CPSR_IRQ_INHIBIT,       0x80
 .equ    CPSR_FIQ_INHIBIT,       0x40
 
 .global undefined_instruction_handler
 .global software_interrupt_handler
 .global irq_handler
+.global fiq_handler
 .global prefetch_abort_handler
 .global data_abort_handler
 
-
-;@ tady budou ostatni symboly, ktere nevyzaduji zadne specialni misto
 .section .text
 
 hang:
@@ -72,6 +72,23 @@ irq_handler:
 	pop {lr}
 	pop {r0-r12}		    	;@ obnovime registry
 	rfeia sp!					;@ vracime se do puvodniho stavu (ktery ulozila instrukce srsdb, takze vlastne delame pop cpsr, pop lr)
+
+.global _internal_fiq_handler
+fiq_handler:
+	sub lr, lr, #4
+
+	push {lr}
+	push {r0-r7}				;@ ulozime registry (pro ted proste vsechny do r7 - pro FIQ staci)
+
+	and r4, sp, #7				;@ zarovname SP na nasobek 8 (viz volaci konvence ARM)
+	sub sp, sp, r4
+
+	bl _internal_fiq_handler	;@ zavolame interni handler FIQ
+
+	add sp, sp, r4				;@ "odzarovname" SP -> vracime do puvodniho stavu
+
+	pop {r0-r7}		    		;@ obnovime registry
+	pop {pc}
 
 .global generic_abort_handler
 

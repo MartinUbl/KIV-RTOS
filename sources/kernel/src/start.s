@@ -25,7 +25,7 @@ _start:
     ldr pc, _data_abort_ptr					;@ 0x10 - data abort - vyvolano, kdyz se procesor snazi napr. nacist data z mista, odkud nacist nejdou
     ldr pc, _unused_handler_ptr				;@ 0x14 - unused - ve specifikaci ARM neni uvedeno zadne vyuziti
     ldr pc, _irq_ptr						;@ 0x18 - IRQ - hardwarove preruseni (general purpose)
-    ldr pc, _fast_interrupt_ptr				;@ 0x1C - fast interrupt request - prioritni IRQ pro vysokorychlostni zalezitosti
+    ldr pc, _fiq_ptr				        ;@ 0x1C - fast interrupt request - prioritni IRQ pro vysokorychlostni zalezitosti
 
 _reset_ptr:
     .word _reset
@@ -41,8 +41,8 @@ _unused_handler_ptr:
     .word _reset
 _irq_ptr:
     .word irq_handler
-_fast_interrupt_ptr:
-    .word fast_interrupt_handler
+_fiq_ptr:
+    .word fiq_handler
 
 
 ;@ kernel reset vektor - tento kod se vykona pri kazdem resetu zarizeni (i prvnim spusteni)
@@ -91,6 +91,7 @@ _reset:
 init_hang:
     b init_hang
 
+;@ tady budou ostatni symboly, ktere nevyzaduji zadne specialni misto
 .section .text
 
 .global kernel_mode_start

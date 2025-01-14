@@ -26,16 +26,6 @@ bool CGPIO_Handler::Get_GPFSEL_Location(uint32_t pin, uint32_t& reg, uint32_t& b
 		return false;
 	
 	reg = pin / 10;
-	/*switch (pin / 10)
-	{
-		case 0: reg = static_cast<uint32_t>(hal::GPIO_Reg::GPFSEL0); break;
-		case 1: reg = static_cast<uint32_t>(hal::GPIO_Reg::GPFSEL1); break;
-		case 2: reg = static_cast<uint32_t>(hal::GPIO_Reg::GPFSEL2); break;
-		case 3: reg = static_cast<uint32_t>(hal::GPIO_Reg::GPFSEL3); break;
-		case 4: reg = static_cast<uint32_t>(hal::GPIO_Reg::GPFSEL4); break;
-		case 5: reg = static_cast<uint32_t>(hal::GPIO_Reg::GPFSEL5); break;
-	}*/
-	
 	bit_idx = (pin % 10) * 3;
 	
 	return true;
