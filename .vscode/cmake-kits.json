@@ -1,0 +1,6 @@
+[
+    {
+        "name": "ARM Toolchain",
+        "toolchainFile": "${workspaceFolder}/misc/cmake/toolchain-arm-none-eabi-rpi0.cmake"
+    }
+]

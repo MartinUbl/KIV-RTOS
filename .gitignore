@@ -1,6 +1,8 @@
 # ignore all build and temporary files
 sources/build/*
 sources/userspace/build/*
+build/*
 
 # personal VSCode workspaces
 KIV-RTOS.code-workspace
+.vscode/settings.json

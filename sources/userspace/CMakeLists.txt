@@ -30,20 +30,21 @@ FUNCTION(ADD_USERSPACE_EXECUTABLE target_name file_list)
 	ADD_EXECUTABLE(${target_name} ${CRT_FILES} ${ABI_FILES} ${file_list})
 	TARGET_LINK_LIBRARIES(${target_name} ${STDLIB_FILES} gcc)
 
+	SET_TARGET_PROPERTIES(${target_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/build)
+
 	IF (COMPLETE_BUILD)
 		ADD_CUSTOM_COMMAND(
 			TARGET ${target_name} POST_BUILD
-			COMMAND ${CMAKE_OBJCOPY} ./userspace/${target_name}${CMAKE_EXECUTABLE_SUFFIX} -O binary ./${target_name}.bin
-			COMMAND ${CMAKE_OBJDUMP} -l -S -D ./userspace/${target_name}${CMAKE_EXECUTABLE_SUFFIX} > ./${target_name}.asm
-			COMMAND cd ./userspace && xxd -i ./${target_name}${CMAKE_EXECUTABLE_SUFFIX} > ./src_${target_name}.h
-			COMMAND cp ./userspace/src_${target_name}.h ../userspace/build/
+			COMMAND ${CMAKE_OBJCOPY} ${CMAKE_CURRENT_SOURCE_DIR}/build/${target_name}${CMAKE_EXECUTABLE_SUFFIX} -O binary ${CMAKE_CURRENT_SOURCE_DIR}/build/${target_name}.bin
+			COMMAND ${CMAKE_OBJDUMP} -l -S -D ${CMAKE_CURRENT_SOURCE_DIR}/build/${target_name}${CMAKE_EXECUTABLE_SUFFIX} > ${CMAKE_CURRENT_SOURCE_DIR}/build/${target_name}.asm
+			COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR}/build && xxd -i ./${target_name}${CMAKE_EXECUTABLE_SUFFIX} > ${CMAKE_CURRENT_SOURCE_DIR}/build/src_${target_name}.h
 			WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 	ELSE()
 		ADD_CUSTOM_COMMAND(
 			TARGET ${target_name} POST_BUILD
-			COMMAND ${CMAKE_OBJCOPY} ./${target_name}${CMAKE_EXECUTABLE_SUFFIX} -O binary ./${target_name}.bin
-			COMMAND ${CMAKE_OBJDUMP} -l -S -D ./${target_name}${CMAKE_EXECUTABLE_SUFFIX} > ./${target_name}.asm
-			COMMAND xxd -i ./${target_name}${CMAKE_EXECUTABLE_SUFFIX} > ./src_${target_name}.h
+			COMMAND ${CMAKE_OBJCOPY} ${CMAKE_CURRENT_SOURCE_DIR}/build/${target_name}${CMAKE_EXECUTABLE_SUFFIX} -O binary ${CMAKE_CURRENT_SOURCE_DIR}/build/${target_name}.bin
+			COMMAND ${CMAKE_OBJDUMP} -l -S -D ${CMAKE_CURRENT_SOURCE_DIR}/build/${target_name}${CMAKE_EXECUTABLE_SUFFIX} > ${CMAKE_CURRENT_SOURCE_DIR}/build/${target_name}.asm
+			COMMAND xxd -i ${CMAKE_CURRENT_SOURCE_DIR}/build/${target_name}${CMAKE_EXECUTABLE_SUFFIX} > ${CMAKE_CURRENT_SOURCE_DIR}/build/src_${target_name}.h
 			WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 	ENDIF()
 
