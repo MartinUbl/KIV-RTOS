@@ -42,7 +42,7 @@ CACHE FILEPATH "The toolchain objdump command " FORCE )
 # Set the common build flags
 
 # Set the CMAKE C flags (which should also be used by the assembler!
-set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0" )
+set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0 -fno-omit-frame-pointer -fno-inline-small-functions" )
 set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g" )
 set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -nostartfiles -nostdlib" )
 set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mfloat-abi=hard" )
@@ -50,7 +50,7 @@ set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mfpu=vfp" )
 set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=armv6zk" )
 set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mtune=arm1176jzf-s" )
 
-set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0" )
+set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -fno-omit-frame-pointer -fno-inline-small-functions" )
 set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g" )
 set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -nostartfiles -nostdlib" )
 set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mfloat-abi=hard" )

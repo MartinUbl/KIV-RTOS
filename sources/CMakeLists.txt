@@ -2,13 +2,11 @@ CMAKE_MINIMUM_REQUIRED(VERSION 3.14)
 
 PROJECT(kiv_os_rpios CXX C ASM)
 
+SET(CMAKE_EXECUTABLE_SUFFIX ".elf" CACHE STRING "Executable suffix" FORCE)
+
 IF (NOT STANDALONE_BUILD)
     SET(COMPLETE_BUILD ON CACHE INTERNAL "Complete build with standard library and userspace")
 ENDIF()
-
-# specifikujeme linker skript - potrebujeme vlastni definici pametoveho layoutu
-SET(LINKER_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/kernel/link.ld")
-SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -T ${LINKER_SCRIPT}")
 
 ADD_DEFINITIONS(-g)
 
@@ -30,6 +28,10 @@ FILE(GLOB_RECURSE stdutils_src "stdutils/*.cpp" "stdutils/*.c" "stdutils/*.h" "s
 
 # pridame cil - sestavujeme jen kernel
 ADD_EXECUTABLE(kernel ${kernel_src})
+
+# specifikujeme linker skript - potrebujeme vlastni definici pametoveho layoutu
+SET(KERNEL_LINKER_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/kernel/link.ld")
+TARGET_LINK_OPTIONS(kernel PRIVATE -T${KERNEL_LINKER_SCRIPT})
 
 # pridame podslozku - standardni knihovnu
 ADD_SUBDIRECTORY(stdlib)

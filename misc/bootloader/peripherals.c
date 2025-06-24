@@ -106,7 +106,7 @@ void uart_init(void)
 // aktivni "spanek" - spali nekolik taktu procesoru naprazdno
 void active_sleep(unsigned int ticks)
 {
-    unsigned int ra;
+    volatile unsigned int ra;
     for (ra = 0; ra < ticks; ra++)
         dummy(ra);
 }

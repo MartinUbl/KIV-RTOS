@@ -4,28 +4,30 @@
 #include <process/process_manager.h>
 #include <fs/filesystem.h>
 
+#include <drivers/uart.h>
+
 extern "C" void Timer_Callback()
 {
 	sProcessMgr.Schedule();
 }
 
-extern "C" unsigned char __init_task[];
-extern "C" unsigned int __init_task_len;
+extern "C" unsigned char __init_task_elf[];
+extern "C" unsigned int __init_task_elf_len;
 
-extern "C" unsigned char __sos_task[];
-extern "C" unsigned int __sos_task_len;
+extern "C" unsigned char __sos_task_elf[];
+extern "C" unsigned int __sos_task_elf_len;
 
-extern "C" unsigned char __oled_task[];
-extern "C" unsigned int __oled_task_len;
+extern "C" unsigned char __oled_task_elf[];
+extern "C" unsigned int __oled_task_elf_len;
 
-extern "C" unsigned char __logger_task[];
-extern "C" unsigned int __logger_task_len;
+extern "C" unsigned char __logger_task_elf[];
+extern "C" unsigned int __logger_task_elf_len;
 
-extern "C" unsigned char __counter_task[];
-extern "C" unsigned int __counter_task_len;
+extern "C" unsigned char __counter_task_elf[];
+extern "C" unsigned int __counter_task_elf_len;
 
-extern "C" unsigned char __tilt_task[];
-extern "C" unsigned int __tilt_task_len;
+extern "C" unsigned char __tilt_task_elf[];
+extern "C" unsigned int __tilt_task_elf_len;
 
 extern "C" int _kernel_main(void)
 {
@@ -33,15 +35,15 @@ extern "C" int _kernel_main(void)
 	sFilesystem.Initialize();
 
 	// vytvoreni hlavniho systemoveho (idle) procesu
-	sProcessMgr.Create_Process(__init_task, __init_task_len, true);
+	sProcessMgr.Create_Process(__init_task_elf, __init_task_elf_len, true);
 
 	// vytvoreni vsech tasku
 	// TODO: presunuti do init procesu a nejake inicializacni sekce
-	sProcessMgr.Create_Process(__sos_task, __sos_task_len, false);
-	sProcessMgr.Create_Process(__oled_task, __oled_task_len, false);
-	sProcessMgr.Create_Process(__logger_task, __logger_task_len, false);
-	sProcessMgr.Create_Process(__counter_task, __counter_task_len, false);
-	sProcessMgr.Create_Process(__tilt_task, __tilt_task_len, false);
+	sProcessMgr.Create_Process(__sos_task_elf, __sos_task_elf_len, false);
+	sProcessMgr.Create_Process(__oled_task_elf, __oled_task_elf_len, false);
+	sProcessMgr.Create_Process(__logger_task_elf, __logger_task_elf_len, false);
+	sProcessMgr.Create_Process(__counter_task_elf, __counter_task_elf_len, false);
+	sProcessMgr.Create_Process(__tilt_task_elf, __tilt_task_elf_len, false);
 
 	// zatim zakazeme IRQ casovace
 	sInterruptCtl.Disable_Basic_IRQ(hal::IRQ_Basic_Source::Timer);

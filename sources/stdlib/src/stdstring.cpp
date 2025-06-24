@@ -105,3 +105,11 @@ void memcpy(const void* src, void* dst, int num)
 	for (int i = 0; i < num; i++)
 		memdst[i] = memsrc[i];
 }
+
+void memset(void* memory, unsigned char value, int length)
+{
+	char* mem = reinterpret_cast<char*>(memory);
+
+	for (int i = 0; i < length; i++)
+		mem[i] = value;
+}

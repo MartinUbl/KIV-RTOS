@@ -8,6 +8,7 @@
 
 // neplatny handle (procesu, souboru, ...)
 constexpr uint32_t Invalid_Handle = static_cast<uint32_t>(-1);
+constexpr uint32_t Invalid_PID = static_cast<uint32_t>(-1);
 
 // podtypy pro Get_Sched_Info syscall
 enum class NGet_Sched_Info_Type
