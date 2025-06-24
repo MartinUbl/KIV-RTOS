@@ -18,10 +18,13 @@ This software is developed as a demonstration project for operating systems cour
 - semaphores
 - condition variables
 - named pipes
+- minimalistic ELF loader
+- real-time process scheduler (EDF) with fallback to Round Robin
 
 ### Planned features
-- ELF loader (now the files are just loaded as-is)
-- real-time process scheduler (EDF)
+- userspace heap
+- minimalistic standard library (and standard template library)
+- SPI support
 - eMMC driver
 - FAT32 support
 - WiFi and Bluetooth driver
