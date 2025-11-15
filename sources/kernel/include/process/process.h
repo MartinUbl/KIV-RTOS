@@ -1,4 +1,5 @@
 #pragma once
+#include <memory/user_task_heap.h>
 
 // maximalni pocet otevrenych souboru
 constexpr uint32_t Max_Process_Opened_Files = 16;
@@ -50,4 +51,5 @@ struct TTask_Struct
                                                 // maximalni podporovany rozsah cekani je 0x7FFFFFFF, jelikoz muze citac pretect; diference je vzdy pocitana i s moznosti preteceni
     uint32_t deadline;                          // deadline dokonceni tasku
     uint32_t notified_deadline;                 // deadline nastavena po nasledujicim probuzeni procesu
+    CUser_Task_Heap_Manager heap_manager;
 };
