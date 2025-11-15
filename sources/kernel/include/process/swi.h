@@ -58,6 +58,11 @@ enum class NSWI_Process_Service
     // IN:  r0 = subservice (NDeadline_Subservice), r1 = ukazatel na prepravku dle druhu pozadavku
     // OUT: r0 = infikator uspechu (NSWI_Result_Code)
     Deadline        = 5,
+
+    // Alokuje pamet pro proces
+    // IN:  r0 = velikost pameti k alokaci v bytech
+    // OUT: r0 = ukazatel na alokovanou pamet nebo nullptr
+    Malloc          = 6,
 };
 
 enum class NSWI_Filesystem_Service

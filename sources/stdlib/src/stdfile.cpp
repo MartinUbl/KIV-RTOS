@@ -161,6 +161,16 @@ uint32_t get_task_ticks_to_deadline()
     return ticks;
 }
 
+uint32_t malloc(uint32_t size) {
+    uint32_t ptr;
+
+    asm volatile("mov r0, %0" : : "r" (size));
+    asm volatile("swi 6");
+    asm volatile("mov %0, r0" : "=r" (ptr));
+
+    return ptr;
+}
+
 const char Pipe_File_Prefix[] = "SYS:pipe/";
 
 uint32_t pipe(const char* name, uint32_t buf_size)
