@@ -24,32 +24,46 @@ int main(int argc, char** argv)
 	params.char_length = NUART_Char_Length::Char_8;
 	ioctl(uart_file, NIOCtl_Operation::Set_Params, &params);
 
-	fputs(uart_file, "UART task starting!");
+	fputs(uart_file, "UART task starting!\r\n");
+	int* myArray = (int*)malloc(15 * sizeof(int));
+	fputs(uart_file, "Allocated array\r\n");
+	for (int i = 0; i < 15; i++)
+	{
+		myArray[i] = i;
+	}
+	fputs(uart_file, "Initialized array\r\n");
+	
+	// fputs(uart_file, "Allocated address: ");
+	// char addrbuf[16];
+	// itoa((uint32_t)ptr, addrbuf, 16);
+	// fputs(uart_file, addrbuf);
+	// fputs(uart_file, "\r\n");
+		
 
-	char buf[16];
-	char tickbuf[16];
-	bzero(buf, 16);
-	bzero(tickbuf, 16);
+	// char buf[16];
+	// char tickbuf[16];
+	// bzero(buf, 16);
+	// bzero(tickbuf, 16);
 
-	uint32_t last_tick = 0;
+	// uint32_t last_tick = 0;
 
-	uint32_t logpipe = pipe("log", 32);
+	// uint32_t logpipe = pipe("log", 32);
 
 	while (true)
 	{
-		wait(logpipe, 1, 0x1000);
+		// wait(logpipe, 1, 0x1000);
 
-		uint32_t v = read(logpipe, buf, 15);
-		if (v > 0)
-		{
-			buf[v] = '\0';
-			fputs(uart_file, "\r\n[ ");
-			uint32_t tick = get_tick_count();
-			itoa(tick, tickbuf, 16);
-			fputs(uart_file, tickbuf);
-			fputs(uart_file, "]: ");
-			fputs(uart_file, buf);
-		}
+		// uint32_t v = read(logpipe, buf, 15);
+		// if (v > 0)
+		// {
+		// 	buf[v] = '\0';
+		// 	fputs(uart_file, "\r\n[ ");
+		// 	uint32_t tick = get_tick_count();
+		// 	itoa(tick, tickbuf, 16);
+		// 	fputs(uart_file, tickbuf);
+		// 	fputs(uart_file, "]: ");
+		// 	fputs(uart_file, buf);
+		// }
 	}
 
     return 0;

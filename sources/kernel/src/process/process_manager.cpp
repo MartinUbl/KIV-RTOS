@@ -111,7 +111,7 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
     task->state = NTask_State::New;
     task->deadline = Indefinite; // task si zatim nestanovil deadline, udela to az to bude aktualni v deadline syscallu
     task->notified_deadline = Indefinite;
-    task->heap_manager = CUser_Task_Heap_Manager();
+    task->heap_manager = new CUser_Task_Heap_Manager();
 
     // lr = co zacit vykonavat po bootstrapu, 0x8000 je misto, kam je relokovany v kazde nasi binarce symbol _start, tedy vstupni bod programu
     //task->cpu_context.lr = 0x8000;
@@ -123,6 +123,9 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
     // sp = zasobnik, vzdy je relokovany na nejakou fixni pamet, pro nas je jednoduche volit ho o velikosti 1MB
     // pozn. zasobnik roste na druhou stranu, takze musime SP nastavit na konec stranky
     task->cpu_context.sp = 0x90000000 + mem::PageSize;
+
+    task->heap_base = 0xB0000000;
+    task->heap_next = task->heap_base;
 
     // alokujeme stranku pro kod a pro zasobnik
     uint32_t code_page_phys = static_cast<unsigned long>(sPage_Manager.Alloc_Page()) - mem::MemoryVirtualBase;
@@ -310,7 +313,7 @@ void CProcess_Manager::Handle_Process_SWI(NSWI_Process_Service svc_idx, uint32_t
             break;
         }
         case NSWI_Process_Service::Malloc: {
-            target.r0 = reinterpret_cast<uint32_t>(mCurrent_Task_Node->task->heap_manager.Alloc(r0));
+            target.r0 = reinterpret_cast<uint32_t>(mCurrent_Task_Node->task->heap_manager->Alloc(r0, mCurrent_Task_Node->task));
             break;
         }
     }

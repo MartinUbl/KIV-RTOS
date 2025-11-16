@@ -37,6 +37,8 @@ struct TCPU_Context
 
 class IFile;
 
+struct CUser_Task_Heap_Manager;
+
 // struktura procesu (tasku, ...)
 struct TTask_Struct
 {
@@ -51,5 +53,7 @@ struct TTask_Struct
                                                 // maximalni podporovany rozsah cekani je 0x7FFFFFFF, jelikoz muze citac pretect; diference je vzdy pocitana i s moznosti preteceni
     uint32_t deadline;                          // deadline dokonceni tasku
     uint32_t notified_deadline;                 // deadline nastavena po nasledujicim probuzeni procesu
-    CUser_Task_Heap_Manager heap_manager;
+    uint32_t heap_base;
+    uint32_t heap_next;
+    CUser_Task_Heap_Manager* heap_manager;
 };

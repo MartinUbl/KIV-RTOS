@@ -161,8 +161,8 @@ uint32_t get_task_ticks_to_deadline()
     return ticks;
 }
 
-uint32_t malloc(uint32_t size) {
-    uint32_t ptr;
+void* malloc(uint32_t size) {
+    void* ptr;
 
     asm volatile("mov r0, %0" : : "r" (size));
     asm volatile("swi 6");

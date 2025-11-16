@@ -12,7 +12,7 @@ uint32_t get_active_process_count();
 uint32_t get_tick_count();
 void set_task_deadline(uint32_t tick_count_required);
 uint32_t get_task_ticks_to_deadline();
-uint32_t malloc(uint32_t size);
+void* malloc(uint32_t size);
 
 uint32_t open(const char* filename, NFile_Open_Mode mode);
 uint32_t read(uint32_t file, char* const buffer, uint32_t size);
