@@ -124,7 +124,7 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
     // pozn. zasobnik roste na druhou stranu, takze musime SP nastavit na konec stranky
     task->cpu_context.sp = 0x90000000 + mem::PageSize;
 
-    task->heap_base = 0xB0000000;
+    task->heap_base = 0x21000000;
     task->heap_next = task->heap_base;
 
     // alokujeme stranku pro kod a pro zasobnik
@@ -313,7 +313,8 @@ void CProcess_Manager::Handle_Process_SWI(NSWI_Process_Service svc_idx, uint32_t
             break;
         }
         case NSWI_Process_Service::Malloc: {
-            target.r0 = reinterpret_cast<uint32_t>(mCurrent_Task_Node->task->heap_manager->Alloc(r0, mCurrent_Task_Node->task));
+            TTask_Struct* task = mCurrent_Task_Node->task;
+            target.r0 = reinterpret_cast<uint32_t>(task->heap_manager->Alloc(r0, task));
             break;
         }
     }

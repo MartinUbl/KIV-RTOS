@@ -5,18 +5,15 @@
 
 struct TTask_Struct;
 
-struct TUser_Task_Heap_Chunk_Header {
-    TUser_Task_Heap_Chunk_Header* prev;
-    TUser_Task_Heap_Chunk_Header* next;
-    uint32_t size;
-    bool is_free;
+struct TCurrent_Page {
+    uint32_t used_space;
+    uint32_t virt_user_addr;
 };
 
 class CUser_Task_Heap_Manager {
     private:
-        TUser_Task_Heap_Chunk_Header* mFirst;
-
-        TUser_Task_Heap_Chunk_Header* Alloc_Next_Page(TTask_Struct* task);
+        TCurrent_Page* current_page;
+        TCurrent_Page* Allocate_New_Page(TTask_Struct* task);
         
     public:
         CUser_Task_Heap_Manager();
