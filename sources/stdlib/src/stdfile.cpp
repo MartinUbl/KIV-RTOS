@@ -161,12 +161,42 @@ uint32_t get_task_ticks_to_deadline()
     return ticks;
 }
 
-void* malloc(uint32_t size) {
-    void* ptr;
+const uint32_t min_alloc_size = 128;
+uint32_t used = 0;
+uint32_t allocated = 0;
+void* user_space_base = nullptr;
 
-    asm volatile("mov r0, %0" : : "r" (size));
-    asm volatile("swi 6");
-    asm volatile("mov %0, r0" : "=r" (ptr));
+void* malloc(uint32_t size) {
+    if (user_space_base == nullptr) {
+        asm volatile("mov r0, %0" : : "r" (min_alloc_size));
+        asm volatile("swi 6");
+        asm volatile("mov %0, r0" : "=r" (user_space_base));
+        allocated = min_alloc_size;
+    }
+    
+    void* ptr;
+    if ((allocated - used) < size) {
+        if (size > min_alloc_size) {
+            asm volatile("mov r0, %0" : : "r" (size));
+        } else {
+            asm volatile("mov r0, %0" : : "r" (min_alloc_size));
+        }
+
+        asm volatile("swi 6");
+        asm volatile("mov %0, r0" : "=r" (ptr));
+        if (ptr == nullptr) {
+            return ptr;
+        }
+        
+        if (size > min_alloc_size) {
+            allocated += size;
+        } else {
+            allocated += min_alloc_size;
+        }
+    }
+
+    ptr = reinterpret_cast<void*>(reinterpret_cast<uint32_t>(user_space_base) + used);
+    used += size;
 
     return ptr;
 }
