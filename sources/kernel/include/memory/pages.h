@@ -1,12 +1,14 @@
 #pragma once
 
 #include <hal/intdef.h>
+#include <process/mutex.h>
 #include "memmap.h"
 
 class CPage_Manager
 {
     private:
         uint8_t mPage_Bitmap[mem::PageCount / 8];
+        CMutex* mutex;
 
         void Mark(uint32_t page_idx, bool used);
 

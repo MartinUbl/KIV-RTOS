@@ -9,6 +9,7 @@ CPage_Manager::CPage_Manager()
         mPage_Bitmap[i] = 0;
 
     // nutno dodat, ze strankovatelna pamet implicitne nezahrnuje pamet, kam se nahralo jadro
+    mutex = new CMutex();
 }
 
 void CPage_Manager::Mark(uint32_t page_idx, bool used)
@@ -23,7 +24,8 @@ uint32_t CPage_Manager::Alloc_Page()
 {
     // VELMI jednoduchy alokator stranek, prochazi bitmapu a hleda prvni volne misto
     // to je samozrejme O(n) a pro prakticke pouziti ne uplne dobre, ale k tomuto problemu az jindy
-
+    bool locked = mutex->Lock();
+    
     uint32_t i, j;
 
     // projdeme vsechny stranky
@@ -40,11 +42,13 @@ uint32_t CPage_Manager::Alloc_Page()
                     // oznacime 
                     const uint32_t page_idx = i*8 + j;
                     Mark(page_idx, true);
+                    mutex->Unlock();
                     return mem::LowMemory + page_idx * mem::PageSize;
                 }
             }
         }
     }
+    mutex->Unlock();
 
     return 0;
 }
