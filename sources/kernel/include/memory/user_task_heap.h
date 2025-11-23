@@ -5,15 +5,17 @@
 
 struct TTask_Struct;
 
-struct TCurrent_Page {
+struct TPage_List_Node {
     uint32_t used_space;
     uint32_t virt_user_addr;
+    void* page_start;
+    TPage_List_Node* next;
 };
 
 class CUser_Task_Heap_Manager {
     private:
-        TCurrent_Page* current_page;
-        TCurrent_Page* Allocate_New_Page(TTask_Struct* task);
+        TPage_List_Node* first_page;
+        void* Allocate_New_Page(TTask_Struct* task);
         
     public:
         CUser_Task_Heap_Manager();
