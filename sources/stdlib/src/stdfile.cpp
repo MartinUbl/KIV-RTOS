@@ -162,89 +162,38 @@ uint32_t get_task_ticks_to_deadline()
 }
 
 const uint32_t min_alloc_size = 128;
-uint32_t used = 0;
-uint32_t allocated = 0;
-uint32_t data = 0;
+static uint32_t used = 0;
+static uint32_t allocated = 0;
+static uint32_t memory_block_base = 0;
 
-// ...existing code...
 void* malloc(uint32_t size, uint32_t uart) {
-    char buf[64];
-
-    /* large single allocation path - use single extended asm to avoid reordering */
     if (allocated < size && min_alloc_size < size) {
-        write(uart, "Allocating large block of memory!\n", 34);
         void* ptr;
-        asm volatile(
-            "mov r0, %1\n"
-            "swi 6\n"
-            "mov %0, r0\n"
-            : "=r"(ptr)
-            : "r"(size)
-            : "memory"
-        );
-
-        /* print ptr and return */
-        itoa((uint32_t)ptr, buf, 16);
-        write(uart, "DEBUG large ptr = ", 18);
-        write(uart, buf, strlen(buf));
-        write(uart, "\n", 1);
+        asm volatile("mov r0, %0" : : "r" (size));
+        asm volatile("swi 6");
+        asm volatile("mov %0, r0" : "=r" (ptr));
         return ptr;
     }
 
     if (used + size > allocated) {
-        write(uart, "Allocating additional block of memory!\n", 39);
         void* ptr;
-
-        /* request new block deterministically */
-        asm volatile(
-            "mov r0, %1\n"
-            "swi 6\n"
-            "mov %0, r0\n"
-            : "=r"(ptr)
-            : "r"(min_alloc_size)
-            : "memory"
-        );
+        asm volatile("mov r0, %0" : : "r" (min_alloc_size));
+        asm volatile("swi 6");
+        asm volatile("mov %0, r0" : "=r" (ptr));
         if (ptr == nullptr) {
             return nullptr;
         }
 
-        /* ensure compiler doesn't keep stale cached values */
-        asm volatile("" ::: "memory");
-
-        /* check extend vs new block */
-        if ((uint32_t)ptr - min_alloc_size == data) {
-            write(uart, "Extending existing memory block!\n", 33);
+        if ((uint32_t)ptr - min_alloc_size == memory_block_base) {
             allocated += min_alloc_size;
         } else {
-            /* store new base and barrier, then print stored value */
-            data = (uint32_t)ptr;
-            asm volatile("" ::: "memory"); /* ensure store completes before reads */
-
-            itoa((uint32_t)ptr, buf, 16);
-            write(uart, "DEBUG: ptr (stored)    = ", 25);
-            write(uart, buf, strlen(buf));
-            write(uart, "\n", 1);
-
-            itoa(data, buf, 16);
-            write(uart, "DEBUG: data (after)    = ", 25);
-            write(uart, buf, strlen(buf));
-            write(uart, "\n", 1);
-
+            memory_block_base = (uint32_t)ptr;
             allocated = min_alloc_size;
             used = 0;
         }
     }
 
-    itoa(used, buf, 16);
-    write(uart, "Used = ", 7);
-    write(uart, buf, strlen(buf));
-    write(uart, "\n", 1);
-
-    uint32_t addr = data + used;
-    itoa(addr, buf, 16);
-    write(uart, "Returning address: ", 19);
-    write(uart, buf, strlen(buf));
-    write(uart, "\n", 1);
+    uint32_t addr = memory_block_base + used;
     used += size;
     return (void*)addr;
 }
