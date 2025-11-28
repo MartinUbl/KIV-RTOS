@@ -193,7 +193,7 @@ void CGPIO_Handler::Enable_Event_Detect(uint32_t pin, NGPIO_Interrupt_Type type)
 	if (!Get_GP_IRQ_Detect_Location(pin, type, reg, bit))
 		return;
 
-	mGPIO[reg] = (1 << bit);
+	mGPIO[reg] |= (1 << bit);
 
 	// TODO: vyresit tohle trochu lepe
 	sInterruptCtl.Enable_IRQ(hal::IRQ_Source::GPIO_0);
@@ -247,6 +247,9 @@ void CGPIO_Handler::Wait_For_Event(IFile* file, uint32_t pin)
 	wf->pin_idx = pin;
 	wf->prev = nullptr;
 	wf->next = mWaiting_Files;
+
+    if (mWaiting_Files)
+        mWaiting_Files->prev = wf;
 
 	mWaiting_Files = wf;
 
