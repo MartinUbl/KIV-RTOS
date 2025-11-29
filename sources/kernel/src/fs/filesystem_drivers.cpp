@@ -11,7 +11,7 @@
 #include <fs/drivers/mutex_fs.h>
 #include <fs/drivers/condvar_fs.h>
 #include <fs/drivers/pipe_fs.h>
-
+#include <fs/drivers/telemetry_fs.h>
 // pole driveru - tady uvedeme vsechny, ktere jsou v systemu dostupne a ktere je zadouci pro tuto instanci naseho OS pripojit
 const CFilesystem::TFS_Driver CFilesystem::gFS_Drivers[] = {
     // "skutecna" zarizeni
@@ -21,6 +21,7 @@ const CFilesystem::TFS_Driver CFilesystem::gFS_Drivers[] = {
     { "Shift_Reg_FS", "DEV:sr", &fsShift_Register_FS_Driver },
     { "7Seg_Disp_FS", "DEV:segd", &fsSegment_Display_FS_Driver },
     { "OLED_Disp_FS", "DEV:oled", &fsOLED_Display_FS_Driver },
+    { "TELEM_FS", "DEV:telemetry", &fsTelemetry_FS_Driver },
 
     // virtualni zarizeni
     { "Mutex", "SYS:mtx", &fsMutex_FS_Driver },

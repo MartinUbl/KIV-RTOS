@@ -13,6 +13,8 @@
 #include <drivers/uart.h>
 #include <drivers/timer.h>
 
+#include "telemetry.h"
+
 // "importovane" funkce z asm
 extern "C"
 {
@@ -267,6 +269,10 @@ void CProcess_Manager::Handle_Process_SWI(NSWI_Process_Service svc_idx, uint32_t
     if (!mCurrent_Task_Node)
         return;
 
+#ifdef ENABLE_TELEMETRY
+    telemetry_increment_syscall();
+#endif
+
     switch (svc_idx)
     {
         case NSWI_Process_Service::Get_PID:
@@ -316,6 +322,10 @@ void CProcess_Manager::Handle_Filesystem_SWI(NSWI_Filesystem_Service svc_idx, ui
     // TODO: signalizace chyby
     if (!mCurrent_Task_Node)
         return;
+
+#ifdef ENABLE_TELEMETRY
+    telemetry_increment_syscall();
+#endif
 
     switch (svc_idx)
     {

@@ -64,3 +64,6 @@ ADD_USERSPACE_EXECUTABLE(oled_task oled_task/main.cpp)
 ADD_USERSPACE_EXECUTABLE(logger_task logger_task/main.cpp)
 ADD_USERSPACE_EXECUTABLE(counter_task counter_task/main.cpp)
 ADD_USERSPACE_EXECUTABLE(tilt_task tilt_task/main.cpp)
+
+ADD_USERSPACE_EXECUTABLE(telemetry_task telemetry_task/main.cpp)  # <- přidáno
+ADD_USERSPACE_EXECUTABLE(mutex_task mutex_task/main.cpp)  # <- přidáno

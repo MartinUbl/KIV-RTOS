@@ -3,6 +3,8 @@
 
 #include <drivers/uart.h>
 
+#include "telemetry.h"
+
 CTimer sTimer(hal::Timer_Base);
 
 #pragma pack(push,1)
@@ -66,6 +68,12 @@ void CTimer::IRQ_Callback()
     Regs(hal::Timer_Reg::IRQ_Clear) = 1;
 
     mTick_Count++;
+
+#ifdef ENABLE_TELEMETRY
+    // počítat timer tick pro telemetry
+    telemetry_on_timer_tick();
+    telemetry_increment_interrupt();
+#endif
 
     if (mCallback)
         mCallback();

@@ -5,6 +5,8 @@
 
 #include <stdstring.h>
 
+#include "telemetry.h"
+
 CMutex::CMutex()
     : IFile(NFile_Type_Major::Mutex)
 {
@@ -29,6 +31,12 @@ bool CMutex::Lock()
     }
 
     mHolder_PID = cpid;
+
+#ifdef ENABLE_TELEMETRY
+    telemetry_increment_mutex();
+#endif
+
+
 
     return true;
 }
