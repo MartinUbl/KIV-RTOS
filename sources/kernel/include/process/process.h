@@ -45,6 +45,9 @@ struct TTask_Struct
     unsigned int sched_counter;                 // pocitadlo - jakmile je proces naplanovan, zkopiruje se do nej priorita a kazdy tik casovace snizuje toto cislo o 1; na 0 se preplanuje na jiny proces
     unsigned int sched_static_priority;         // staticka priorita procesu (dana pri jeho vytvareni)
     IFile* opened_files[Max_Process_Opened_Files];  // otevrene soubory; index je zaroven handle
+    uint32_t multi_wait_fd_bitmap;              // bitmapa souboru, na ktere proces ceka pri WaitAll - cekani na vice souboru najednou
+    bool is_multi_file_wait;                    // indikuje, ze proces ceka na vice souboru najednou (WaitAll)
+    uint32_t multi_wait_ready_fd;               // soubor, ktery byl prvni pripraven k operaci pri cekani na vice souboru (WaitAll)
     int exit_code;                              // navratovy kod procesu; nastaveny pri volani terminate nebo pri vyvolanem data/prefetch abortu a jinych
     uint32_t sleep_timer;                       // casovac pro uspane procesy - jakmile systemovy citac prekroci tuto hodnotu, proces je odblokovan
                                                 // maximalni podporovany rozsah cekani je 0x7FFFFFFF, jelikoz muze citac pretect; diference je vzdy pocitana i s moznosti preteceni

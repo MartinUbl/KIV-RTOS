@@ -131,6 +131,20 @@ bool CPipe::Wait(uint32_t count)
     return true;
 }
 
+bool CPipe::TryWaitAllReserve(uint32_t count) {
+    spinlock_lock(&mBuffer_Lock);
+
+    if (mSem_Busy->Get_Current_Count() >= count)
+    {
+        spinlock_unlock(&mBuffer_Lock);
+        return true;
+    }
+
+    spinlock_unlock(&mBuffer_Lock);
+    return false;
+}
+
+
 uint32_t CPipe::Notify(uint32_t count)
 {
     return IFile::Notify(count);

@@ -60,9 +60,6 @@ class IFile
 
         spinlock_t mWait_Lock;
 
-    protected:
-        void Wait_Enqueue_Current();
-
     public:
         IFile(NFile_Type_Major type) : mType(type) { spinlock_init(&mWait_Lock); };
         virtual ~IFile() = default;
@@ -77,11 +74,19 @@ class IFile
         virtual bool IOCtl(NIOCtl_Operation dir, void* ctlptr) { return false; };
         // vycka na udalost nad timto souborem (specificke pro danou implementaci)
         virtual bool Wait(uint32_t count) { return true; };
+        // pokusí se získat resource bez blokování; vrací true pokud se podařilo získat resource, false s přípravou na čekání pokud ne
+        virtual bool TryWaitAllReserve(uint32_t count) { return false; };
+        // získá resource po notifikaci (je použito po notikaci z WaitAll volani)
+        virtual bool WaitAllAcquire(uint32_t count) { return true; };
 
         // notifikuje <count> cekajici nad timto souborem (pokud nejaky cekajici je)
         virtual uint32_t Notify(uint32_t count);
 
-        // zjisti typ souboru
+        virtual void Wait_Enqueue_Current();
+        // odstraneni zadaneho procesu ze seznamu cekajicich bez probouzeni
+        virtual bool Wait_Dequeue_Process(uint32_t pid);
+
+    // zjisti typ souboru
         NFile_Type_Major Get_File_Type() const { return mType; };
         
         // TODO: seek, atd...

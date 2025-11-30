@@ -256,6 +256,35 @@ void CGPIO_Handler::Wait_For_Event(IFile* file, uint32_t pin)
 	spinlock_unlock(&mLock);
 }
 
+void CGPIO_Handler::Cancel_Wait_For_Event(IFile* file, uint32_t pin) {
+    spinlock_lock(&mLock);
+
+    TWaiting_File* wf = mWaiting_Files;
+    TWaiting_File* tmpwf;
+
+    while (wf != nullptr) {
+        if (wf->file == file && wf->pin_idx == pin) {
+            if (wf->prev)
+                wf->prev->next = wf->next;
+            if (wf->next)
+                wf->next->prev = wf->prev;
+
+            tmpwf = wf;
+
+            if (mWaiting_Files == wf)
+                mWaiting_Files = wf->next;
+
+            wf = wf->next;
+
+            delete tmpwf;
+        } else {
+            wf = wf->next;
+        }
+    }
+
+    spinlock_unlock(&mLock);
+}
+
 void CGPIO_Handler::Handle_IRQ()
 {
 	TWaiting_File* wf, *tmpwf;

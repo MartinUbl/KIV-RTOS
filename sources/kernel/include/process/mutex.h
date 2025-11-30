@@ -46,5 +46,7 @@ class CMutex : public IFile
         virtual bool IOCtl(NIOCtl_Operation dir, void* ctlptr) override { return false; };
 
         virtual bool Wait(uint32_t count) override { return Lock(); }
+        virtual bool TryWaitAllReserve(uint32_t count) override;
+        virtual bool WaitAllAcquire(uint32_t count) override;
         virtual uint32_t Notify(uint32_t count) { return Unlock(); };
 };

@@ -109,6 +109,9 @@ class CGPIO_Handler
 
 		// pocka na udalost (zablokuje proces)
 		void Wait_For_Event(IFile* file, uint32_t pin);
+
+        // zrusi "registraci" cekani procesu
+        void Cancel_Wait_For_Event(IFile *file, uint32_t pin);
 };
 
 // globalni instance pro hlavni GPIO port

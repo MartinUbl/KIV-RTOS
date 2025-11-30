@@ -20,6 +20,7 @@ void close(uint32_t file);
 uint32_t ioctl(uint32_t file, NIOCtl_Operation operation, void* param);
 uint32_t notify(uint32_t file, uint32_t count = 1);
 NSWI_Result_Code wait(uint32_t file, uint32_t count = 1, uint32_t notified_deadline = Deadline_Unchanged);
+uint32_t wait_all(uint32_t* files, uint32_t file_count, uint32_t notified_deadline = Deadline_Unchanged);
 bool sleep(uint32_t ticks, uint32_t notified_deadline = Deadline_Unchanged);
 
 uint32_t pipe(const char* name, uint32_t buf_size);
