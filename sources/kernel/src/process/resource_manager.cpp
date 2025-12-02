@@ -103,6 +103,7 @@ CCondition_Variable* CProcess_Resource_Manager::Alloc_Condition_Variable(const c
 
             strncpy(mCondVars[i].name, name, Max_Cond_Var_Name_Length);
             mCondVars[i].alloc_count++;
+            mCondVars[i].cv.Reset(cvmtx);
             return &mCondVars[i].cv;
         }
     }
