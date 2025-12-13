@@ -40,12 +40,17 @@ class CUART_File final : public IFile
 
         virtual bool Wait(uint32_t count) override
         {
-            Wait_Enqueue_Current();
-            sUART0.Wait_For_Event(this);
+            if (mChannel == 0)
+            {
+                Wait_Enqueue_Current();
+                sUART0.Wait_For_Event(this);
 
-            // zablokujeme, probudi nas az notify
-            sProcessMgr.Block_Current_Process();
-            return true;
+                // zablokujeme, probudi nas az notify
+                sProcessMgr.Block_Current_Process();
+                return true;
+            }
+
+            return false;
         }
 
         virtual uint32_t Write(const char* buffer, uint32_t num) override

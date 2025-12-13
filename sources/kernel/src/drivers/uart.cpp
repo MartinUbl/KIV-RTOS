@@ -20,13 +20,15 @@ bool CUART::Open()
     // zamek, kdyby se nahodou dva procesy pokouseli otevrit UART
     spinlock_lock(&mOpenLock);
 
-    if (mOpened) {
+    if (mOpened)
+    {
         spinlock_unlock(&mOpenLock);
         return false;
     }
 
     // rezervujeme si TX a RX piny, exkluzivne pro nas (R i W, ackoliv je jeden jen vstupni a jeden jen vystupni)
-    if (!sGPIO.Reserve_Pin(14, true, true)) {
+    if (!sGPIO.Reserve_Pin(14, true, true))
+    {
         spinlock_unlock(&mOpenLock);
         return false;
     }
@@ -221,7 +223,8 @@ void CUART::IRQ_Callback()
     }
 
     // Pokud je cekajici soubor a buffer neni prazdny (head a tail jsou ruzne hodnoty), probudime proces
-    if (mWaiting_File && mRx_head != mRx_tail) {
+    if (mWaiting_File && mRx_head != mRx_tail)
+    {
         mWaiting_File->Notify(1);
         mWaiting_File = nullptr;
     }
@@ -233,8 +236,10 @@ int CUART::ReadOrWait(char *str, unsigned int len, IFile* file)
 {
     spinlock_lock(&mRx_Lock);
 
-    while (mBlocking_Read == NUART_Blocking_Read::BLOCKING && mRx_head == mRx_tail) {
-        if (!file) {
+    while (mBlocking_Read == NUART_Blocking_Read::BLOCKING && mRx_head == mRx_tail)
+    {
+        if (!file)
+        {
             spinlock_unlock(&mRx_Lock);
             return 0;
         }
@@ -247,13 +252,15 @@ int CUART::ReadOrWait(char *str, unsigned int len, IFile* file)
 
     // zjisteni delky zpravy cekajici v bufferu
     int msg_len = (mRx_head + CUART_BUF_SIZE - mRx_tail) % CUART_BUF_SIZE;
-    if (msg_len > len) {
+    if (msg_len > len)
+    {
         // omezeni cteni na velikost userspace bufferu
         msg_len = len;
     }
 
     // zkopirovani znaku do userspace bufferu
-    for (uint32_t i = 0; i < msg_len; i++) {
+    for (uint32_t i = 0; i < msg_len; i++)
+    {
         str[i] = mRx_Buf[(mRx_tail + i) % CUART_BUF_SIZE];
     }
 
@@ -266,7 +273,8 @@ int CUART::ReadOrWait(char *str, unsigned int len, IFile* file)
 }
 
 // implementace Wait() nad souborem
-void CUART::Wait_For_Event(IFile* file) {
+void CUART::Wait_For_Event(IFile* file)
+{
     spinlock_lock(&mRx_Lock);
 
     mWaiting_File = file;
