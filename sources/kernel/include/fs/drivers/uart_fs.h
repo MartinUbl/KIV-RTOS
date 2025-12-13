@@ -27,9 +27,25 @@ class CUART_File final : public IFile
 
         virtual uint32_t Read(char* buffer, uint32_t num) override
         {
-            // NYI, prijde nejspis az s kernel buffery a prerusenimi z UARTu
+            if (num > 0 && buffer != nullptr)
+            {
+                if (mChannel == 0)
+                {
+                    return sUART0.ReadOrWait(buffer, num, this);
+                }
+            }
 
             return 0;
+        }
+
+        virtual bool Wait(uint32_t count) override
+        {
+            Wait_Enqueue_Current();
+            sUART0.Wait_For_Event(this);
+
+            // zablokujeme, probudi nas az notify
+            sProcessMgr.Block_Current_Process();
+            return true;
         }
 
         virtual uint32_t Write(const char* buffer, uint32_t num) override
@@ -68,6 +84,7 @@ class CUART_File final : public IFile
                 {
                     params->baud_rate = sUART0.Get_Baud_Rate();
                     params->char_length = sUART0.Get_Char_Length();
+                    params->blocking_read = sUART0.Get_Blocking_Read();
                     return true;
                 }
             }
@@ -79,6 +96,7 @@ class CUART_File final : public IFile
                 {
                     sUART0.Set_Baud_Rate(params->baud_rate);
                     sUART0.Set_Char_Length(params->char_length);
+                    sUART0.Set_Blocking_Read(params->blocking_read);
                     return true;
                 }
             }

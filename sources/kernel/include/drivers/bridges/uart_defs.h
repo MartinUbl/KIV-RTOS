@@ -18,9 +18,16 @@ enum class NUART_Baud_Rate
     BR_115200   = 115200,
 };
 
+enum class NUART_Blocking_Read
+{
+    BLOCKING    = 0,
+    NONBLOCKING = 1,
+};
+
 // parametry UARTu pro prenos skrz IOCTL rozhrani
 struct TUART_IOCtl_Params
 {
     NUART_Char_Length char_length;
     NUART_Baud_Rate baud_rate;
+    NUART_Blocking_Read blocking_read;
 };
