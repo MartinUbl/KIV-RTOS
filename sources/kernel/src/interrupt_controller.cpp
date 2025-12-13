@@ -7,6 +7,8 @@
 #include <process/process_manager.h>
 #include <process/swi.h>
 
+#include "drivers/uart.h"
+
 extern "C"
 {
     void enable_irq();
@@ -50,6 +52,9 @@ extern "C" void _internal_irq_handler()
     // casovac
     if (sTimer.Is_Timer_IRQ_Pending())
         sTimer.IRQ_Callback();
+
+    // UART terminal (sam si overi, zda k nejakemu doslo)
+    sUART0.IRQ_Callback();
 }
 
 extern "C" void _internal_fiq_handler()

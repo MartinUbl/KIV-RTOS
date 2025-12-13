@@ -4,34 +4,43 @@
 
 #include <stdstring.h>
 
+#include "interrupt_controller.h"
+
 CUART sUART0(sAUX);
 
 CUART::CUART(CAUX& aux)
     : mAUX(aux), mOpened(false)
 {
-
+    spinlock_init(&mOpenLock);
+    spinlock_init(&mRx_Lock);
 }
 
 bool CUART::Open()
 {
-    // TODO: zamek, aby se neco neseslo
+    // zamek, kdyby se nahodou dva procesy pokouseli otevrit UART
+    spinlock_lock(&mOpenLock);
 
-    if (mOpened)
+    if (mOpened) {
+        spinlock_unlock(&mOpenLock);
         return false;
+    }
 
     // rezervujeme si TX a RX piny, exkluzivne pro nas (R i W, ackoliv je jeden jen vstupni a jeden jen vystupni)
-    if (!sGPIO.Reserve_Pin(14, true, true))
+    if (!sGPIO.Reserve_Pin(14, true, true)) {
+        spinlock_unlock(&mOpenLock);
         return false;
+    }
 
     if (!sGPIO.Reserve_Pin(15, true, true))
     {
         sGPIO.Free_Pin(14, true, true);
+        spinlock_unlock(&mOpenLock);
         return false;
     }
 
     mAUX.Enable(hal::AUX_Peripherals::MiniUART);
     mAUX.Set_Register(hal::AUX_Reg::MU_IIR, 0);
-    mAUX.Set_Register(hal::AUX_Reg::MU_IER, 0);
+    mAUX.Set_Register(hal::AUX_Reg::MU_IER, 1);
     mAUX.Set_Register(hal::AUX_Reg::MU_MCR, 0);
     mAUX.Set_Register(hal::AUX_Reg::MU_CNTL, 3); // RX and TX enabled
 
@@ -39,11 +48,17 @@ bool CUART::Open()
     sGPIO.Set_GPIO_Function(14, NGPIO_Function::Alt_5);
     sGPIO.Set_GPIO_Function(15, NGPIO_Function::Alt_5);
 
+    // povolime preruseni UARTu
+    sInterruptCtl.Enable_IRQ(hal::IRQ_Source::UART);
+
     mOpened = true;
 
     // nastavime vychozi rychlost a velikost znaku
     Set_Char_Length(NUART_Char_Length::Char_8);
     Set_Baud_Rate(NUART_Baud_Rate::BR_9600);
+    Set_Blocking_Read(NUART_Blocking_Read::BLOCKING);
+
+    spinlock_unlock(&mOpenLock);
 
     return true;
 }
@@ -53,8 +68,10 @@ void CUART::Close()
     if (!mOpened)
         return;
 
-    // zakazeme AUX periferii
+    // zakazeme AUX periferii a preruseni
+    sInterruptCtl.Disable_IRQ(hal::IRQ_Source::UART);
     mAUX.Disable(hal::AUX_Peripherals::MiniUART);
+    mAUX.Set_Register(hal::AUX_Reg::MU_IER, 0);
 
     // piny 14 a 15 prepneme na Input (tak zerou nejmin proudu)
     sGPIO.Set_GPIO_Function(14, NGPIO_Function::Input);
@@ -86,6 +103,16 @@ void CUART::Set_Char_Length(NUART_Char_Length len)
         return;
 
     mAUX.Set_Register(hal::AUX_Reg::MU_LCR, (mAUX.Get_Register(hal::AUX_Reg::MU_LCR) & 0xFFFFFFFE) | static_cast<unsigned int>(len));
+}
+
+NUART_Blocking_Read CUART::Get_Blocking_Read()
+{
+    return mBlocking_Read;
+}
+
+void CUART::Set_Blocking_Read(NUART_Blocking_Read r)
+{
+    mBlocking_Read = r;
 }
 
 NUART_Baud_Rate CUART::Get_Baud_Rate()
@@ -166,4 +193,83 @@ void CUART::Write_Hex(unsigned int num)
 
     itoa(num, buf, 16);
     Write(buf);
+}
+
+void CUART::IRQ_Callback()
+{
+    // 0 == pending interrupt
+    if (mAUX.Get_Register(hal::AUX_Reg::MU_IIR) & 0b1)
+        return;
+
+    spinlock_lock(&mRx_Lock);
+
+    while (mAUX.Get_Register(hal::AUX_Reg::MU_LSR) & 0x01)   // RX data ready
+    {
+        // Precteni znaku
+        const auto c = static_cast<char>(mAUX.Get_Register(hal::AUX_Reg::MU_IO) & 0xFF);
+
+        uint32_t next = (mRx_head + 1) % CUART_BUF_SIZE;
+
+        if (next == mRx_tail)
+        {
+            // Buffer je plny -> zahodi se nejstarsi byte
+            mRx_tail = (mRx_tail + 1) % CUART_BUF_SIZE;
+        }
+
+        mRx_Buf[mRx_head] = c;
+        mRx_head = next;
+    }
+
+    // Pokud je cekajici soubor a buffer neni prazdny (head a tail jsou ruzne hodnoty), probudime proces
+    if (mWaiting_File && mRx_head != mRx_tail) {
+        mWaiting_File->Notify(1);
+        mWaiting_File = nullptr;
+    }
+
+    spinlock_unlock(&mRx_Lock);
+}
+
+int CUART::ReadOrWait(char *str, unsigned int len, IFile* file)
+{
+    spinlock_lock(&mRx_Lock);
+
+    while (mBlocking_Read == NUART_Blocking_Read::BLOCKING && mRx_head == mRx_tail) {
+        if (!file) {
+            spinlock_unlock(&mRx_Lock);
+            return 0;
+        }
+
+        spinlock_unlock(&mRx_Lock);
+        // Wait nad souborem pred zablokovanim zvola Wait_For_Event
+        file->Wait(1);
+        spinlock_lock(&mRx_Lock);
+    }
+
+    // zjisteni delky zpravy cekajici v bufferu
+    int msg_len = (mRx_head + CUART_BUF_SIZE - mRx_tail) % CUART_BUF_SIZE;
+    if (msg_len > len) {
+        // omezeni cteni na velikost userspace bufferu
+        msg_len = len;
+    }
+
+    // zkopirovani znaku do userspace bufferu
+    for (uint32_t i = 0; i < msg_len; i++) {
+        str[i] = mRx_Buf[(mRx_tail + i) % CUART_BUF_SIZE];
+    }
+
+    // posunuti ukazatele pro cteni z bufferu
+    mRx_tail = (mRx_tail + msg_len) % CUART_BUF_SIZE;
+
+    spinlock_unlock(&mRx_Lock);
+
+    return msg_len;
+}
+
+// implementace Wait() nad souborem
+void CUART::Wait_For_Event(IFile* file) {
+    spinlock_lock(&mRx_Lock);
+
+    mWaiting_File = file;
+
+    spinlock_unlock(&mRx_Lock);
 }
