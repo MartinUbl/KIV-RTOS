@@ -22,6 +22,7 @@ enum class NFile_Type_Major
     Semaphore       = 3, // semaphore virtual file
     Condition_Var   = 4, // podminkova promenna
     Pipe            = 5, // roura
+    Broadcast       = 6, // broadcast channel
 };
 
 enum class NFile_Open_Mode
