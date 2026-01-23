@@ -2,6 +2,8 @@ CMAKE_MINIMUM_REQUIRED(VERSION 3.14)
 
 PROJECT(kiv_os_rpios CXX C ASM)
 
+SET(USE_EXPANSION_BOARD "KIVDPP02" CACHE STRING "Type of expansion board connected to RPi0 (KIVDPP02, KIVDPP01 or NONE)")
+
 SET(CMAKE_EXECUTABLE_SUFFIX ".elf" CACHE STRING "Executable suffix" FORCE)
 
 IF (NOT STANDALONE_BUILD)
@@ -19,6 +21,18 @@ INCLUDE_DIRECTORIES("${CMAKE_CURRENT_SOURCE_DIR}/stdutils/include/")
 # budeme vyvijet jen pro RPi0, takze tady proste natvrdo napiseme cesty k hlavickam a pridame define
 INCLUDE_DIRECTORIES("${CMAKE_CURRENT_SOURCE_DIR}/kernel/include/board/rpi0/")
 ADD_DEFINITIONS(-DRPI0)
+
+IF (USE_EXPANSION_BOARD STREQUAL "KIVDPP02")
+    ADD_DEFINITIONS(-DEXPANSION_BOARD=KIVDPP02)
+ELSEIF (USE_EXPANSION_BOARD STREQUAL "KIVDPP01")
+    ADD_DEFINITIONS(-DEXPANSION_BOARD=KIVDPP01)
+ELSEIF (USE_EXPANSION_BOARD STREQUAL "NONE")
+    ADD_DEFINITIONS(-DNO_EXPANSION_BOARD)
+ELSE()
+    MESSAGE(FATAL_ERROR "Unknown expansion board type: ${USE_EXPANSION_BOARD}. Supported types are KIVDPP02, KIVDPP01 or NONE.")
+ENDIF()
+
+MESSAGE(STATUS "Building for RPi0 with expansion board: ${USE_EXPANSION_BOARD}")
 
 # rekurzivne pridame vsechny zdrojaky z kernel podslozky
 FILE(GLOB_RECURSE kernel_src "kernel/*.cpp" "kernel/*.c" "kernel/*.h" "kernel/*.hpp" "kernel/*.s")

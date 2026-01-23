@@ -23,7 +23,7 @@ int main(int argc, char** argv)
 	bool fast = false;
 	bool ascending = true;
 
-	set_task_deadline(fast ? 0x1000 : 0x2800);
+	set_task_deadline(fast ? 0x1000 : 0x4000);
 
 	while (true)
 	{
@@ -43,7 +43,7 @@ int main(int argc, char** argv)
 		tmp = '0' + (counter % 10);
 		write(display_file, &tmp, 1);
 
-		sleep(fast ? 0x400 : 0x600, fast ? 0x1000 : 0x2800);
+		sleep(fast ? 0x400 : 0x1200, fast ? 0x1000 : 0x4000);
 	}
 
 	close(display_file);
