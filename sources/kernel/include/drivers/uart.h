@@ -21,12 +21,12 @@ class CUART
         // nastavena baud rate, ukladame ji proto, ze do registru se uklada (potencialne ztratovy) prepocet
         NUART_Baud_Rate mBaud_Rate;
 
-        NUART_Blocking_Read mBlocking_Read;
+        NUART_Blocking_State mBlocking_State;
 
         // cyklicky buffer pro cteni
         char mRx_Buf[CUART_BUF_SIZE];
-        uint32_t mRx_head = 0;
-        uint32_t mRx_tail = 0;
+        uint32_t mRx_Head = 0;
+        uint32_t mRx_Tail = 0;
         spinlock_t mRx_Lock;
         IFile* mWaiting_File = nullptr;
 
@@ -46,8 +46,8 @@ class CUART
         NUART_Baud_Rate Get_Baud_Rate();
         void Set_Baud_Rate(NUART_Baud_Rate rate);
 
-        NUART_Blocking_Read Get_Blocking_Read();
-        void Set_Blocking_Read(NUART_Blocking_Read r);
+        NUART_Blocking_State Get_Blocking_State();
+        void Set_Blocking_State(NUART_Blocking_State state);
 
         // IRQ handler vola tuto rutinu po signalizaci IRQ
         void IRQ_Callback();
@@ -60,8 +60,8 @@ class CUART
         void Write(unsigned int num);
         void Write_Hex(unsigned int num);
 
-        // precist nebo se zablokovat (pokud je nastaveno jako blokujici)
-        int ReadOrWait(char* str, unsigned int len, IFile* file);
+        // precist nebo se zablokovat, dokud neni co cist (pokud je nastaveno jako blokujici)
+        int Read_Or_Wait(char* str, unsigned int len, IFile* file);
 
         // pocka na udalost (zablokuje proces)
         void Wait_For_Event(IFile* file);

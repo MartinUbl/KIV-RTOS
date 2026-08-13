@@ -31,7 +31,7 @@ class CUART_File final : public IFile
             {
                 if (mChannel == 0)
                 {
-                    return sUART0.ReadOrWait(buffer, num, this);
+                    return sUART0.Read_Or_Wait(buffer, num, this);
                 }
             }
 
@@ -89,7 +89,7 @@ class CUART_File final : public IFile
                 {
                     params->baud_rate = sUART0.Get_Baud_Rate();
                     params->char_length = sUART0.Get_Char_Length();
-                    params->blocking_read = sUART0.Get_Blocking_Read();
+                    params->blocking_state = sUART0.Get_Blocking_State();
                     return true;
                 }
             }
@@ -101,7 +101,7 @@ class CUART_File final : public IFile
                 {
                     sUART0.Set_Baud_Rate(params->baud_rate);
                     sUART0.Set_Char_Length(params->char_length);
-                    sUART0.Set_Blocking_Read(params->blocking_read);
+                    sUART0.Set_Blocking_State(params->blocking_state);
                     return true;
                 }
             }
@@ -111,8 +111,8 @@ class CUART_File final : public IFile
 
 class CUART_FS_Driver : public IFilesystem_Driver
 {
-	public:
-		virtual void On_Register() override
+    public:
+        virtual void On_Register() override
         {
             //
         }

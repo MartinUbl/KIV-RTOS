@@ -58,7 +58,7 @@ bool CUART::Open()
     // nastavime vychozi rychlost a velikost znaku
     Set_Char_Length(NUART_Char_Length::Char_8);
     Set_Baud_Rate(NUART_Baud_Rate::BR_9600);
-    Set_Blocking_Read(NUART_Blocking_Read::BLOCKING);
+    Set_Blocking_State(NUART_Blocking_State::BLOCKING);
 
     spinlock_unlock(&mOpenLock);
 
@@ -107,14 +107,14 @@ void CUART::Set_Char_Length(NUART_Char_Length len)
     mAUX.Set_Register(hal::AUX_Reg::MU_LCR, (mAUX.Get_Register(hal::AUX_Reg::MU_LCR) & 0xFFFFFFFE) | static_cast<unsigned int>(len));
 }
 
-NUART_Blocking_Read CUART::Get_Blocking_Read()
+NUART_Blocking_State CUART::Get_Blocking_State()
 {
-    return mBlocking_Read;
+    return mBlocking_State;
 }
 
-void CUART::Set_Blocking_Read(NUART_Blocking_Read r)
+void CUART::Set_Blocking_State(NUART_Blocking_State state)
 {
-    mBlocking_Read = r;
+    mBlocking_State = state;
 }
 
 NUART_Baud_Rate CUART::Get_Baud_Rate()
@@ -210,20 +210,20 @@ void CUART::IRQ_Callback()
         // Precteni znaku
         const auto c = static_cast<char>(mAUX.Get_Register(hal::AUX_Reg::MU_IO) & 0xFF);
 
-        uint32_t next = (mRx_head + 1) % CUART_BUF_SIZE;
+        uint32_t next = (mRx_Head + 1) % CUART_BUF_SIZE;
 
-        if (next == mRx_tail)
+        if (next == mRx_Tail)
         {
             // Buffer je plny -> zahodi se nejstarsi byte
-            mRx_tail = (mRx_tail + 1) % CUART_BUF_SIZE;
+            mRx_Tail = (mRx_Tail + 1) % CUART_BUF_SIZE;
         }
 
-        mRx_Buf[mRx_head] = c;
-        mRx_head = next;
+        mRx_Buf[mRx_Head] = c;
+        mRx_Head = next;
     }
 
     // Pokud je cekajici soubor a buffer neni prazdny (head a tail jsou ruzne hodnoty), probudime proces
-    if (mWaiting_File && mRx_head != mRx_tail)
+    if (mWaiting_File && mRx_Head != mRx_Tail)
     {
         mWaiting_File->Notify(1);
         mWaiting_File = nullptr;
@@ -232,11 +232,11 @@ void CUART::IRQ_Callback()
     spinlock_unlock(&mRx_Lock);
 }
 
-int CUART::ReadOrWait(char *str, unsigned int len, IFile* file)
+int CUART::Read_Or_Wait(char *str, unsigned int len, IFile* file)
 {
     spinlock_lock(&mRx_Lock);
 
-    while (mBlocking_Read == NUART_Blocking_Read::BLOCKING && mRx_head == mRx_tail)
+    while (mBlocking_State == NUART_Blocking_State::BLOCKING && mRx_Head == mRx_Tail)
     {
         if (!file)
         {
@@ -251,7 +251,7 @@ int CUART::ReadOrWait(char *str, unsigned int len, IFile* file)
     }
 
     // zjisteni delky zpravy cekajici v bufferu
-    int msg_len = (mRx_head + CUART_BUF_SIZE - mRx_tail) % CUART_BUF_SIZE;
+    int msg_len = (mRx_Head + CUART_BUF_SIZE - mRx_Tail) % CUART_BUF_SIZE;
     if (msg_len > len)
     {
         // omezeni cteni na velikost userspace bufferu
@@ -261,11 +261,11 @@ int CUART::ReadOrWait(char *str, unsigned int len, IFile* file)
     // zkopirovani znaku do userspace bufferu
     for (uint32_t i = 0; i < msg_len; i++)
     {
-        str[i] = mRx_Buf[(mRx_tail + i) % CUART_BUF_SIZE];
+        str[i] = mRx_Buf[(mRx_Tail + i) % CUART_BUF_SIZE];
     }
 
     // posunuti ukazatele pro cteni z bufferu
-    mRx_tail = (mRx_tail + msg_len) % CUART_BUF_SIZE;
+    mRx_Tail = (mRx_Tail + msg_len) % CUART_BUF_SIZE;
 
     spinlock_unlock(&mRx_Lock);
 
