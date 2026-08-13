@@ -1,0 +1,29 @@
+{
+	"name": "kiv-rtos-tools",
+	"displayName": "KIV-RTOS Tools",
+	"version": "0.0.1",
+	"publisher": "local",
+	"engines": {
+		"vscode": "^1.90.0"
+	},
+	"main": "./extension.js",
+	"activationEvents": [
+		"onStartupFinished"
+	],
+	"contributes": {
+		"commands": [
+			{
+				"command": "kernel.build",
+				"title": "Build system"
+			},
+			{
+				"command": "kernel.flash",
+				"title": "Flash system"
+			},
+			{
+				"command": "kernel.serial",
+				"title": "Open serial terminal"
+			}
+		]
+	}
+}
