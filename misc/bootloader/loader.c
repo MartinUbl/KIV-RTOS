@@ -1,5 +1,117 @@
 #include "peripherals.h"
 
+#define BINCMD_SET_CURSOR  0x01
+#define BINCMD_WRITE       0x02
+#define BINCMD_WRITE_ZERO  0x03
+#define BINCMD_SET_ENTRY   0x04
+#define BINCMD_GO          0x05
+#define BINCMD_SET_BAUD    0x06
+#define BINARY_ACK         'K'
+#define AUX_MU_BAUD_REG    0x20215068
+
+static unsigned int uart_recv_u16be(void)
+{
+    unsigned int v;
+
+    v = uart_recv() & 0xFF;
+    v <<= 8;
+    v |= uart_recv() & 0xFF;
+
+    return v;
+}
+
+static unsigned int uart_recv_u32be(void)
+{
+    unsigned int v;
+
+    v = uart_recv() & 0xFF;
+    v <<= 8;
+    v |= uart_recv() & 0xFF;
+    v <<= 8;
+    v |= uart_recv() & 0xFF;
+    v <<= 8;
+    v |= uart_recv() & 0xFF;
+
+    return v;
+}
+
+static int uart_recv_binary_upgrade(void)
+{
+    if (uart_recv() != 'B')
+        return 0;
+    if (uart_recv() != 'I')
+        return 0;
+    if (uart_recv() != 'N')
+        return 0;
+    if (uart_recv() != '1')
+        return 0;
+
+    return 1;
+}
+
+static void uart_set_baud_divisor(unsigned int divisor)
+{
+    PUT32(AUX_MU_BAUD_REG, divisor);
+}
+
+static unsigned int write_uart_data(unsigned int addr, unsigned int count)
+{
+    unsigned int data;
+
+    while ((addr & 3) && count > 0)
+    {
+        PUT8(addr, uart_recv());
+        addr++;
+        count--;
+    }
+
+    while (count >= 4)
+    {
+        data = uart_recv() & 0xFF;
+        data |= (uart_recv() & 0xFF) << 8;
+        data |= (uart_recv() & 0xFF) << 16;
+        data |= (uart_recv() & 0xFF) << 24;
+        PUT32(addr, data);
+        addr += 4;
+        count -= 4;
+    }
+
+    while (count > 0)
+    {
+        PUT8(addr, uart_recv());
+        addr++;
+        count--;
+    }
+
+    return addr;
+}
+
+static unsigned int write_zeroes(unsigned int addr, unsigned int count)
+{
+    while ((addr & 3) && count > 0)
+    {
+        PUT8(addr, 0);
+        addr++;
+        count--;
+    }
+
+    while (count >= 4)
+    {
+        PUT32(addr, 0);
+        addr += 4;
+        count -= 4;
+    }
+
+    while (count > 0)
+    {
+        PUT8(addr, 0);
+        addr++;
+        count--;
+    }
+
+    return addr;
+}
+
 int loader_main(void)
 {
     unsigned int state;
@@ -16,6 +128,10 @@ int loader_main(void)
     uart_send('R');
     uart_send('E');
     uart_send('C');
+    uart_send('-');
+    uart_send('2');
+    uart_send('0');
+    uart_send('0');
     uart_send(0x0D);
     uart_send(0x0A);
 
@@ -52,6 +168,80 @@ int loader_main(void)
                 else if (ra == 'p' || ra == 'P')
                 {
                     blink();
+                }
+                // U = ridici kod protokolu - prepnuti do binarniho rezimu prenosu
+                else if (ra == 'U')
+                {
+                    if (!uart_recv_binary_upgrade())
+                    {
+                        failstring(3);
+                        return 1;
+                    }
+                    state = 100;
+                    uart_send(BINARY_ACK);
+                }
+                break;
+            }
+            case 100:
+            {
+                switch (ra)
+                {
+                    case BINCMD_SET_CURSOR:
+                    {
+                        addr = uart_recv_u32be();
+                        short_blink();
+                        uart_send(BINARY_ACK);
+                        break;
+                    }
+                    case BINCMD_WRITE:
+                    {
+                        count = uart_recv_u16be();
+                        addr = write_uart_data(addr, count);
+                        short_blink();
+                        uart_send(BINARY_ACK);
+                        break;
+                    }
+                    case BINCMD_WRITE_ZERO:
+                    {
+                        count = uart_recv_u16be();
+                        addr = write_zeroes(addr, count);
+                        short_blink();
+                        uart_send(BINARY_ACK);
+                        break;
+                    }
+                    case BINCMD_SET_ENTRY:
+                    {
+                        entry = uart_recv_u32be();
+                        uart_send(BINARY_ACK);
+                        break;
+                    }
+                    case BINCMD_GO:
+                    case 'g':
+                    case 'G':
+                    {
+                        uart_flush();
+                        BRANCHTO(entry);
+                        break;
+                    }
+                    case BINCMD_SET_BAUD:
+                    {
+                        data = uart_recv_u16be();
+                        uart_send(BINARY_ACK);
+                        uart_flush();
+                        uart_set_baud_divisor(data);
+                        break;
+                    }
+                    case 'p':
+                    case 'P':
+                    {
+                        blink();
+                        break;
+                    }
+                    default:
+                    {
+                        failstring(4);
+                        return 1;
+                    }
                 }
                 break;
             }
