@@ -111,6 +111,7 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
     task->state = NTask_State::New;
     task->deadline = Indefinite; // task si zatim nestanovil deadline, udela to az to bude aktualni v deadline syscallu
     task->notified_deadline = Indefinite;
+    task->page_count = 0;
 
     // lr = co zacit vykonavat po bootstrapu, 0x8000 je misto, kam je relokovany v kazde nasi binarce symbol _start, tedy vstupni bod programu
     //task->cpu_context.lr = 0x8000;
@@ -126,6 +127,7 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
     // alokujeme stranku pro kod a pro zasobnik
     uint32_t code_page_phys = static_cast<unsigned long>(sPage_Manager.Alloc_Page()) - mem::MemoryVirtualBase;
     uint32_t stack_page_phys = static_cast<unsigned long>(sPage_Manager.Alloc_Page()) - mem::MemoryVirtualBase;
+    task->page_count += 2;
     
     // alokujeme tabulku stranek procesu z poolu
     uint32_t* pt = sPT_Alloc.Alloc();
@@ -430,9 +432,68 @@ bool CProcess_Manager::Get_Scheduler_Info(NGet_Sched_Info_Type type, void* targe
             *reinterpret_cast<uint32_t*>(target) = sTimer.Get_Tick_Count();
             break;
         }
+        case NGet_Sched_Info_Type::Process_Summary:
+        {
+            CProcess_List_Node* node = mProcess_List_Head;
+            uint32_t procCnt = 0;
+
+            CProcess_Summary_Info *sum = reinterpret_cast<CProcess_Summary_Info*>(target);
+            bzero(sum, sizeof(CProcess_Summary_Info));
+
+            while (node)
+            {
+                switch (node->task->state)
+                {
+                    case NTask_State::Running:
+                    case NTask_State::Runnable:
+                        sum->running++;
+                        break;
+                    case NTask_State::Blocked:
+                    case NTask_State::Interruptable_Sleep:
+                        sum->blocked++;
+                        break;
+                    case NTask_State::Zombie:
+                        sum->zombie++;
+                        break;
+                    default:
+                        break;
+                }
+                sum->total++;
+                node = node->next;
+            }
+            break;
+        }
+
         default:
             return false;
     }
 
     return true;
+}
+
+uint32_t CProcess_Manager::Get_Page_Count() {
+    CProcess_List_Node* node = mProcess_List_Head;
+    uint32_t c = 0;
+    while (node != nullptr)
+    {
+        c += node->task->page_count;
+        node = node->next;
+    }
+
+    return c;
+}
+
+uint32_t CProcess_Manager::Get_File_Count() {
+    CProcess_List_Node* node = mProcess_List_Head;
+    uint32_t c = 0;
+    while (node != nullptr)
+    {
+        for (int i = 0; i < Max_Process_Opened_Files; i++) 
+        {
+            if (node->task->opened_files[i] != nullptr) c++;
+        }
+        node = node->next;
+    }
+
+    return c;
 }

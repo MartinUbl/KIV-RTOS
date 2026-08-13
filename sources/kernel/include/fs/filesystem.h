@@ -142,6 +142,7 @@ class CFilesystem
         TFS_Tree_Node mRoot_Dev;
         TFS_Tree_Node mRoot_Sys;
         TFS_Tree_Node mRoot_Mnt;
+        TFS_Tree_Node mRoot_Proc;
 
     public:
         CFilesystem();

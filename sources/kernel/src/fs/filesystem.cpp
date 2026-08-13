@@ -36,10 +36,17 @@ CFilesystem::CFilesystem()
 
     mRoot_Mnt.parent = &mRoot;
     mRoot_Mnt.children = nullptr;
-    mRoot_Mnt.next = nullptr;
+    mRoot_Mnt.next = &mRoot_Proc;
     mRoot_Mnt.isDirectory = true;
     mRoot_Mnt.driver_idx = NoFilesystemDriver;
     strncpy(mRoot_Mnt.name, "MNT", 4);
+
+    mRoot_Proc.parent = &mRoot;
+    mRoot_Proc.children = nullptr;
+    mRoot_Proc.next = nullptr;
+    mRoot_Proc.isDirectory = true;
+    mRoot_Proc.driver_idx = NoFilesystemDriver;
+    strncpy(mRoot_Proc.name, "PROC", 5);
 }
 
 CFilesystem::TFS_Tree_Node* CFilesystem::TFS_Tree_Node::Find_Child(const char* name)

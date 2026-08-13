@@ -11,6 +11,7 @@
 #include <fs/drivers/mutex_fs.h>
 #include <fs/drivers/condvar_fs.h>
 #include <fs/drivers/pipe_fs.h>
+#include <fs/drivers/proc_fs.h>
 
 // pole driveru - tady uvedeme vsechny, ktere jsou v systemu dostupne a ktere je zadouci pro tuto instanci naseho OS pripojit
 const CFilesystem::TFS_Driver CFilesystem::gFS_Drivers[] = {
@@ -27,6 +28,7 @@ const CFilesystem::TFS_Driver CFilesystem::gFS_Drivers[] = {
     { "Semaphore", "SYS:sem", &fsSemaphore_FS_Driver },
     { "CondVar", "SYS:cv", &fsCond_Var_FS_Driver },
     { "Pipe", "SYS:pipe", &fsPipe_FS_Driver },
+    { "Process", "PROC:", &fsProc_FS_Driver},
 };
 
 // pocet FS driveru - je staticky spocitan z velikosti vyse uvedeneho pole

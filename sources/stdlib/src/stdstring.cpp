@@ -89,6 +89,20 @@ int strlen(const char* s)
 	return i;
 }
 
+char *strcat(char *dest, const char *src)
+{
+    char *rdest = dest;
+
+    while (*dest)
+        dest++;
+
+    while (*dest++ = *src++)
+        ;
+
+    return rdest;
+}
+
+
 void bzero(void* memory, int length)
 {
 	char* mem = reinterpret_cast<char*>(memory);
