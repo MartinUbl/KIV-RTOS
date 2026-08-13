@@ -16,6 +16,26 @@ function activate(context) {
 
             if (selected) {
                 expansionBoardSelect.text = `$(game) Expansion Board: ${selected}`;
+                context.globalState.update('expansionBoard', selected);
+            }
+        }
+    );
+
+    const selectFlashMode = vscode.commands.registerCommand(
+        "kernel.selectFlashMode",
+        async () => {
+            const flashModes = [
+                "SREC (old)",
+                "SREC-200",
+                "SREC-200+"
+            ];
+            const selected = await vscode.window.showQuickPick(flashModes, {
+                placeHolder: "Select flash mode"
+            });
+
+            if (selected) {
+                flashModeSelect.text = `$(fold-up) Flash mode: ${selected}`;
+                context.globalState.update('flashMode', selected);
             }
         }
     );
@@ -23,18 +43,33 @@ function activate(context) {
     const build = vscode.commands.registerCommand(
         "kernel.build",
         async () => {
+
+            const board = context.globalState.get('expansionBoard') ? context.globalState.get('expansionBoard') : "None";
+
             const terminal = getTerminal("KIV-RTOS Build");
             terminal.show();
-            terminal.sendText("cd /workspaces/KIV-RTOS/sources && ./build.sh " + expansionBoardSelect.text.split(": ")[1]);
+            terminal.sendText("cd /workspaces/KIV-RTOS/sources && ./build.sh " + board);
         }
     );
 
     const flash = vscode.commands.registerCommand(
         "kernel.flash",
         async () => {
+
+            const flashMode = context.globalState.get('flashMode') ? context.globalState.get('flashMode') : "SREC (old)";
+
             const terminal = getTerminal("KIV-RTOS Flash");
             terminal.show();
-            terminal.sendText("uart_flasher /workspaces/KIV-RTOS/sources/build/kernel.srec /dev/ttyCOM");
+
+            if (flashMode == "SREC-200+") {
+                terminal.sendText("uart_flasher -b --baud 921600 /workspaces/KIV-RTOS/sources/build/kernel.elf /dev/ttyCOM");
+            }
+            else if (flashMode == "SREC-200") {
+                terminal.sendText("uart_flasher -b /workspaces/KIV-RTOS/sources/build/kernel.elf /dev/ttyCOM");
+            }
+            else {
+                terminal.sendText("uart_flasher /workspaces/KIV-RTOS/sources/build/kernel.srec /dev/ttyCOM");
+            }
         }
     );
 
@@ -49,17 +84,31 @@ function activate(context) {
         }
     );
 
-    context.subscriptions.push(selectExpansionBoard, build, flash, serial);
+    context.subscriptions.push(selectExpansionBoard, selectFlashMode, build, flash, serial);
 
     const expansionBoardSelect = vscode.window.createStatusBarItem(
         vscode.StatusBarAlignment.Left,
-        101
+        105
     );
 
-    expansionBoardSelect.text = "$(game) Expansion Board: None";
+    const selectedExpansionBoard = context.globalState.get('expansionBoard');
+
+    expansionBoardSelect.text = "$(game) Expansion Board: " + (selectedExpansionBoard ? selectedExpansionBoard : "None");
     expansionBoardSelect.tooltip = "Select expansion board";
     expansionBoardSelect.command = "kernel.selectExpansionBoard";
     expansionBoardSelect.show();
+
+    const flashModeSelect = vscode.window.createStatusBarItem(
+        vscode.StatusBarAlignment.Left,
+        102
+    );
+
+    const selectedFlashMode = context.globalState.get('flashMode');
+
+    flashModeSelect.text = "$(fold-up) Flash mode: " + (selectedFlashMode ? selectedFlashMode : "SREC (old)");
+    flashModeSelect.tooltip = "Select flash mode";
+    flashModeSelect.command = "kernel.selectFlashMode";
+    flashModeSelect.show();
 
     const buildButton = vscode.window.createStatusBarItem(
         vscode.StatusBarAlignment.Left,
@@ -93,6 +142,7 @@ function activate(context) {
 
     context.subscriptions.push(
         expansionBoardSelect,
+        flashModeSelect,
         buildButton,
         flashButton,
         serialButton
