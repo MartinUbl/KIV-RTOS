@@ -1,0 +1,24 @@
+{
+    "name": "KIV-RTOS Development Container",
+    "build": {
+        "dockerfile": "Dockerfile",
+		"context": ".."
+    },
+    "initializeCommand": [
+        "python",
+        ".devcontainer/serial_bridge.py"
+    ],
+
+    "runArgs": [
+        "--add-host=host.docker.internal:host-gateway"
+    ],
+
+    "postStartCommand": "pkill -f '^socat .*PTY,link=/tmp/ttyCOM' 2>/dev/null || true; nohup bash -c '.devcontainer/start_serial_pty.sh &' >/tmp/start_serial_pty.log 2>&1",
+
+    "postAttachCommand": ".devcontainer/install_vscode_extension.sh",
+
+    "containerEnv": {
+        "SERIAL_PORT": "/dev/ttyCOM"
+    },
+    "remoteUser": "dev"
+}

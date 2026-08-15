@@ -60,7 +60,7 @@ char* strncpy(char* dest, const char *src, int num)
 	for (; i < num; i++)
 		dest[i] = '\0';
 
-   return dest;
+    return dest;
 }
 
 int strncmp(const char *s1, const char *s2, int num)
@@ -87,6 +87,37 @@ int strlen(const char* s)
 		i++;
 
 	return i;
+}
+
+char *strcat(char *dest, const char *src)
+{
+    char *rdest = dest;
+
+    while (*dest)
+        dest++;
+
+    while (*dest++ = *src++)
+        ;
+
+    return rdest;
+}
+
+char* strncat(char *dest, const char* src, int ssize) {
+
+    char *rdest = dest;
+
+    int i = 0;
+    while (*dest && i < ssize) {
+        dest++;
+        i++;
+    }
+
+    while (i < ssize && (*dest++ = *src++))
+        i++;
+
+    *dest = '\0';
+
+    return rdest;
 }
 
 void bzero(void* memory, int length)
