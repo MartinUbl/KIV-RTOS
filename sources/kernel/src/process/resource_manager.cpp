@@ -191,3 +191,48 @@ void CProcess_Resource_Manager::Free_Pipe(CPipe* pipe)
         }
     }
 }
+
+CBroadcast_Channel* CProcess_Resource_Manager::Alloc_Broadcast_Channel(const char* name, uint32_t bcast_size)
+{
+    for (uint32_t i = 0; i < Broadcast_Channel_Count; i++)
+    {
+        if (mBroadcast_Channels[i].alloc_count > 0)
+        {
+            if (strncmp(mBroadcast_Channels[i].name, name, Max_Broadcast_Channel_Name_Length) == 0)
+            {
+                mBroadcast_Channels[i].alloc_count++;
+                return &mBroadcast_Channels[i].bcast;
+            }
+        }
+    }
+
+    if (bcast_size == Broadcast_Channel_Byte_Count_Unknown)
+        return nullptr;
+
+    for (uint32_t i = 0; i < Broadcast_Channel_Count; i++)
+    {
+        if (mBroadcast_Channels[i].alloc_count == 0)
+        {
+            mBroadcast_Channels[i].bcast.Reset(bcast_size);
+
+            strncpy(mBroadcast_Channels[i].name, name, Max_Broadcast_Channel_Name_Length);
+            mBroadcast_Channels[i].alloc_count++;
+            return &mBroadcast_Channels[i].bcast;
+        }
+    }
+
+    return nullptr;
+}
+
+void CProcess_Resource_Manager::Free_Broadcast_Channel(CBroadcast_Channel* bcast)
+{
+    for (uint32_t i = 0; i < Broadcast_Channel_Count; i++)
+    {
+        if (&mBroadcast_Channels[i].bcast == bcast && mBroadcast_Channels[i].alloc_count > 0)
+        {
+            if ((--mBroadcast_Channels[i].alloc_count) == 0)
+                mBroadcast_Channels[i].bcast.Reset(0);
+            return;
+        }
+    }
+}

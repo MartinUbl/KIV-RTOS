@@ -6,6 +6,7 @@
 #include "semaphore.h"
 #include "condvar.h"
 #include "pipe.h"
+#include "broadcast_channel.h"
 
 // pocet predalokovanych mutexu (a zaroven max. pocet)
 constexpr uint32_t Mutex_Count = 32;
@@ -27,10 +28,17 @@ constexpr uint32_t Pipe_Count = 16;
 // maximalni delka jmena pipe
 constexpr uint32_t Max_Pipe_Name_Length = 16;
 
+// pocet predalokovanych broadcast channelu (a zaroven max. pocet)
+constexpr uint32_t Broadcast_Channel_Count = 16;
+// maximalni delka jmena broadcast channelu
+constexpr uint32_t Max_Broadcast_Channel_Name_Length = 16;
+
 // pri otevirani semaforu = pokud uz musel byt semafor otevreny
 constexpr uint32_t Semaphore_Initial_Res_Count_Unknown = static_cast<uint32_t>(-1);
 // pokud je pri otevirani pipe velikost neznama
 constexpr uint32_t Pipe_Byte_Count_Unknown = static_cast<uint32_t>(-1);
+// pokud je pri otevirani broadcast channelu velikost neznama
+constexpr uint32_t Broadcast_Channel_Byte_Count_Unknown = static_cast<uint32_t>(-1);
 
 class CProcess_Resource_Manager
 {
@@ -63,10 +71,18 @@ class CProcess_Resource_Manager
             unsigned int alloc_count;
         };
 
+        struct TBroadcast_Channel_Record
+        {
+            CBroadcast_Channel bcast;
+            char name[Max_Broadcast_Channel_Name_Length];
+            unsigned int alloc_count;
+        };
+
         TMutex_Record mMutexes[Mutex_Count];
         TSemaphore_Record mSemaphores[Semaphore_Count];
         TCond_Var_Record mCondVars[Cond_Var_Count];
         TPipe_Record mPipes[Pipe_Count];
+        TBroadcast_Channel_Record mBroadcast_Channels[Broadcast_Channel_Count];
 
     public:
         CProcess_Resource_Manager();
@@ -83,6 +99,9 @@ class CProcess_Resource_Manager
 
         CPipe* Alloc_Pipe(const char* name, uint32_t pipe_size);
         void Free_Pipe(CPipe* pipe);
+
+        CBroadcast_Channel* Alloc_Broadcast_Channel(const char* name, uint32_t bcast_size);
+        void Free_Broadcast_Channel(CBroadcast_Channel* bcast);
 };
 
 extern CProcess_Resource_Manager sProcess_Resource_Manager;
