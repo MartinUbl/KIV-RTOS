@@ -4,33 +4,34 @@
 #include "mutex.h"
 
 constexpr uint32_t Max_Broadcast_Readers = 16;
+constexpr uint32_t Broadcast_No_Message = 0;
 
 class CBroadcast_Channel : public IFile
 {
-private:
-    struct TReader_Info
-    {
-        uint32_t pid;
-        uint32_t last_read_generation;
-    };
+    private:
+        struct TReader_Info
+        {
+            uint32_t pid;
+            uint32_t last_read_generation;
+        };
 
-    char *mBuffer;
-    uint32_t mSize;
-    uint32_t mMessage_Length;
-    uint32_t mGeneration;
+        char *mBuffer = nullptr;
+        uint32_t mSize = 0;
+        uint32_t mMessage_Length = 0;
+        uint32_t mGeneration = 0;
 
-    TReader_Info mReaders[Max_Broadcast_Readers];
-    uint32_t mReader_Count;
+        TReader_Info mReaders[Max_Broadcast_Readers];
+        uint32_t mReader_Count = 0;
 
-    CMutex mMutex;
+        CMutex mMutex;
 
-public:
-    CBroadcast_Channel();
-    ~CBroadcast_Channel();
+    public:
+        CBroadcast_Channel();
+        ~CBroadcast_Channel();
 
-    void Reset(uint32_t size);
+        void Reset(uint32_t size);
 
-    virtual uint32_t Read(char *buffer, uint32_t len) override;
-    virtual uint32_t Write(const char *buffer, uint32_t len) override;
-    virtual bool Close() override;
+        virtual uint32_t Read(char *buffer, uint32_t len) override;
+        virtual uint32_t Write(const char *buffer, uint32_t len) override;
+        virtual bool Close() override;
 };

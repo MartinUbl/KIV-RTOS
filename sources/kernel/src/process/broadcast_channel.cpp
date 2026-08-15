@@ -19,14 +19,21 @@ CBroadcast_Channel::~CBroadcast_Channel()
 
 void CBroadcast_Channel::Reset(uint32_t size)
 {
-    if (mBuffer)
-        sKernelMem.Free(mBuffer);
-
-    mSize = size;
-    if (mSize > 0)
+    if (!mBuffer && size > 0) {
         mBuffer = reinterpret_cast<char*>(sKernelMem.Alloc(size));
-    else
+    }
+    else if (mBuffer && size == 0) {
+        sKernelMem.Free(mBuffer);
         mBuffer = nullptr;
+    }
+    else if (size != mSize) {
+        if (mBuffer)
+            sKernelMem.Free(mBuffer);
+
+        mSize = size;
+        if (mSize > 0)
+            mBuffer = reinterpret_cast<char*>(sKernelMem.Alloc(mSize));
+    }
 
     mMessage_Length = 0;
     mGeneration = 0;
@@ -49,11 +56,12 @@ uint32_t CBroadcast_Channel::Read(char *buffer, uint32_t len)
             break;
         }
     }
+
     if (!reader_info && mReader_Count < Max_Broadcast_Readers)
     {
         reader_info = &mReaders[mReader_Count++];
         reader_info->pid = current_pid;
-        reader_info->last_read_generation = 0; // Nikdy nic necetl
+        reader_info->last_read_generation = Broadcast_No_Message; // Nikdy nic necetl
     }
 
     // Pokud jsme nenasli/nevytvorili zaznam, je chyba (malo mista)
@@ -64,7 +72,7 @@ uint32_t CBroadcast_Channel::Read(char *buffer, uint32_t len)
     }
 
     // Cekame, dokud neni k dispozici nova generace zpravy
-    while (mGeneration == 0 || reader_info->last_read_generation == mGeneration)
+    while (mGeneration == Broadcast_No_Message || reader_info->last_read_generation == mGeneration)
     {
         Wait_Enqueue_Current();
         mMutex.Unlock();
@@ -101,7 +109,7 @@ uint32_t CBroadcast_Channel::Write(const char *buffer, uint32_t len)
 
     // Zvysime generaci
     mGeneration++;
-    if (mGeneration == 0) // preteceni, 0 je specialni hodnota "zadna zprava"
+    if (mGeneration == Broadcast_No_Message) // preteceni, 0 je specialni hodnota "zadna zprava"
         mGeneration = 1;
 
     // Probudime vsechny cekajici ctenare
