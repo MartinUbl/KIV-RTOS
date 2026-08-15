@@ -36,7 +36,7 @@ void CBroadcast_Channel::Reset(uint32_t size)
     }
 
     mMessage_Length = 0;
-    mGeneration = 0;
+    mGeneration = Broadcast_No_Message;
     mReader_Count = 0;
 }
 
