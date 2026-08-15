@@ -8,8 +8,7 @@ constexpr uint32_t I2C_Transaction_Max_Size = 8;
 class CI2C;
 
 // trida reprezentujici I2C "transakci"
-class CI2C_Transaction
-{
+class CI2C_Transaction {
     friend class CI2C;
     private:
         bool mIn_Progress = false;
@@ -23,17 +22,16 @@ class CI2C_Transaction
     public:
         CI2C_Transaction() = default;
 
-        void Set_Address(uint16_t addr)
-        {
+        void Set_Address(uint16_t addr) {
             mAddress = addr;
-        } 
+        }
 
         // vlozeni znaku do bufferu
         template<typename T>
-        CI2C_Transaction& operator<<(const T& chr)
-        {
-            if (mLength >= I2C_Transaction_Max_Size)
+        CI2C_Transaction& operator<<(const T& chr) {
+            if (mLength >= I2C_Transaction_Max_Size) {
                 return *this;
+            }
 
             mBuffer[mLength++] = static_cast<uint8_t>(chr);
 
@@ -41,8 +39,7 @@ class CI2C_Transaction
         }
 };
 
-class CI2C
-{
+class CI2C {
     private:
         // baze pro registry BSC (I2C)
         volatile uint32_t* const mBSC_Base;

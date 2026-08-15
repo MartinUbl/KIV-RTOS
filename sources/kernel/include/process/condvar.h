@@ -6,8 +6,7 @@
 
 #include "spinlock.h"
 
-class CCondition_Variable : public IFile
-{
+class CCondition_Variable : public IFile {
     private:
         CMutex* mMutex;
 
@@ -17,7 +16,7 @@ class CCondition_Variable : public IFile
         void Reset(CMutex* mtx);
 
         // rozhrani IFile - pro userspace
-        
+
         // nelze "cist"
         virtual uint32_t Read(char* buffer, uint32_t num) override { return 0; };
         // nelze "zapisovat"

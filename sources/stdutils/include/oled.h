@@ -3,8 +3,7 @@
 #include <hal/intdef.h>
 
 // knihovni implementace OLED displeje
-class COLED_Display
-{
+class COLED_Display {
     private:
         // otevreny soubor displeje
         uint32_t mHandle;

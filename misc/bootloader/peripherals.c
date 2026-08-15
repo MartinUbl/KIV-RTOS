@@ -28,42 +28,40 @@
 
 #define ACT_LED_BIT     (1 << (47-32))
 
-unsigned int uart_lcr(void)
-{
+unsigned int uart_lcr(void) {
     return GET32(AUX_MU_LSR_REG);
 }
 
-unsigned int uart_recv(void)
-{
-    while (!(GET32(AUX_MU_LSR_REG) & 0x01))
-        ;
+unsigned int uart_recv(void) {
+    while (!(GET32(AUX_MU_LSR_REG) & 0x01)) {
+        //
+    }
 
     return GET32(AUX_MU_IO_REG) & 0xFF;
 }
 
-unsigned int uart_check(void)
-{
-    if (GET32(AUX_MU_LSR_REG) & 0x01)
+unsigned int uart_check(void) {
+    if (GET32(AUX_MU_LSR_REG) & 0x01) {
         return 1;
+    }
     return 0;
 }
 
-void uart_send(unsigned int c)
-{
-    while(!(GET32(AUX_MU_LSR_REG) & 0x20))
-        ;
+void uart_send(unsigned int c) {
+    while(!(GET32(AUX_MU_LSR_REG) & 0x20)) {
+        //
+    }
 
     PUT32(AUX_MU_IO_REG,c);
 }
 
-void uart_flush(void)
-{
-    while(!(GET32(AUX_MU_LSR_REG)&0x40))
-        ;
+void uart_flush(void) {
+    while(!(GET32(AUX_MU_LSR_REG)&0x40)) {
+        //
+    }
 }
 
-void failstring(unsigned int d)
-{
+void failstring(unsigned int d) {
     uart_send('F');
     uart_send('0' + (d / 100) % 10);
     uart_send('0' + (d / 10) % 10);
@@ -72,8 +70,7 @@ void failstring(unsigned int d)
     uart_send(0x0A);
 }
 
-void okstring(void)
-{
+void okstring(void) {
     uart_send('X');
     uart_send('F');
     uart_send('O');
@@ -82,8 +79,7 @@ void okstring(void)
     uart_send(0x0A);
 }
 
-void uart_init(void)
-{
+void uart_init(void) {
     unsigned int ra;
 
     PUT32(AUX_ENABLES,1);
@@ -104,15 +100,14 @@ void uart_init(void)
 }
 
 // aktivni "spanek" - spali nekolik taktu procesoru naprazdno
-void active_sleep(unsigned int ticks)
-{
+void active_sleep(unsigned int ticks) {
     volatile unsigned int ra;
-    for (ra = 0; ra < ticks; ra++)
+    for (ra = 0; ra < ticks; ra++) {
         dummy(ra);
+    }
 }
 
-void init_led(void)
-{
+void init_led(void) {
     unsigned int ra;
 
     ra = GET32(GPFSEL4);
@@ -123,8 +118,7 @@ void init_led(void)
     PUT32(GPSET1, ACT_LED_BIT);
 }
 
-void blink(void)
-{
+void blink(void) {
     PUT32(GPCLR1, ACT_LED_BIT);
     active_sleep(0x80000);
     PUT32(GPSET1, ACT_LED_BIT);
@@ -137,23 +131,19 @@ void blink(void)
 
 int blinkstate = 0;
 
-void short_blink(void)
-{
-    if (blinkstate == 0)
-    {
+void short_blink(void) {
+    if (blinkstate == 0) {
         PUT32(GPCLR1, ACT_LED_BIT);
         blinkstate = 1;
-    }
-    else
-    {
+    } else {
         PUT32(GPSET1, ACT_LED_BIT);
         blinkstate = 0;
     }
 }
 
-unsigned int ctonib(unsigned int c)
-{
-    if (c > '9')
+unsigned int ctonib(unsigned int c) {
+    if (c > '9') {
         c -= 7;
+    }
     return (c & 0x0F);
 }

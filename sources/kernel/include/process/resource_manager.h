@@ -40,39 +40,33 @@ constexpr uint32_t Pipe_Byte_Count_Unknown = static_cast<uint32_t>(-1);
 // pokud je pri otevirani broadcast channelu velikost neznama
 constexpr uint32_t Broadcast_Channel_Byte_Count_Unknown = static_cast<uint32_t>(-1);
 
-class CProcess_Resource_Manager
-{
+class CProcess_Resource_Manager {
     private:
-        struct TMutex_Record
-        {
+        struct TMutex_Record {
             CMutex mtx;
             char name[Max_Mutex_Name_Length];
             unsigned int alloc_count;
         };
 
-        struct TSemaphore_Record
-        {
+        struct TSemaphore_Record {
             CSemaphore semaphore;
             char name[Max_Semaphore_Name_Length];
             unsigned int alloc_count;
         };
 
-        struct TCond_Var_Record
-        {
+        struct TCond_Var_Record {
             CCondition_Variable cv;
             char name[Max_Cond_Var_Name_Length];
             unsigned int alloc_count;
         };
 
-        struct TPipe_Record
-        {
+        struct TPipe_Record {
             CPipe pipe;
             char name[Max_Pipe_Name_Length];
             unsigned int alloc_count;
         };
 
-        struct TBroadcast_Channel_Record
-        {
+        struct TBroadcast_Channel_Record {
             CBroadcast_Channel bcast;
             char name[Max_Broadcast_Channel_Name_Length];
             unsigned int alloc_count;

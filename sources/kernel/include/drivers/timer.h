@@ -3,15 +3,13 @@
 #include <hal/peripherals.h>
 
 // hardwarovy "prescaler" - tedy vlastne delic, urcuje, jaky rad ma hodnota casovace
-enum class NTimer_Prescaler : uint8_t
-{
+enum class NTimer_Prescaler : uint8_t {
     Prescaler_1      = 0,    // 00
     Prescaler_16     = 1,    // 01
     Prescaler_256    = 2     // 10
 };
 
-class CTimer
-{
+class CTimer {
     public:
         // typ callbacku casovace
         using TTimer_Callback = void(*)();

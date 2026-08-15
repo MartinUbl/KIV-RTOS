@@ -3,8 +3,7 @@
 #include <hal/intdef.h>
 
 // jednoduchy ELF loader - jedine, co udela, je ze nacte vsechny sekce (oznacene jako loadable) do pameti, kam maji byt nacteny
-class CELF_Loader
-{
+class CELF_Loader {
     public:
         // rozparsuje ELF obraz a nacte vsechny sekce do pameti, kam maji byt nacteny
         // vraci vstupni bod programu

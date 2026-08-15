@@ -3,8 +3,7 @@
 #include <hal/intdef.h>
 #include <hal/peripherals.h>
 
-namespace mem
-{
+namespace mem {
     // velikost jedne stranky (1MB)
     constexpr uint32_t PageSize = 0x100000;
 
@@ -19,6 +18,9 @@ namespace mem
     // baze alokovane pameti - pri praci s pameti v jadre plati to, ze po odectu teto hodnoty od adresy virtualni ziskame fyzickou adresu
     // u procesu jako takovych to pochopitelne neplati, ty sice maji v tabulce stranek namapovane adresy 0xC0000000 a vyse, ale nemohou je cist
     constexpr uint32_t MemoryVirtualBase = 0xC0000000;
+
+    // fyzicka adresa dolni boundary strankovatelne pameti
+    constexpr uint32_t LowMemoryPhys = mem::LowMemory - mem::MemoryVirtualBase;
 
     // kolik pameti muzeme vubec strankovat?
     constexpr uint32_t PagingMemorySize = HighMemory - LowMemory;

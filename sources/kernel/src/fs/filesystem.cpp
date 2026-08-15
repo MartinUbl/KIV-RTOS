@@ -9,8 +9,7 @@
 
 CFilesystem sFilesystem;
 
-CFilesystem::CFilesystem()
-{
+CFilesystem::CFilesystem() {
     // inicializujeme zakladni strukturu (tedy vlastne obsah root adresare)
 
     mRoot.parent = nullptr;
@@ -49,14 +48,13 @@ CFilesystem::CFilesystem()
     strncpy(mRoot_Proc.name, "PROC", 5);
 }
 
-CFilesystem::TFS_Tree_Node* CFilesystem::TFS_Tree_Node::Find_Child(const char* name)
-{
+CFilesystem::TFS_Tree_Node* CFilesystem::TFS_Tree_Node::Find_Child(const char* name) {
     TFS_Tree_Node* child = children;
 
-    while (child != nullptr)
-    {
-        if (strncmp(child->name, name, MaxFilenameLength) == 0)
+    while (child != nullptr) {
+        if (strncmp(child->name, name, MaxFilenameLength) == 0) {
             return child;
+        }
 
         child = child->next;
     }
@@ -64,27 +62,24 @@ CFilesystem::TFS_Tree_Node* CFilesystem::TFS_Tree_Node::Find_Child(const char* n
     return nullptr;
 }
 
-void CFilesystem::Initialize()
-{
+void CFilesystem::Initialize() {
     char tmpName[MaxFilenameLength];
     const char* mpPtr;
 
     int i, j;
 
-    for (i = 0; i < gFS_Drivers_Count; i++)
-    {
+    for (i = 0; i < gFS_Drivers_Count; i++) {
         const TFS_Driver* ptr = &gFS_Drivers[i];
 
         mpPtr = ptr->mountPoint;
 
         TFS_Tree_Node* node = &mRoot, *tmpNode = nullptr;
 
-        while (mpPtr[0] != '\0')
-        {
-            for (j = 0; j < MaxPathLength && mpPtr[j] != '\0'; j++)
-            {
-                if (mpPtr[j] == ':' || mpPtr[j] == '/')
+        while (mpPtr[0] != '\0') {
+            for (j = 0; j < MaxPathLength && mpPtr[j] != '\0'; j++) {
+                if (mpPtr[j] == ':' || mpPtr[j] == '/') {
                     break;
+                }
 
                 tmpName[j] = mpPtr[j];
             }
@@ -94,18 +89,17 @@ void CFilesystem::Initialize()
             mpPtr += j;
 
             // jedna se o konec retezce?
-            if (mpPtr[0] != '\0')
-            {
+            if (mpPtr[0] != '\0') {
                 mpPtr += 1;
             }
 
             tmpNode = node->Find_Child(tmpName);
             // uzel jsme nasli - pouzijeme ho pro dalsi prohledavani
-            if (tmpNode)
+            if (tmpNode) {
                 node = tmpNode;
             // uzel jsme nenasli - vytvorime ho a pouzijeme ho pro dalsi prohledavani
-            else
-            {
+            }
+            else {
                 tmpNode = sKernelMem.Alloc<TFS_Tree_Node>();
                 strncpy(tmpNode->name, tmpName, MaxFilenameLength);
                 tmpNode->parent = node;
@@ -122,8 +116,9 @@ void CFilesystem::Initialize()
         // 'node' obsahuje uzel posledniho clanku mountpointu - tedy vlastni mountpoint
 
         // mountpoint nesmi byt uz zabrany
-        if (node->driver_idx != NoFilesystemDriver)
+        if (node->driver_idx != NoFilesystemDriver) {
             return;
+        }
 
         node->driver_idx = i; // timto predavame veskere manipulace driveru
 
@@ -132,8 +127,7 @@ void CFilesystem::Initialize()
     }
 }
 
-IFile* CFilesystem::Open(const char* path, NFile_Open_Mode mode)
-{
+IFile* CFilesystem::Open(const char* path, NFile_Open_Mode mode) {
     char tmpName[MaxFilenameLength];
     const char* mpPtr;
 
@@ -143,12 +137,11 @@ IFile* CFilesystem::Open(const char* path, NFile_Open_Mode mode)
 
     TFS_Tree_Node* node = &mRoot, *tmpNode = nullptr;
 
-    while (mpPtr[0] != '\0')
-    {
-        for (j = 0; j < MaxPathLength && mpPtr[j] != '\0'; j++)
-        {
-            if (mpPtr[j] == ':' || mpPtr[j] == '/')
+    while (mpPtr[0] != '\0') {
+        for (j = 0; j < MaxPathLength && mpPtr[j] != '\0'; j++) {
+            if (mpPtr[j] == ':' || mpPtr[j] == '/') {
                 break;
+            }
 
             tmpName[j] = mpPtr[j];
         }
@@ -158,27 +151,27 @@ IFile* CFilesystem::Open(const char* path, NFile_Open_Mode mode)
         mpPtr += j;
 
         // jedna se o konec retezce?
-        if (mpPtr[0] != '\0')
-        {
+        if (mpPtr[0] != '\0') {
             mpPtr += 1;
         }
 
         tmpNode = node->Find_Child(tmpName);
-        if (tmpNode)
+        if (tmpNode) {
             node = tmpNode;
+        }
 
-        if (tmpNode->driver_idx != NoFilesystemDriver)
+        if (tmpNode->driver_idx != NoFilesystemDriver) {
             return gFS_Drivers[tmpNode->driver_idx].driver->Open_File(mpPtr, mode);
-        else if (!tmpNode->isDirectory)
+        } else if (!tmpNode->isDirectory) {
             break;
+        }
     }
 
     // zadny filesystem se tohoto uzlu "neujal" -> soubor neexistuje
     return nullptr;
 }
 
-void IFile::Wait_Enqueue_Current()
-{
+void IFile::Wait_Enqueue_Current() {
     spinlock_lock(&mWait_Lock);
 
     TWaiting_Task* task = new TWaiting_Task;
@@ -186,10 +179,9 @@ void IFile::Wait_Enqueue_Current()
     task->prev = nullptr;
     task->next = nullptr;
 
-    if (!mWaiting_Tasks)
+    if (!mWaiting_Tasks) {
         mWaiting_Tasks = task;
-    else
-    {
+    } else {
         mWaiting_Tasks->prev = task;
         task->next = mWaiting_Tasks;
         mWaiting_Tasks = task;
@@ -198,18 +190,17 @@ void IFile::Wait_Enqueue_Current()
     spinlock_unlock(&mWait_Lock);
 }
 
-uint32_t IFile::Notify(uint32_t count)
-{
+uint32_t IFile::Notify(uint32_t count) {
     spinlock_lock(&mWait_Lock);
 
     TWaiting_Task* tmp;
     TWaiting_Task* itr = mWaiting_Tasks;
-    while (itr && itr->next)
+    while (itr && itr->next) {
         itr = itr->next;
+    }
 
     uint32_t notified_count = 0;
-    while (itr && notified_count < count)
-    {
+    while (itr && notified_count < count) {
         sProcessMgr.Notify_Process(itr->pid);
 
         tmp = itr;
@@ -218,10 +209,9 @@ uint32_t IFile::Notify(uint32_t count)
         delete tmp;
         notified_count++;
 
-        if (itr)
+        if (itr) {
             itr->next = nullptr;
-        else
-        {
+        } else {
             mWaiting_Tasks = nullptr;
             break;
         }

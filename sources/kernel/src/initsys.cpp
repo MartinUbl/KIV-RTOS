@@ -9,37 +9,36 @@ extern "C" void __attribute__((section(".text"))) _init_system_memory_high();
 volatile __attribute__ ((aligned (0x4000))) __attribute__((section(".initsys.data"))) uint32_t Page_Directory_Kernel[PT_Size];
 
 // prevod virtualni adresy na index sekce v tabulce stranek (1. uroven prekladu)
-static uint32_t __attribute__((section(".initsys"))) PT_Entry(uint32_t addr)
-{
+static uint32_t __attribute__((section(".initsys"))) PT_Entry(uint32_t addr) {
     return addr >> 20;
 }
 
 // inicializace prostredi
 // volame jeste nez zapneme strankovani = musi byt v initsys sekci, ktera je "relokovana" 1:1 na fyzickou pamet
-extern "C" int __attribute__((section(".initsys"))) _c_startup(void)
-{
+extern "C" int __attribute__((section(".initsys"))) _c_startup(void) {
     int* i;
 
     // vynulujeme .bss sekci
-    for (i = (int*)_phys_bss_start; i < (int*)_phys_bss_end; i++)
+    for (i = (int*)_phys_bss_start; i < (int*)_phys_bss_end; i++) {
         *i = 0;
+    }
 
     return 0;
 }
 
-extern "C" void __attribute__((section(".initsys"))) __attribute__((noreturn)) _init_system_memory()
-{
+extern "C" void __attribute__((section(".initsys"))) __attribute__((noreturn)) _init_system_memory() {
+
     // vyprazdnime tabulku stranek - budeme ji plnit konkretnimi zaznamy
     // cokoliv co konci dvema nulovymi bity vyvola pri pokusu o pristup abort
-    for (uint32_t i = 0; i < PT_Size; i++)
+    for (uint32_t i = 0; i < PT_Size; i++) {
         Page_Directory_Kernel[i] = DL1_Flags::Access_Type_Translation_Fault;
+    }
 
     // docasna zalezitost - 1:1 mapovani (tzv. "identity mapping") celeho spodku pameti (mapujeme vsechno pro ted, do budoucna by mohlo stacit jen neco)
     // kdybychom tohle neudelali, v momente, kdy bychom nahrali tabulku stranek a zapnuli MMU, okamzite by doslo k page fault vyjimce (resp. abort na ARM)
     // tohle pak zase odebereme, az budeme provadet kod v higher half
     unsigned int addr;
-    for (addr = 0; addr < 0x20000000; addr += PT_Region_Size)
-    {
+    for (addr = 0; addr < 0x20000000; addr += PT_Region_Size) {
         Page_Directory_Kernel[PT_Entry(addr)] = addr
             | DL1_Flags::Access_Type_Section_Address
             | DL1_Flags::Bufferable
@@ -51,8 +50,7 @@ extern "C" void __attribute__((section(".initsys"))) __attribute__((noreturn)) _
     }
 
     // memory-mapped I/O pro periferie, necachovane (!), nebufferovane (!), RW jen pro privilegovany rezim (nechceme, aby nam uzivatelske procesy manipulovaly s HW primo)
-    for (addr = hal::Peripheral_Base; addr < hal::Peripheral_Base + 0x01000000; addr += PT_Region_Size)
-    {
+    for (addr = hal::Peripheral_Base; addr < hal::Peripheral_Base + 0x01000000; addr += PT_Region_Size) {
         Page_Directory_Kernel[PT_Entry(addr)] = addr
                 | DL1_Flags::Access_Type_Section_Address
                 | DL1_Flags::Domain_0
@@ -63,8 +61,7 @@ extern "C" void __attribute__((section(".initsys"))) __attribute__((noreturn)) _
 
     // kernel kod - konstantni, budeme z nej v podstate jen cist a spoustet ho
     // mapujeme 0xF0000000-0xF0FFFFFF na 0x00000000-0x00FFFFFF
-    for (addr = 0xF0000000; addr < 0xF1000000; addr += PT_Region_Size)
-    {
+    for (addr = 0xF0000000; addr < 0xF1000000; addr += PT_Region_Size) {
         Page_Directory_Kernel[PT_Entry(addr)] = (addr - 0xF0000000)
                 | DL1_Flags::Access_Type_Section_Address
                 | DL1_Flags::Bufferable
@@ -76,8 +73,7 @@ extern "C" void __attribute__((section(".initsys"))) __attribute__((noreturn)) _
     }
 
     // mapujeme 0xC0000000-0xCFFFFFFF na 0x00000000-0x0FFFFFFF (abychom meli z kernelu pristup do veskere fyzicke pameti "jako k datum")
-    for (addr = 0xC0000000; addr < 0xD0000000; addr += PT_Region_Size)
-    {
+    for (addr = 0xC0000000; addr < 0xD0000000; addr += PT_Region_Size) {
         Page_Directory_Kernel[PT_Entry(addr)] = (addr - 0xC0000000)
                 | DL1_Flags::Access_Type_Section_Address
                 | DL1_Flags::Cacheable
@@ -138,7 +134,6 @@ extern "C" void __attribute__((section(".initsys"))) __attribute__((noreturn)) _
 
     asm volatile ("mcr p15,0,%0,c1,c0,0" :: "r" (mmucr) : "memory");
 
-
     /*
      * V tento moment je pametovy layout pripraveny na prepnuti do ciloveho rezimu
      * - kernel kod je v horni casti virtualni pameti
@@ -153,14 +148,13 @@ extern "C" void __attribute__((section(".initsys"))) __attribute__((noreturn)) _
      * kernelu cist a zapisovat)
      */
 
-
-
     // skok do hlavniho kodu kernelu, ktery je relokovany na vrchi cast pameti (0xF0000000 a dal)
     asm volatile("mov lr, %[_init_system_memory_high]" : : [_init_system_memory_high] "r" ((unsigned int)&_init_system_memory_high) );
     asm volatile("bx lr");
 
     // uspokojeni kompilatoru - funkce je dekorovana atributem noreturn, takze kompilator neceka, ze se z teto funkce budeme vracet
     // fakticky se sice vracime ("bx lr" vyse), ale to kompilator nevidi a jde vlastne o trochu jiny druh navratu
-    while (true)
-        ;
+    while (true) {
+        // hang
+    }
 }

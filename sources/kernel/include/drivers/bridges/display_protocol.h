@@ -3,8 +3,7 @@
 #include <hal/intdef.h>
 
 // prikazy pro monochromaticky displej
-enum class NDisplay_Command : uint8_t
-{
+enum class NDisplay_Command : uint8_t {
     // zadna operace
     // 0 bytu na vstupu
     // 0 bytu na vystupu
@@ -31,35 +30,30 @@ enum class NDisplay_Command : uint8_t
 #pragma pack(push, 1)
 
 // specifikator pixelu ke zmene
-struct TDisplay_Pixel_Spec
-{
+struct TDisplay_Pixel_Spec {
     uint16_t x;
     uint16_t y;
     uint8_t set;
 };
 
 // hlavicka paketu
-struct TDisplay_Packet_Header
-{
+struct TDisplay_Packet_Header {
     NDisplay_Command cmd;
 };
 
 // bezparametricky paket
-struct TDisplay_NonParametric_Packet
-{
+struct TDisplay_NonParametric_Packet {
     TDisplay_Packet_Header header;
 };
 
 // paket pro vymazani obsahu
-struct TDisplay_Clear_Packet
-{
+struct TDisplay_Clear_Packet {
     TDisplay_Packet_Header header;
     uint8_t clearSet;
 };
 
 // paket pro vykresleni pole pixelu (bez struktury)
-struct TDisplay_Draw_Pixel_Array_Packet
-{
+struct TDisplay_Draw_Pixel_Array_Packet {
     TDisplay_Packet_Header header;
     uint16_t count;
 
@@ -67,8 +61,7 @@ struct TDisplay_Draw_Pixel_Array_Packet
 };
 
 // paket pro vykresleni pixelu v obdelniku
-struct TDisplay_Pixels_To_Rect
-{
+struct TDisplay_Pixels_To_Rect {
     TDisplay_Packet_Header header;
     uint16_t x1, y1;
     uint16_t w, h;

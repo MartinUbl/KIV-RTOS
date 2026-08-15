@@ -5,8 +5,7 @@
 #include "semaphore.h"
 #include "spinlock.h"
 
-class CPipe final : public IFile
-{
+class CPipe final : public IFile {
     private:
         CSemaphore* mSem_Free = nullptr;
         CSemaphore* mSem_Busy = nullptr;

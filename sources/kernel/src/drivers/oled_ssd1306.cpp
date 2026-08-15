@@ -6,21 +6,22 @@
 CDisplay_SSD1306 sDisplay_SSD1306(sI2C1);
 
 CDisplay_SSD1306::CDisplay_SSD1306(CI2C& i2c)
-    : mI2C(i2c), mOpened(false), mBuffer(nullptr), mWidth(0), mHeight(0)
-{
-
+    : mI2C(i2c), mOpened(false), mBuffer(nullptr), mWidth(0), mHeight(0) {
+    //
 }
 
 bool CDisplay_SSD1306::Open(int width, int height)
 {
-    if (!mI2C.Open())
+    if (!mI2C.Open()) {
         return false;
+    }
 
     mOpened = true;
 
     // zaokrouhlime nahoru na nasobek osmi (na cele stranky)
-    if (height % 8 != 0)
+    if (height % 8 != 0) {
         height += 8 - (height % 8);
+    }
 
     mWidth = width;
     mHeight = height;
@@ -34,7 +35,7 @@ bool CDisplay_SSD1306::Open(int width, int height)
     {
         auto& ta = mI2C.Begin_Transaction(SSD1306_Slave_Address);
 
-        ta << SSD1306_Cmd::Command_Start
+        ta  << SSD1306_Cmd::Command_Start
             << SSD1306_Cmd::Display_Off
             << SSD1306_Cmd::Set_Display_Clock_Div_Ratio
             << 0x80
@@ -47,7 +48,7 @@ bool CDisplay_SSD1306::Open(int width, int height)
     {
         auto& ta = mI2C.Begin_Transaction(SSD1306_Slave_Address);
 
-        ta << SSD1306_Cmd::Command_Start
+        ta  << SSD1306_Cmd::Command_Start
             << height - 1;
 
         mI2C.End_Transaction(ta);
@@ -57,7 +58,7 @@ bool CDisplay_SSD1306::Open(int width, int height)
     {
         auto& ta = mI2C.Begin_Transaction(SSD1306_Slave_Address);
 
-        ta << SSD1306_Cmd::Command_Start
+        ta  << SSD1306_Cmd::Command_Start
             << SSD1306_Cmd::Set_Display_Offset
             << 0x00
             << (static_cast<uint8_t>(SSD1306_Cmd::Set_Start_Line) | 0x00) // zacatek na radce 0
@@ -70,7 +71,7 @@ bool CDisplay_SSD1306::Open(int width, int height)
     {
         auto& ta = mI2C.Begin_Transaction(SSD1306_Slave_Address);
 
-        ta << SSD1306_Cmd::Command_Start
+        ta  << SSD1306_Cmd::Command_Start
             << 0x14;
 
         mI2C.End_Transaction(ta);
@@ -81,7 +82,7 @@ bool CDisplay_SSD1306::Open(int width, int height)
     {
         auto& ta = mI2C.Begin_Transaction(SSD1306_Slave_Address);
 
-        ta << SSD1306_Cmd::Command_Start
+        ta  << SSD1306_Cmd::Command_Start
             << SSD1306_Cmd::Memory_Addr_Mode
             << 0x00
             << (static_cast<uint8_t>(SSD1306_Cmd::Set_Segment_Remap) | 0x01)
@@ -94,7 +95,7 @@ bool CDisplay_SSD1306::Open(int width, int height)
     {
         auto& ta = mI2C.Begin_Transaction(SSD1306_Slave_Address);
 
-        ta << SSD1306_Cmd::Command_Start
+        ta  << SSD1306_Cmd::Command_Start
             << SSD1306_Cmd::Set_Com_Pins;
 
         mI2C.End_Transaction(ta);
@@ -104,7 +105,7 @@ bool CDisplay_SSD1306::Open(int width, int height)
     {
         auto& ta = mI2C.Begin_Transaction(SSD1306_Slave_Address);
 
-        ta << SSD1306_Cmd::Command_Start
+        ta  << SSD1306_Cmd::Command_Start
             << 0x02;
 
         mI2C.End_Transaction(ta);
@@ -114,7 +115,7 @@ bool CDisplay_SSD1306::Open(int width, int height)
     {
         auto& ta = mI2C.Begin_Transaction(SSD1306_Slave_Address);
 
-        ta << SSD1306_Cmd::Command_Start
+        ta  << SSD1306_Cmd::Command_Start
             << SSD1306_Cmd::Set_Contrast;
 
         mI2C.End_Transaction(ta);
@@ -124,7 +125,7 @@ bool CDisplay_SSD1306::Open(int width, int height)
     {
         auto& ta = mI2C.Begin_Transaction(SSD1306_Slave_Address);
 
-        ta << SSD1306_Cmd::Command_Start
+        ta  << SSD1306_Cmd::Command_Start
             << 0x8F;
 
         mI2C.End_Transaction(ta);
@@ -134,7 +135,7 @@ bool CDisplay_SSD1306::Open(int width, int height)
     {
         auto& ta = mI2C.Begin_Transaction(SSD1306_Slave_Address);
 
-        ta << SSD1306_Cmd::Command_Start
+        ta  << SSD1306_Cmd::Command_Start
             << SSD1306_Cmd::Set_Precharge_Period;
 
         mI2C.End_Transaction(ta);
@@ -144,7 +145,7 @@ bool CDisplay_SSD1306::Open(int width, int height)
     {
         auto& ta = mI2C.Begin_Transaction(SSD1306_Slave_Address);
 
-        ta << SSD1306_Cmd::Command_Start
+        ta  << SSD1306_Cmd::Command_Start
             << 0xF1;
 
         mI2C.End_Transaction(ta);
@@ -154,7 +155,7 @@ bool CDisplay_SSD1306::Open(int width, int height)
     {
         auto& ta = mI2C.Begin_Transaction(SSD1306_Slave_Address);
 
-        ta << SSD1306_Cmd::Command_Start
+        ta  << SSD1306_Cmd::Command_Start
             << SSD1306_Cmd::Set_VCOM_Detect
             << 0x40
             << SSD1306_Cmd::Display_All_On_Resume
@@ -170,26 +171,25 @@ bool CDisplay_SSD1306::Open(int width, int height)
     return true;
 }
 
-void CDisplay_SSD1306::Send_Command(SSD1306_Cmd cmd, uint8_t lowPart)
-{
+void CDisplay_SSD1306::Send_Command(SSD1306_Cmd cmd, uint8_t lowPart) {
     auto& ta = mI2C.Begin_Transaction(SSD1306_Slave_Address);
 
-    ta << SSD1306_Cmd::Command_Start
-       << (static_cast<uint8_t>(cmd) | lowPart);
+    ta  << SSD1306_Cmd::Command_Start
+        << (static_cast<uint8_t>(cmd) | lowPart);
 
     mI2C.End_Transaction(ta);
 }
 
-void CDisplay_SSD1306::Close()
-{
-    if (!mOpened)
+void CDisplay_SSD1306::Close() {
+    if (!mOpened) {
         return;
+    }
 
     // posleme prikaz z vypnuti displeje
     {
         auto& ta = mI2C.Begin_Transaction(SSD1306_Slave_Address);
 
-        ta << SSD1306_Cmd::Command_Start
+        ta  << SSD1306_Cmd::Command_Start
             << SSD1306_Cmd::Display_Off;
 
         mI2C.End_Transaction(ta);
@@ -202,41 +202,43 @@ void CDisplay_SSD1306::Close()
     mOpened = false;
 }
 
-bool CDisplay_SSD1306::Is_Opened() const
-{
+bool CDisplay_SSD1306::Is_Opened() const {
     return mOpened;
 }
 
-void CDisplay_SSD1306::Clear(bool clearWhite)
-{
-    if (!mOpened)
+void CDisplay_SSD1306::Clear(bool clearWhite) {
+    if (!mOpened) {
         return;
+    }
 
     const uint8_t clearColor = clearWhite ? 0xFF : 0x00;
 
     const int maxIdx = mWidth * (mHeight / 8);
 
-    for (int i = 0; i < maxIdx; i++)
+    for (int i = 0; i < maxIdx; i++) {
         mBuffer[i] = clearColor;
+    }
 
     Flip();
 }
 
-void CDisplay_SSD1306::Set_Pixel(uint32_t x, uint32_t y, bool set)
-{
-    if (!mOpened)
+void CDisplay_SSD1306::Set_Pixel(uint32_t x, uint32_t y, bool set) {
+    if (!mOpened) {
         return;
+    }
 
-    if (set)
+    if (set) {
         mBuffer[x + (y / 8) * mWidth] |= (1 << (y & 7));
-    else
+    }
+    else {
         mBuffer[x + (y / 8) * mWidth] &= ~(1 << (y & 7));
+    }
 }
 
-void CDisplay_SSD1306::Flip()
-{
-    if (!mOpened)
+void CDisplay_SSD1306::Flip() {
+    if (!mOpened) {
         return;
+    }
 
     int i;
 
@@ -244,7 +246,7 @@ void CDisplay_SSD1306::Flip()
     {
         auto& ta = mI2C.Begin_Transaction(SSD1306_Slave_Address);
 
-        ta << SSD1306_Cmd::Command_Start
+        ta  << SSD1306_Cmd::Command_Start
             << SSD1306_Cmd::Set_Page_Addr
             << 0x00
             << 0xFF
@@ -260,27 +262,26 @@ void CDisplay_SSD1306::Flip()
 
     const int maxIdx = mWidth * (mHeight / 8);
 
-    for (int i = 0; i < maxIdx; i += PktSize)
-    {
+    for (int i = 0; i < maxIdx; i += PktSize) {
         auto& ta = mI2C.Begin_Transaction(SSD1306_Slave_Address);
 
         ta << SSD1306_Cmd::Data_Continue;
-        for (int j = 0; j < PktSize; j++)
+        for (int j = 0; j < PktSize; j++) {
             ta << mBuffer[i + j];
+        }
 
         mI2C.End_Transaction(ta);
     }
 }
 
-void CDisplay_SSD1306::Process_External_Command(const char* input, uint32_t length)
-{
-    if (length <= 0)
+void CDisplay_SSD1306::Process_External_Command(const char* input, uint32_t length) {
+    if (length <= 0) {
         return;
+    }
 
     NDisplay_Command cmd = static_cast<NDisplay_Command>(input[0]);
 
-    switch (cmd)
-    {
+    switch (cmd) {
         case NDisplay_Command::Nop:
             break;
 
@@ -288,10 +289,10 @@ void CDisplay_SSD1306::Process_External_Command(const char* input, uint32_t leng
             Flip();
             break;
 
-        case NDisplay_Command::Clear:
-        {
-            if (length != sizeof(TDisplay_Clear_Packet))
+        case NDisplay_Command::Clear: {
+            if (length != sizeof(TDisplay_Clear_Packet)) {
                 return;
+            }
 
             const TDisplay_Clear_Packet* pkt = reinterpret_cast<const TDisplay_Clear_Packet*>(input);
 
@@ -300,48 +301,43 @@ void CDisplay_SSD1306::Process_External_Command(const char* input, uint32_t leng
             break;
         }
 
-        case NDisplay_Command::Draw_Pixel_Array:
-        {
-            if (length < sizeof(TDisplay_Draw_Pixel_Array_Packet))
+        case NDisplay_Command::Draw_Pixel_Array: {
+            if (length < sizeof(TDisplay_Draw_Pixel_Array_Packet)) {
                 return;
+            }
 
             const TDisplay_Draw_Pixel_Array_Packet* pkt = reinterpret_cast<const TDisplay_Draw_Pixel_Array_Packet*>(input);
 
             const TDisplay_Pixel_Spec* ptr = &pkt->first;
 
-            for (uint16_t i = 0; i < pkt->count; i++)
+            for (uint16_t i = 0; i < pkt->count; i++) {
                 Set_Pixel(ptr->x, ptr->y, (ptr->set != 0));
+            }
 
             break;
         }
 
-        case NDisplay_Command::Draw_Pixel_Array_To_Rect:
-        {
-            if (length < sizeof(TDisplay_Pixels_To_Rect))
+        case NDisplay_Command::Draw_Pixel_Array_To_Rect: {
+            if (length < sizeof(TDisplay_Pixels_To_Rect)) {
                 return;
+            }
 
             const TDisplay_Pixels_To_Rect* pkt = reinterpret_cast<const TDisplay_Pixels_To_Rect*>(input);
 
             const uint8_t* data = &pkt->first;
 
-            if (pkt->vflip == 0)
-            {
-                for (uint16_t x = pkt->x1; x < pkt->x1 + pkt->w; x++)
-                {
-                    for (uint16_t y = pkt->y1; y < pkt->y1 + pkt->h; y++)
-                    {
+            if (pkt->vflip == 0) {
+                for (uint16_t x = pkt->x1; x < pkt->x1 + pkt->w; x++) {
+                    for (uint16_t y = pkt->y1; y < pkt->y1 + pkt->h; y++) {
                         const uint16_t pos = ((y - pkt->y1) * pkt->w + (x - pkt->x1));
 
                         Set_Pixel(x, y, ((data[pos / 8] >> (7 - (pos % 8))) & 0x1) != 0);
                     }
                 }
             }
-            else
-            {
-                for (uint16_t x = 0; x < pkt->w; x++)
-                {
-                    for (uint16_t y = 0; y < pkt->h; y++)
-                    {
+            else {
+                for (uint16_t x = 0; x < pkt->w; x++) {
+                    for (uint16_t y = 0; y < pkt->h; y++) {
                         const uint16_t pos = (x * pkt->h + y);
 
                         Set_Pixel(x + pkt->x1, (pkt->h - y) + pkt->y1, ((data[pos / 8] >> (7 - (pos % 8))) & 0x1) != 0);

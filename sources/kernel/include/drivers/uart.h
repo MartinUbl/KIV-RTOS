@@ -8,8 +8,7 @@
 
 constexpr int CUART_BUF_SIZE = 8192;
 
-class CUART
-{
+class CUART {
     private:
         // odkaz na AUX driver
         CAUX& mAUX;

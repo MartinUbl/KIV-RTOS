@@ -6,21 +6,19 @@
 #include <stdstring.h>
 
 CMutex::CMutex()
-    : IFile(NFile_Type_Major::Mutex)
-{
+    : IFile(NFile_Type_Major::Mutex) {
     spinlock_init(&mLock_State);
 }
 
-bool CMutex::Lock()
-{
+bool CMutex::Lock() {
     auto* cur = sProcessMgr.Get_Current_Process();
     const unsigned int cpid = cur->pid;
 
-    if (mHolder_PID == cpid)
+    if (mHolder_PID == cpid) {
         return false;
+    }
 
-    while (spinlock_try_lock(&mLock_State) == Lock_Locked) // try_lock vraci puvodni hodnotu zamku - pokud vrati "zamceno", zamknout se jiste nepovedlo
-    {
+    while (spinlock_try_lock(&mLock_State) == Lock_Locked) { // try_lock vraci puvodni hodnotu zamku - pokud vrati "zamceno", zamknout se jiste nepovedlo
         // vlozime ho do fronty cekajicich
         Wait_Enqueue_Current();
 
@@ -33,24 +31,24 @@ bool CMutex::Lock()
     return true;
 }
 
-bool CMutex::Try_Lock()
-{
+bool CMutex::Try_Lock() {
     auto* cur = sProcessMgr.Get_Current_Process();
     const unsigned int cpid = cur->pid;
 
-    if (mHolder_PID == cpid)
+    if (mHolder_PID == cpid) {
         return false;
+    }
 
     return spinlock_try_lock(&mLock_State);
 }
 
-bool CMutex::Unlock()
-{
+bool CMutex::Unlock() {
     auto* cur = sProcessMgr.Get_Current_Process();
     const unsigned int cpid = cur->pid;
 
-    if (mHolder_PID != cpid || mLock_State != Lock_Locked)
+    if (mHolder_PID != cpid || mLock_State != Lock_Locked) {
         return false;
+    }
 
     mHolder_PID = 0;
     spinlock_unlock(&mLock_State);
@@ -58,8 +56,7 @@ bool CMutex::Unlock()
     return IFile::Notify(1);
 }
 
-bool CMutex::Close()
-{
+bool CMutex::Close() {
     sProcess_Resource_Manager.Free_Mutex(this);
 
     return true;

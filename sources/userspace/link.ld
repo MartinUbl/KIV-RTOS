@@ -8,32 +8,32 @@ MEMORY
 SECTIONS
 {
     .text :
-	{
-		*(.text*)
-	} > main
+    {
+        *(.text*)
+    } > main
 
-	.rodata :
+    .rodata :
     {
-		*(.rodata*)
-	} > main
-	
-	.data :
+        *(.rodata*)
+    } > main
+
+    .data :
     {
-		__CTOR_LIST__ = .; *(.ctors) *(.init_array) __CTOR_END__ = .; 
-		__DTOR_LIST__ = .; *(.dtors) *(.fini_array) __DTOR_END__ = .;
+        __CTOR_LIST__ = .; *(.ctors) *(.init_array) __CTOR_END__ = .; 
+        __DTOR_LIST__ = .; *(.dtors) *(.fini_array) __DTOR_END__ = .;
         data = .;
-		_data = .;
-		__data = .;
+        _data = .;
+        __data = .;
         *(.data)
     } > main
-	
+
     .bss :
-	{
+    {
         __bss_start = .;
 
-		*(.bss*)
-		*(COMMON)
+        *(.bss*)
+        *(COMMON)
 
         __bss_end = .;
-	} > main
+    } > main
 }

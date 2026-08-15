@@ -156,59 +156,59 @@ const uint8_t CSegment_Display::mCharacter_Map[128 - 32] = {
 };
 
 CSegment_Display::CSegment_Display()
-    : mOpened(false), mOutput('\0')
-{
+    : mOpened(false), mOutput('\0') {
     //
 }
 
-bool CSegment_Display::Open()
-{
-    if (mOpened)
+bool CSegment_Display::Open() {
+    if (mOpened) {
         return false;
+    }
 
-    if (!sShift_Register.Open())
+    if (!sShift_Register.Open()) {
         return false;
+    }
 
     mOpened = true;
 
     return true;
 }
 
-void CSegment_Display::Close()
-{
-    if (!mOpened)
+void CSegment_Display::Close() {
+    if (!mOpened) {
         return;
+    }
 
     sShift_Register.Close();
 
     mOpened = false;
 }
 
-bool CSegment_Display::Is_Opened() const
-{
+bool CSegment_Display::Is_Opened() const {
     return mOpened;
 }
 
-void CSegment_Display::Write(char c)
-{
-    if (!mOpened)
+void CSegment_Display::Write(char c) {
+    if (!mOpened) {
         return;
+    }
 
     uint8_t idx = static_cast<uint8_t>(c);
 
     // jen tisknutelne zakladni znaky
-    if (idx < 32 || idx >= 128)
+    if (idx < 32 || idx >= 128) {
         return;
+    }
 
     // segmenty jsou invertovane (spolecna katoda), takze tam kde je 0 bude segment svitit
-    
+    // to ale neni problem posuvneho registru, takze invertujeme zde
     sShift_Register.Shift_In(static_cast<uint8_t>(~(mCharacter_Map[idx - 32])));
 }
 
-char CSegment_Display::Read() const
-{
-    if (!mOpened)
+char CSegment_Display::Read() const {
+    if (!mOpened) {
         return '\0';
+    }
 
     return mOutput;
 }

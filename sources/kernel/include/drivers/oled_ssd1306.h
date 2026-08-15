@@ -6,8 +6,7 @@
 constexpr uint16_t SSD1306_Slave_Address = 0x3C;
 
 // zakladni selekce prikazu displeje SSD1306
-enum class SSD1306_Cmd
-{
+enum class SSD1306_Cmd : uint8_t {
     Command_Start               = 0x00,
     Data_Start                  = 0xC0,
     Data_Continue               = 0x40,
@@ -51,8 +50,7 @@ enum class SSD1306_Cmd
 };
 
 // SSD1306 OLED displej, datasheet: https://cdn-shop.adafruit.com/datasheets/SSD1306.pdf
-class CDisplay_SSD1306
-{
+class CDisplay_SSD1306 {
     private:
         // I2C kanal
         CI2C& mI2C;

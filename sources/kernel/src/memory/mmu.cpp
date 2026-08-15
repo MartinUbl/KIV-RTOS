@@ -7,17 +7,16 @@ uint32_t* const Page_Directory_Kernel_High = reinterpret_cast<uint32_t*>(_virt_d
 
 extern "C" void __attribute__((section(".text"))) kernel_mode_start();
 
-static inline uint32_t __attribute__((section(".text"))) PT_Entry(uint32_t addr)
-{
+static inline uint32_t __attribute__((section(".text"))) PT_Entry(uint32_t addr) {
     return addr >> 20;
 }
 
-extern "C" void __attribute__((section(".text"))) _init_system_memory_high()
-{
+extern "C" void __attribute__((section(".text"))) _init_system_memory_high() {
     // nechame v tabulce stranek jen high mapping kernelu a dat
     unsigned int addr;
-    for (addr = 0; addr < 0x20000000; addr += PT_Region_Size)
+    for (addr = 0; addr < 0x20000000; addr += PT_Region_Size) {
         Page_Directory_Kernel_High[PT_Entry(addr)] = 0;
+    }
 
     // po modifikaci nesmime zapomenout vymazat cache a TLB
     mmu_invalidate_cache();
@@ -30,16 +29,14 @@ extern "C" void __attribute__((section(".text"))) _init_system_memory_high()
     asm volatile("bx lr");
 }
 
-void copy_kernel_page_table_to(uint32_t* target)
-{
+void copy_kernel_page_table_to(uint32_t* target) {
     // kopirovani by se dalo vyhnout pouzitim TTBR1 a prislusneho nastaveni boundary
 
     for (unsigned int i = 0; i < PT_Size; i++)
         target[i] = Page_Directory_Kernel_High[i];
 }
 
-void map_memory(uint32_t* target_pt, uint32_t phys, uint32_t virt)
-{
+void map_memory(uint32_t* target_pt, uint32_t phys, uint32_t virt) {
     // zatim nechme vychozi sadu priznaku
     // do budoucna by se urcite hodilo oddelit kodovou stranku (read-only) a datovou stranku (read-write, execute-never)
 

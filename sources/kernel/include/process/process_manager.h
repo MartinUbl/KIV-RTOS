@@ -12,22 +12,19 @@ constexpr uint32_t Invalid_Handle = static_cast<uint32_t>(-1);
 constexpr uint32_t Invalid_PID = static_cast<uint32_t>(-1);
 
 // podtypy pro Get_Sched_Info syscall
-enum class NGet_Sched_Info_Type
-{
+enum class NGet_Sched_Info_Type {
     Active_Process_Count    = 0,                    // pocet procesu, ktere jsou aktivne planovane (Runnable + Running)
     Tick_Count              = 1,                    // pocet ticku casovace
     Process_Summary         = 2,
 };
 
 // deadline syscall
-enum class NDeadline_Subservice
-{
+enum class NDeadline_Subservice {
     Set_Relative            = 0,                    // nastaveni deadline
     Get_Remaining           = 1,                    // ziska zbyvajici cas do deadline
 };
 
-struct CProcess_Summary_Info 
-{
+struct CProcess_Summary_Info {
     uint32_t total;                                 // celkovy pocet tasku
     uint32_t running;                               // runnable, running
     uint32_t blocked;                               // blocked, interruptable_sleep
@@ -35,15 +32,13 @@ struct CProcess_Summary_Info
 };
 
 // struktura uzlu v seznamu procesu
-struct CProcess_List_Node
-{
+struct CProcess_List_Node {
     CProcess_List_Node* prev;
     CProcess_List_Node* next;
     TTask_Struct* task;
 };
 
-class CProcess_Manager
-{
+class CProcess_Manager {
     private:
         // posledni pridelene PID
         uint32_t mLast_PID;

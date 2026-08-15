@@ -306,29 +306,27 @@ class CProc_FS_Driver : public IFilesystem_Driver {
             // validace PIDu (cislo)
             bool is_pid = true;
             const char *s = path;
-            while (*s && (*s) != '/')
-            {
+            while (*s && (*s) != '/') {
                 if (*s < '0' || *s > '9') is_pid = false;
                 s++;
             }
 
-            if (*s == '/') s++; // preskocime lomitko, pokud je
+            if (*s == '/') {
+                s++; // preskocime lomitko, pokud je
+            }
 
             bool self = strncmp(path, "self", 4) == 0; // self je taky PID, jen aktualniho procesu
-            if (is_pid || self)
-            {
+            if (is_pid || self) {
                 // resolve pid + task
                 uint32_t pid = 0;
-                if (self)
-                {
+                if (self) {
                     TTask_Struct *task = sProcessMgr.Get_Current_Process();
                     if (!task) {
                         return nullptr;
                     }
                     pid = task->pid;
                 }
-                else
-                {
+                else {
                     pid = atoi(path);
                     // validace PIDu
                     if (!sProcessMgr.Get_Process_By_PID(pid)) {

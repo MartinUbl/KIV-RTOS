@@ -40,8 +40,7 @@ uint32_t CELF_Loader::Load_ELF32_Image(const uint8_t* elf_data, uint8_t* memory,
     const Elf32_Ehdr* ehdr = reinterpret_cast<const Elf32_Ehdr*>(elf_data);
 
     // ELF magic - pokud neco z toho nesouhlasi, nejde o ELF soubor
-    if (ehdr->e_ident[0] != 0x7F || ehdr->e_ident[1] != 'E' ||
-        ehdr->e_ident[2] != 'L'  || ehdr->e_ident[3] != 'F') {
+    if (ehdr->e_ident[0] != 0x7F || ehdr->e_ident[1] != 'E' || ehdr->e_ident[2] != 'L'  || ehdr->e_ident[3] != 'F') {
         return Invalid_Entry_Point;
     }
 

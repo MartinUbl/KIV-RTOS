@@ -3,8 +3,7 @@
 #include <hal/peripherals.h>
 
 // True Random Number Generator driver
-class CTRNG
-{
+class CTRNG {
     private:
         // baze pro registry
         volatile unsigned int* const mTrng_Regs;

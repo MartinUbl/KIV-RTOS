@@ -10,8 +10,7 @@ constexpr uint32_t Indefinite = static_cast<uint32_t>(-1);
 constexpr uint32_t Deadline_Unchanged = static_cast<uint32_t>(-2);
 
 // vycet stavu procesu
-enum class NTask_State
-{
+enum class NTask_State {
     New,                // novy - zatim nenaplanovany, neinicializovany, stav na jiny se zmeni jeste behem vytvareni
     Runnable,           // pripraveny k naplanovani (uz mohl v minulosti bezet)
     Running,            // prave naplanovany
@@ -24,8 +23,7 @@ enum class NTask_State
 #pragma pack(push, 1)
 
 // kontext provadeni procesu z pohledu CPU - v podstate ulozene registry
-struct TCPU_Context
-{
+struct TCPU_Context {
     unsigned long lr;
     unsigned long sp;
     unsigned long pc;
@@ -37,8 +35,7 @@ struct TCPU_Context
 class IFile;
 
 // struktura procesu (tasku, ...)
-struct TTask_Struct
-{
+struct TTask_Struct {
     TCPU_Context cpu_context;                   // ulozeny kontext procesoru
     unsigned int pid;                           // ID procesu, kladne nenulove cislo
     NTask_State state;                          // stav procesu

@@ -4,8 +4,7 @@
 #include <drivers/shiftregister.h>
 
 // driver pro (7-)segmentovy displej pripojeny za posuvny registr
-class CSegment_Display
-{
+class CSegment_Display {
     private:
         // je driver pouzivan?
         bool mOpened;
