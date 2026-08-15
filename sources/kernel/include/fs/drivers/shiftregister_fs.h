@@ -21,7 +21,6 @@ class CShift_Register_File final : public IFile
 
         ~CShift_Register_File()
         {
-            Close();
         }
 
         virtual uint32_t Read(char* buffer, uint32_t num) override

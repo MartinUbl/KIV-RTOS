@@ -21,7 +21,6 @@ class CSegment_Display_File final : public IFile
 
         ~CSegment_Display_File()
         {
-            Close();
         }
 
         virtual uint32_t Read(char* buffer, uint32_t num) override

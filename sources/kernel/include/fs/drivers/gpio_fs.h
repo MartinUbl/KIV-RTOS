@@ -27,8 +27,6 @@ class CGPIO_File final : public IFile
 
         ~CGPIO_File()
         {
-            // pokud jeste je otevreny, zavreme
-            Close();
         }
 
         virtual uint32_t Read(char* buffer, uint32_t num) override

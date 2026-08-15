@@ -93,6 +93,9 @@ class CProcess_Manager
         // odmapuje soubor z daneho handle
         bool Unmap_File_Current(uint32_t handle);
 
+        // zavre vsechny soubory procesu
+        void Close_All_Files(TTask_Struct* task);
+
         // softwarova preruseni pro process facility
         void Handle_Process_SWI(NSWI_Process_Service svc_idx, uint32_t r0, uint32_t r1, uint32_t r2, TSWI_Result& target);
         // softwarova preruseni pro filesystem facility

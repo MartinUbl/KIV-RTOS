@@ -22,7 +22,6 @@ class CUART_File final : public IFile
 
         ~CUART_File()
         {
-            Close();
         }
 
         virtual uint32_t Read(char* buffer, uint32_t num) override
