@@ -1,0 +1,15 @@
+{
+    "cmake.sourceDirectory": "${workspaceFolder}/sources",
+    "cmake.useCMakePresets": "always",
+    "cmake.options.statusBarVisibility": "hidden",
+    "cmake.options.advanced": {
+        "build": { "statusBarVisibility": "hidden" },
+        "debug": { "statusBarVisibility": "hidden" },
+        "launch": { "statusBarVisibility": "hidden" },
+        "kit": { "statusBarVisibility": "hidden" },
+        "variant": { "statusBarVisibility": "hidden" },
+        "folder": { "statusBarVisibility": "hidden" },
+        "configurePreset": { "statusBarVisibility": "hidden" },
+        "buildTarget": { "statusBarVisibility": "hidden" }
+    }
+}

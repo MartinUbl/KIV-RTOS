@@ -1,0 +1,16 @@
+{
+    "version": 3,
+    "configurePresets": [
+        {
+            "name": "rpi0",
+            "displayName": "RPi0 ARM",
+            "generator": "Unix Makefiles",
+            "binaryDir": "${sourceDir}/build",
+            "toolchainFile": "${sourceDir}/../misc/cmake/toolchain-arm-none-eabi-rpi0.cmake",
+            "cacheVariables": {
+              "USE_EXPANSION_BOARD": "NONE",
+              "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+            }
+        }
+    ]
+}

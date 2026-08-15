@@ -2,8 +2,18 @@
     "name": "KIV-RTOS Development Container",
     "build": {
         "dockerfile": "Dockerfile",
-		"context": ".."
+        "context": ".."
     },
+
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-vscode.cpptools",
+                "ms-vscode.cmake-tools"
+            ]
+        }
+    },
+
     "initializeCommand": [
         "python",
         ".devcontainer/serial_bridge.py"

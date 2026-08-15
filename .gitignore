@@ -5,4 +5,3 @@ build/*
 
 # personal VSCode workspaces
 KIV-RTOS.code-workspace
-.vscode/settings.json
