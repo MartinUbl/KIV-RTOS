@@ -1,5 +1,13 @@
 #!/bin/bash
 
+if [ "$1" == "clean" ]; then
+    echo -ne "Cleaning build directories... "
+    rm -rf build/*
+    rm -rf userspace/build/*
+    echo "Done."
+    exit 0
+fi
+
 mkdir -p build >/dev/null 2>&1
 cd build
 
@@ -13,5 +21,3 @@ fi
 cmake -G "Unix Makefiles" -DCMAKE_TOOLCHAIN_FILE="../misc/cmake/toolchain-arm-none-eabi-rpi0.cmake" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DUSE_EXPANSION_BOARD=$EXPANSION_BOARD ..
 
 cmake --build . --parallel
-#make
-#make VERBOSE=1

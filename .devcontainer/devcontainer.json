@@ -28,7 +28,9 @@
     "postAttachCommand": ".devcontainer/install_vscode_extension.sh",
 
     "containerEnv": {
-        "SERIAL_PORT": "/dev/ttyCOM"
+        "SERIAL_PORT": "/dev/ttyCOM",
+        "LANG": "C.UTF-8",
+        "LC_ALL": "C.UTF-8"
     },
     "remoteUser": "dev"
 }

@@ -55,21 +55,49 @@ function activate(context) {
     const flash = vscode.commands.registerCommand(
         "kernel.flash",
         async () => {
+            const flashJob = prepareFlash(context);
 
-            const flashMode = context.globalState.get('flashMode') ? context.globalState.get('flashMode') : "SREC (old)";
+            const closeListener = vscode.window.onDidCloseTerminal(async closedTerminal => {
+                if (closedTerminal !== flashJob.terminal) {
+                    return;
+                }
 
-            const terminal = getTerminal("KIV-RTOS Flash");
-            terminal.show();
+                closeListener.dispose();
 
-            if (flashMode == "SREC-200+") {
-                terminal.sendText("uart_flasher -b --baud 921600 /workspaces/KIV-RTOS/sources/build/kernel.elf /dev/ttyCOM");
-            }
-            else if (flashMode == "SREC-200") {
-                terminal.sendText("uart_flasher -b /workspaces/KIV-RTOS/sources/build/kernel.elf /dev/ttyCOM");
-            }
-            else {
-                terminal.sendText("uart_flasher /workspaces/KIV-RTOS/sources/build/kernel.srec /dev/ttyCOM");
-            }
+                if (closedTerminal.exitStatus?.code === 0) {
+                    vscode.window.showInformationMessage("Kernel flashed successfully.");
+                }
+                else {
+                    vscode.window.showErrorMessage("Kernel flashing failed.");
+                }
+            });
+
+            flashJob.terminal.sendText(flashJob.command);
+        }
+    );
+
+    const flashAndSerial = vscode.commands.registerCommand(
+        "kernel.flashAndSerial",
+        async () => {
+            const flashJob = prepareFlash(context);
+
+            const closeListener = vscode.window.onDidCloseTerminal(async closedTerminal => {
+                if (closedTerminal !== flashJob.terminal) {
+                    return;
+                }
+
+                closeListener.dispose();
+
+                if (closedTerminal.exitStatus?.code === 0) {
+                    vscode.window.showInformationMessage("Kernel flashed successfully.");
+                    await vscode.commands.executeCommand("kernel.serial");
+                }
+                else {
+                    vscode.window.showErrorMessage("Kernel flashing failed.");
+                }
+            });
+
+            flashJob.terminal.sendText(flashJob.command);
         }
     );
 
@@ -84,7 +112,18 @@ function activate(context) {
         }
     );
 
-    context.subscriptions.push(selectExpansionBoard, selectFlashMode, build, flash, serial);
+    const clean = vscode.commands.registerCommand(
+        "kernel.clean",
+        async () => {
+            const terminal = getTerminal("KIV-RTOS Build");
+            terminal.show();
+            terminal.sendText(
+                "./build.sh clean"
+            );
+        }
+    );
+
+    context.subscriptions.push(selectExpansionBoard, selectFlashMode, build, flash, serial, clean, flashAndSerial);
 
     const expansionBoardSelect = vscode.window.createStatusBarItem(
         vscode.StatusBarAlignment.Left,
@@ -130,9 +169,29 @@ function activate(context) {
     flashButton.command = "kernel.flash";
     flashButton.show();
 
-    const serialButton = vscode.window.createStatusBarItem(
+    const flashAndSerialButton = vscode.window.createStatusBarItem(
         vscode.StatusBarAlignment.Left,
         98
+    );
+
+    flashAndSerialButton.text = "$(pulse) Flash & Serial";
+    flashAndSerialButton.tooltip = "Flash kernel and open serial terminal";
+    flashAndSerialButton.command = "kernel.flashAndSerial";
+    flashAndSerialButton.show();
+
+    const cleanButton = vscode.window.createStatusBarItem(
+        vscode.StatusBarAlignment.Left,
+        97
+    );
+
+    cleanButton.text = "$(trash) Clean";
+    cleanButton.tooltip = "Clean build";
+    cleanButton.command = "kernel.clean";
+    cleanButton.show();
+
+    const serialButton = vscode.window.createStatusBarItem(
+        vscode.StatusBarAlignment.Left,
+        96
     );
 
     serialButton.text = "$(terminal) Serial";
@@ -145,7 +204,9 @@ function activate(context) {
         flashModeSelect,
         buildButton,
         flashButton,
-        serialButton
+        flashAndSerialButton,
+        serialButton,
+        cleanButton
     );
 }
 
@@ -159,6 +220,34 @@ function getTerminal(name) {
     }
 
     return vscode.window.createTerminal(name);
+}
+
+function prepareFlash(context) {
+    const serialTerminal = vscode.window.terminals.find(
+        terminal => terminal.name === "Serial"
+    );
+
+    if (serialTerminal) {
+        serialTerminal.dispose();
+    }
+
+    const flashMode = context.globalState.get('flashMode') ? context.globalState.get('flashMode') : "SREC (old)";
+
+    const terminal = getTerminal("KIV-RTOS Flash");
+    terminal.show();
+
+    let command;
+    if (flashMode == "SREC-200+") {
+        command = "uart_flasher -b --baud 921600 /workspaces/KIV-RTOS/sources/build/kernel.elf /dev/ttyCOM && exit 0";
+    }
+    else if (flashMode == "SREC-200") {
+        command = "uart_flasher -b /workspaces/KIV-RTOS/sources/build/kernel.elf /dev/ttyCOM && exit 0";
+    }
+    else {
+        command = "uart_flasher /workspaces/KIV-RTOS/sources/build/kernel.srec /dev/ttyCOM && exit 0";
+    }
+
+    return { terminal, command };
 }
 
 function deactivate() {}
