@@ -11,246 +11,344 @@
 
 constexpr uint32_t Max_ProcFS_File_Len = 64;
 
-enum class NProcFS_PID_Type
-{
-    PID,            // PID tasku
-    STATE,          // stav tasku (runnable, blocked, ...)
-    FD_N,           // pocet otevrenych souboru
-    FD,             // file descriptory otevrenych souboru
-    STATUS,         // souhrn vsech statistik
-    PAGE,           // pocet alokovanych stranek
-};
+// virtualni soubor pro proces s PIDem (marker)
+class CProcFS_Task_File : public IFile {
+    protected:
+        int mPID;
 
-// virtualni soubor pro proces s PIDem
-class CProcFS_PID_File final : public IFile
-{
+        const char* Status_To_String(NTask_State state) {
+            switch (state) {
+                case NTask_State::New: return "new";
+                case NTask_State::Runnable:
+                case NTask_State::Running: return "runnable";
+                case NTask_State::Interruptable_Sleep: return "sleep";
+                case NTask_State::Blocked: return "blocked";
+                case NTask_State::Zombie: return "zombie";
+                default: return "unknown";
+            }
+        }
+
     public:
-        CProcFS_PID_File(int pid, NProcFS_PID_Type type) : IFile(NFile_Type_Major::Character), _pid(pid), _type(type) 
-        {
+        CProcFS_Task_File(int pid) : IFile(NFile_Type_Major::Character), mPID(pid) {
             //
         }
+};
 
-        ~CProcFS_PID_File()
-        {
-            Close();
+// virtualni nePIDovy soubor (marker trida)
+class CProcFS_Global_File : public IFile {
+    public:
+        CProcFS_Global_File() : IFile(NFile_Type_Major::Character) {
+            //
+        }
+};
+
+class CProcFS_Task_File__PID : public CProcFS_Task_File {
+    public:
+        CProcFS_Task_File__PID(int pid) : CProcFS_Task_File(pid) {}
+
+        virtual uint32_t Read(char* buffer, uint32_t num) override {
+            itoa(mPID, buffer, 10);
+            return strlen(buffer);
         }
 
-        virtual uint32_t Read(char* buffer, uint32_t num) override
-        {
-            TTask_Struct *task = sProcessMgr.Get_Process_By_PID(_pid);
-            if (!task) return 0;
+        static CProcFS_Task_File* Create(int pid) {
+            return new CProcFS_Task_File__PID(pid);
+        }
+};
 
-            // prevod statu do citelne formy
-            const char *state_str;
-            if (_type == NProcFS_PID_Type::STATE || _type == NProcFS_PID_Type::STATUS) 
-            {
-                switch (task->state)
-                {
-                    case NTask_State::New:
-                        state_str = "new"; break;
-                    case NTask_State::Runnable:
-                    case NTask_State::Running:
-                        state_str = "runnable"; break;
-                    case NTask_State::Interruptable_Sleep:
-                        state_str = "sleep"; break;
-                    case NTask_State::Blocked:
-                        state_str = "blocked"; break;
-                    case NTask_State::Zombie:
-                        state_str = "zombie"; break;
-                    default:
-                        state_str = "unknown"; break;
+class CProcFS_Task_File__Status : public CProcFS_Task_File {
+    public:
+        CProcFS_Task_File__Status(int pid) : CProcFS_Task_File(pid) {}
+
+        virtual uint32_t Read(char* buffer, uint32_t num) override {
+            TTask_Struct *task = sProcessMgr.Get_Process_By_PID(mPID);
+            if (!task) {
+                return 0;
+            }
+
+            const char *state_str = Status_To_String(task->state);
+
+            strncat(buffer, state_str, num);
+            return strlen(buffer);
+        }
+
+        static CProcFS_Task_File* Create(int pid) {
+            return new CProcFS_Task_File__Status(pid);
+        }
+};
+
+class CProcFS_Task_File__FD_Count : public CProcFS_Task_File {
+    public:
+        CProcFS_Task_File__FD_Count(int pid) : CProcFS_Task_File(pid) {}
+
+        virtual uint32_t Read(char* buffer, uint32_t num) override {
+            TTask_Struct *task = sProcessMgr.Get_Process_By_PID(mPID);
+            if (!task) {
+                return 0;
+            }
+
+            uint8_t f = 0;
+            for (int i = 0; i < Max_Process_Opened_Files; i++) {
+                if (task->opened_files[i] != nullptr) {
+                    f++;
                 }
             }
 
-            // pocet otevrenych souboru
-            uint8_t f = 0;
+            itoa(f, buffer, 10);
+            return strlen(buffer);
+        }
+
+        static CProcFS_Task_File* Create(int pid) {
+            return new CProcFS_Task_File__FD_Count(pid);
+        }
+};
+
+class CProcFS_Task_File__FD : public CProcFS_Task_File {
+    public:
+        CProcFS_Task_File__FD(int pid) : CProcFS_Task_File(pid) {}
+
+        virtual uint32_t Read(char* buffer, uint32_t num) override {
+            TTask_Struct *task = sProcessMgr.Get_Process_By_PID(mPID);
+            if (!task) {
+                return 0;
+            }
+
             char fd_buffer[Max_Process_Opened_Files * 3];
             bzero(fd_buffer, Max_Process_Opened_Files * 3);
-            if (_type == NProcFS_PID_Type::STATUS || _type == NProcFS_PID_Type::FD_N || _type == NProcFS_PID_Type::FD)
-            {
-                for (int i = 0; i < Max_Process_Opened_Files; i++) {
-                    if (task->opened_files[i] != nullptr) {
-                        f++;
-                        itoa(i, fd_buffer + strlen(fd_buffer), 10);
-                        strcat(fd_buffer, " ");
-                    }
+            for (int i = 0; i < Max_Process_Opened_Files; i++) {
+                if (task->opened_files[i] != nullptr) {
+                    itoa(i, fd_buffer + strlen(fd_buffer), 10);
+                    strcat(fd_buffer, " ");
                 }
             }
 
-            char buf[Max_ProcFS_File_Len];
-            bzero(buf, Max_ProcFS_File_Len);
+            strncat(buffer, fd_buffer, num);
+            return strlen(buffer);
+        }
 
-            switch (_type)
-            {
-                case NProcFS_PID_Type::PID:
-                    itoa(_pid, buf, 10);
-                    break;
-                case NProcFS_PID_Type::STATUS:
-                    strcat(buf, "PID: ");
-                    itoa(_pid, buf + strlen(buf), 10);
-                    strcat(buf, "\r\nstate: ");
-                    strcat(buf, state_str);
-                    strcat(buf, "\r\nopended files: ");
-                    itoa(f, buf + strlen(buf), 10);
-                    strcat(buf, "\r\npage count: ");
-                    itoa(task->page_count, buf + strlen(buf), 10);
-                    break;
-                case NProcFS_PID_Type::STATE:
-                    strcat(buf, state_str);
-                    break;
-                case NProcFS_PID_Type::FD:
-                    strcat(buf, fd_buffer);
-                    break;
-                case NProcFS_PID_Type::FD_N:
-                    itoa(f, buf, 10);
-                    break;
-                case NProcFS_PID_Type::PAGE:
-                    itoa(task->page_count, buf, 10);
-                    break;
+        static CProcFS_Task_File* Create(int pid) {
+            return new CProcFS_Task_File__FD(pid);
+        }
+};
+
+class CProcFS_Task_File__Summary : public CProcFS_Task_File {
+    public:
+        CProcFS_Task_File__Summary(int pid) : CProcFS_Task_File(pid) {}
+
+        virtual uint32_t Read(char* buffer, uint32_t num) override {
+            TTask_Struct *task = sProcessMgr.Get_Process_By_PID(mPID);
+            if (!task) {
+                return 0;
             }
 
-            int len_s = strlen(buf); // celkova delka dat
-            int len = len_s < num ? len_s : num; // delka dat k zapsani do bufferu - min(len_s, num)
-            bzero(buffer, num);
-            strncpy(buffer, buf, len);
+            const char *state_str = Status_To_String(task->state);
 
-            return len;
+            uint8_t f = 0;
+            for (int i = 0; i < Max_Process_Opened_Files; i++) {
+                if (task->opened_files[i] != nullptr) {
+                    f++;
+                }
+            }
+
+            strncat(buffer, "PID: ", num);
+            itoa(mPID, buffer + strlen(buffer), 10);
+            strncat(buffer, "\r\nstatus: ", num);
+            strncat(buffer, state_str, num);
+            strncat(buffer, "\r\nopened files: ", num);
+            itoa(f, buffer + strlen(buffer), 10);
+            strncat(buffer, "\r\npage count: ", num);
+            itoa(task->page_count, buffer + strlen(buffer), 10);
+
+            return strlen(buffer);
         }
 
-    private:
-        int _pid;
-        NProcFS_PID_Type _type;
+        static CProcFS_Task_File* Create(int pid) {
+            return new CProcFS_Task_File__Summary(pid);
+        }
 };
 
-enum class NProcFS_Status_Type
-{
-    SCHED = 0,                  // pocty procesu v ruznych stavech
-    TASKS,                      // celkovy pocet tasku
-    TICKS,                      // pocet tiku od startu
-    FD_N,                       // celkovy pocet otevrenych souboru
-    PAGE,                       // celkovy pocet alokovanych stranek
-};
-
-// virtualni nePIDový soubor
-class CProcFS_Status_File final : public IFile
-{
+class CProcFS_Task_File__Page_Count : public CProcFS_Task_File {
     public:
+        CProcFS_Task_File__Page_Count(int pid) : CProcFS_Task_File(pid) {}
 
-        CProcFS_Status_File(NProcFS_Status_Type type) : IFile(NFile_Type_Major::Character), _type(type) 
-        {
-            //
+        virtual uint32_t Read(char* buffer, uint32_t num) override {
+            TTask_Struct *task = sProcessMgr.Get_Process_By_PID(mPID);
+            if (!task) {
+                return 0;
+            }
+
+            itoa(task->page_count, buffer, 10);
+            return strlen(buffer);
         }
 
-        ~CProcFS_Status_File()
-        {
-            Close();
+        static CProcFS_Task_File* Create(int pid) {
+            return new CProcFS_Task_File__Page_Count(pid);
         }
+};
 
-        virtual uint32_t Read(char* buffer, uint32_t num) override
-        {
-            char buf[Max_ProcFS_File_Len];
-            bzero(buf, Max_ProcFS_File_Len);
-
-            // ziskani poctu bezicich, blokovanych atd. procesu
+class CProcFS_Global_File__Scheduler final : public CProcFS_Global_File {
+    public:
+        virtual uint32_t Read(char* buffer, uint32_t num) override {
             CProcess_Summary_Info info;
             sProcessMgr.Get_Scheduler_Info(NGet_Sched_Info_Type::Process_Summary, &info);
 
-            switch (_type)
-            {
-                case NProcFS_Status_Type::SCHED:
-                    strcat(buf, "runnable: ");
-                    itoa(info.running, buf + strlen(buf), 10);
-                    strcat(buf, "\r\nblocked: ");
-                    itoa(info.blocked, buf + strlen(buf), 10);
-                    strcat(buf, "\r\nzombie: ");
-                    itoa(info.zombie, buf + strlen(buf), 10);
-                    break;
-                case NProcFS_Status_Type::TASKS:
-                    itoa(info.total, buf, 10);
-                    break;
-                case NProcFS_Status_Type::TICKS:
-                    uint32_t ticks;
-                    sProcessMgr.Get_Scheduler_Info(NGet_Sched_Info_Type::Tick_Count, &ticks);
-                    itoa(ticks, buf, 10);
-                    break;
-                case NProcFS_Status_Type::FD_N:
-                    itoa(sProcessMgr.Get_File_Count(), buf, 10);
-                    break;
-                case NProcFS_Status_Type::PAGE:
-                    itoa(sProcessMgr.Get_Page_Count(), buf, 10);
-                    break;
-            };
+            strncat(buffer, "runnable: ", num);
+            itoa(info.running, buffer + strlen(buffer), 10);
+            strncat(buffer, "\r\nblocked: ", num);
+            itoa(info.blocked, buffer + strlen(buffer), 10);
+            strncat(buffer, "\r\nzombie: ", num);
+            itoa(info.zombie, buffer + strlen(buffer), 10);
 
-            int len_s = strlen(buf); // celkova delka dat
-            int len = len_s < num ? len_s : num; // delka dat k zapsani do bufferu - min(len_s, num)
-            bzero(buffer, num);
-            strncpy(buffer, buf, len);
-
-            return len;
+            return strlen(buffer);
         }
-    private:
-        NProcFS_Status_Type _type;
+
+        static CProcFS_Global_File* Create() {
+            return new CProcFS_Global_File__Scheduler();
+        }
+};
+
+class CProcFS_Global_File__Tasks final : public CProcFS_Global_File {
+    public:
+        virtual uint32_t Read(char* buffer, uint32_t num) override {
+            CProcess_Summary_Info info;
+            sProcessMgr.Get_Scheduler_Info(NGet_Sched_Info_Type::Process_Summary, &info);
+
+            itoa(info.total, buffer, 10);
+
+            return strlen(buffer);
+        }
+
+        static CProcFS_Global_File* Create() {
+            return new CProcFS_Global_File__Tasks();
+        }
+};
+
+class CProcFS_Global_File__Ticks final : public CProcFS_Global_File {
+    public:
+        virtual uint32_t Read(char* buffer, uint32_t num) override {
+            uint32_t ticks;
+            sProcessMgr.Get_Scheduler_Info(NGet_Sched_Info_Type::Tick_Count, &ticks);
+            itoa(ticks, buffer, 10);
+
+            return strlen(buffer);
+        }
+
+        static CProcFS_Global_File* Create() {
+            return new CProcFS_Global_File__Ticks();
+        }
+};
+
+class CProcFS_Global_File__FD_Count final : public CProcFS_Global_File {
+    public:
+        virtual uint32_t Read(char* buffer, uint32_t num) override {
+            itoa(sProcessMgr.Get_File_Count(), buffer, 10);
+            return strlen(buffer);
+        }
+
+        static CProcFS_Global_File* Create() {
+            return new CProcFS_Global_File__FD_Count();
+        }
+};
+
+class CProcFS_Global_File__Page_Count final : public CProcFS_Global_File {
+    public:
+        virtual uint32_t Read(char* buffer, uint32_t num) override {
+            itoa(sProcessMgr.Get_Page_Count(), buffer, 10);
+
+            return strlen(buffer);
+        }
+
+        static CProcFS_Global_File* Create() {
+            return new CProcFS_Global_File__Page_Count();
+        }
+};
+
+struct TProcFS_Task_File_Entry {
+    const char* name;
+    CProcFS_Task_File* (*create_func)(int pid);
+};
+
+TProcFS_Task_File_Entry ProcFS_Task_Files[] = {
+    { "pid", CProcFS_Task_File__PID::Create },
+    { "status", CProcFS_Task_File__Status::Create },
+    { "fd_count", CProcFS_Task_File__FD_Count::Create },
+    { "fd", CProcFS_Task_File__FD::Create },
+    { "summary", CProcFS_Task_File__Summary::Create },
+    { "page", CProcFS_Task_File__Page_Count::Create }
+};
+
+struct TProcFS_Global_File_Entry {
+    const char* name;
+    CProcFS_Global_File* (*create_func)();
+};
+
+TProcFS_Global_File_Entry ProcFS_Global_Files[] = {
+    { "scheduler", CProcFS_Global_File__Scheduler::Create },
+    { "tasks", CProcFS_Global_File__Tasks::Create },
+    { "ticks", CProcFS_Global_File__Ticks::Create },
+    { "fd_count", CProcFS_Global_File__FD_Count::Create },
+    { "page_count", CProcFS_Global_File__Page_Count::Create }
 };
 
 // driver Proc FS (PROC:)
-class CProc_FS_Driver : public IFilesystem_Driver
-{
-	public:
-        virtual void On_Register() override 
-        {
+class CProc_FS_Driver : public IFilesystem_Driver {
+    public:
+        virtual void On_Register() override {
             //
         };
 
         virtual IFile* Open_File(const char* path, NFile_Open_Mode mode) override
         {
-            if (mode != NFile_Open_Mode::Read_Only)
+            if (mode != NFile_Open_Mode::Read_Only) {
                 return nullptr;
+            }
 
             // validace PIDu (cislo)
             bool is_pid = true;
-            char *s = const_cast<char*>(path);
+            const char *s = path;
             while (*s && (*s) != '/')
             {
                 if (*s < '0' || *s > '9') is_pid = false;
                 s++;
             }
-            
-            bool self = strncmp(path, "self", 4) == 0; // self je taky PID, jen aktualniho procesu
-            if (is_pid || self )
-            {
-                *s++ = '\0'; // ukonceni pid retezce (misto '/') pro atoi()
 
+            if (*s == '/') s++; // preskocime lomitko, pokud je
+
+            bool self = strncmp(path, "self", 4) == 0; // self je taky PID, jen aktualniho procesu
+            if (is_pid || self)
+            {
                 // resolve pid + task
                 uint32_t pid = 0;
-                TTask_Struct *task = nullptr;
                 if (self)
                 {
-                    task = sProcessMgr.Get_Current_Process();
-                    if (!task) return nullptr;
+                    TTask_Struct *task = sProcessMgr.Get_Current_Process();
+                    if (!task) {
+                        return nullptr;
+                    }
                     pid = task->pid;
                 }
                 else
                 {
                     pid = atoi(path);
                     // validace PIDu
-                    task = sProcessMgr.Get_Process_By_PID(pid);
-                    if (!task) return nullptr;
+                    if (!sProcessMgr.Get_Process_By_PID(pid)) {
+                        return nullptr;
+                    }
                 }
 
-                if (strncmp(s, "pid", MaxFilenameLength) == 0) return new CProcFS_PID_File(pid, NProcFS_PID_Type::PID);
-                if (strncmp(s, "fd_n", MaxFilenameLength) == 0) return new CProcFS_PID_File(pid, NProcFS_PID_Type::FD_N);
-                if (strncmp(s, "fd", MaxFilenameLength) == 0) return new CProcFS_PID_File(pid, NProcFS_PID_Type::FD);
-                if (strncmp(s, "status", MaxFilenameLength) == 0) return new CProcFS_PID_File(pid, NProcFS_PID_Type::STATUS);
-                if (strncmp(s, "state", MaxFilenameLength) == 0) return new CProcFS_PID_File(pid, NProcFS_PID_Type::STATE);
-                if (strncmp(s, "page", MaxFilenameLength) == 0) return new CProcFS_PID_File(pid, NProcFS_PID_Type::PAGE);
+                for (int i = 0; i < sizeof(ProcFS_Task_Files) / sizeof(ProcFS_Task_Files[0]); i++) {
+                    if (strncmp(s, ProcFS_Task_Files[i].name, MaxFilenameLength) == 0) {
+                        return ProcFS_Task_Files[i].create_func(pid);
+                    }
+                }
             }
             else
             {
-                if (strncmp(path, "sched", MaxFilenameLength) == 0) return new CProcFS_Status_File(NProcFS_Status_Type::SCHED);
-                if (strncmp(path, "tasks", MaxFilenameLength) == 0) return new CProcFS_Status_File(NProcFS_Status_Type::TASKS);
-                if (strncmp(path, "ticks", MaxFilenameLength) == 0) return new CProcFS_Status_File(NProcFS_Status_Type::TICKS);
-                if (strncmp(path, "fd_n", MaxFilenameLength) == 0) return new CProcFS_Status_File(NProcFS_Status_Type::FD_N);
-                if (strncmp(path, "page", MaxFilenameLength) == 0) return new CProcFS_Status_File(NProcFS_Status_Type::PAGE);
+                for (int i = 0; i < sizeof(ProcFS_Global_Files) / sizeof(ProcFS_Global_Files[0]); i++) {
+                    if (strncmp(path, ProcFS_Global_Files[i].name, MaxFilenameLength) == 0) {
+                        return ProcFS_Global_Files[i].create_func();
+                    }
+                }
             }
 
             return nullptr;
