@@ -199,11 +199,14 @@ void CGPIO_Handler::Enable_Event_Detect(uint32_t pin, NGPIO_Interrupt_Type type)
 
     mGPIO[reg] |= (1 << bit);
 
-    // TODO: vyresit tohle trochu lepe
-    sInterruptCtl.Enable_IRQ(hal::IRQ_Source::GPIO_0);
-    sInterruptCtl.Enable_IRQ(hal::IRQ_Source::GPIO_1);
-    sInterruptCtl.Enable_IRQ(hal::IRQ_Source::GPIO_2);
-    sInterruptCtl.Enable_IRQ(hal::IRQ_Source::GPIO_3);
+    // v manualu BCM2835 sice najdeme, ze cip ma 4 IRQ lines, realne ale
+    // line 0 a line 1 odpovidaji pinum 0-31 a 32-53, a line 2 je pak sdruzena pro piny 0-53
+    // line 3 pravdepodobne neni zapojena, ale to se v manualu bohuzel nedocteme
+    if (pin < 32) {
+        sInterruptCtl.Enable_IRQ(hal::IRQ_Source::GPIO_0);
+    } else {
+        sInterruptCtl.Enable_IRQ(hal::IRQ_Source::GPIO_1);
+    }
 }
 
 void CGPIO_Handler::Disable_Event_Detect(uint32_t pin, NGPIO_Interrupt_Type type) {
