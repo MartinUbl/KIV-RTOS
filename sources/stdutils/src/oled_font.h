@@ -1,8 +1,7 @@
 #include <hal/peripherals.h>
 #include <oled.h>
 
-namespace OLED_Font
-{
+namespace OLED_Font {
     // sirka znaku v pixelech
     constexpr uint16_t Char_Width = 6;
     // vyska znaku v pixelech
@@ -17,8 +16,7 @@ namespace OLED_Font
     constexpr bool Flip_Chars = true;
 
     // jednoduchy 6x8 font
-    const uint8_t OLED_Font_Default[(Char_End - Char_Begin) * Char_Width] =
-    {
+    const uint8_t OLED_Font_Default[(Char_End - Char_Begin) * Char_Width] = {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // mezernik
         0x00, 0x00, 0x00, 0x2f, 0x00, 0x00, // !
         0x00, 0x00, 0x07, 0x00, 0x07, 0x00, // "

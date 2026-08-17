@@ -19,40 +19,40 @@ SET(ABI_FILES cxxabi.cpp)
 SET(CRT_FILES crt0.s crt0.c)
 
 IF(NOT COMPLETE_BUILD)
-	SET(STDLIB_FILES ${CMAKE_CURRENT_SOURCE_DIR}/../build/stdlib/libkivrtos_stdlib.a)
+    SET(STDLIB_FILES ${CMAKE_CURRENT_SOURCE_DIR}/../build/stdlib/libkivrtos_stdlib.a)
 ELSE()
-	SET(STDLIB_FILES kivrtos_stdlib)
+    SET(STDLIB_FILES kivrtos_stdlib)
 ENDIF()
 
 FUNCTION(ADD_USERSPACE_EXECUTABLE target_name file_list)
-	SET(file_list ${ARGV})
-	LIST(REMOVE_AT file_list 0)
+    SET(file_list ${ARGV})
+    LIST(REMOVE_AT file_list 0)
 
-	ADD_EXECUTABLE(${target_name} ${CRT_FILES} ${ABI_FILES} ${file_list})
-	TARGET_LINK_LIBRARIES(${target_name} ${STDLIB_FILES} gcc)
-	TARGET_LINK_OPTIONS(${target_name} PRIVATE -T${USERSPACE_LINKER_SCRIPT})
+    ADD_EXECUTABLE(${target_name} ${CRT_FILES} ${ABI_FILES} ${file_list})
+    TARGET_LINK_LIBRARIES(${target_name} ${STDLIB_FILES} gcc)
+    TARGET_LINK_OPTIONS(${target_name} PRIVATE -T${USERSPACE_LINKER_SCRIPT})
 
-	SET_TARGET_PROPERTIES(${target_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/build)
+    SET_TARGET_PROPERTIES(${target_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/build)
 
-	IF (COMPLETE_BUILD)
-		ADD_CUSTOM_COMMAND(
-			TARGET ${target_name} POST_BUILD
-			COMMAND ${CMAKE_OBJCOPY} ${CMAKE_CURRENT_SOURCE_DIR}/build/${target_name}${CMAKE_EXECUTABLE_SUFFIX} -O binary ${CMAKE_CURRENT_SOURCE_DIR}/build/${target_name}.bin
-			COMMAND ${CMAKE_OBJDUMP} -l -S -D ${CMAKE_CURRENT_SOURCE_DIR}/build/${target_name}${CMAKE_EXECUTABLE_SUFFIX} > ${CMAKE_CURRENT_SOURCE_DIR}/build/${target_name}.asm
-			COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR}/build && xxd -i ./${target_name}${CMAKE_EXECUTABLE_SUFFIX} > ${CMAKE_CURRENT_SOURCE_DIR}/build/src_${target_name}.h
-			WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
-	ELSE()
-		ADD_CUSTOM_COMMAND(
-			TARGET ${target_name} POST_BUILD
-			COMMAND ${CMAKE_OBJCOPY} ${CMAKE_CURRENT_SOURCE_DIR}/build/${target_name}${CMAKE_EXECUTABLE_SUFFIX} -O binary ${CMAKE_CURRENT_SOURCE_DIR}/build/${target_name}.bin
-			COMMAND ${CMAKE_OBJDUMP} -l -S -D ${CMAKE_CURRENT_SOURCE_DIR}/build/${target_name}${CMAKE_EXECUTABLE_SUFFIX} > ${CMAKE_CURRENT_SOURCE_DIR}/build/${target_name}.asm
-			COMMAND xxd -i ${CMAKE_CURRENT_SOURCE_DIR}/build/${target_name}${CMAKE_EXECUTABLE_SUFFIX} > ${CMAKE_CURRENT_SOURCE_DIR}/build/src_${target_name}.h
-			WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
-	ENDIF()
+    IF (COMPLETE_BUILD)
+        ADD_CUSTOM_COMMAND(
+            TARGET ${target_name} POST_BUILD
+            COMMAND ${CMAKE_OBJCOPY} ${CMAKE_CURRENT_SOURCE_DIR}/build/${target_name}${CMAKE_EXECUTABLE_SUFFIX} -O binary ${CMAKE_CURRENT_SOURCE_DIR}/build/${target_name}.bin
+            COMMAND ${CMAKE_OBJDUMP} -l -S -D ${CMAKE_CURRENT_SOURCE_DIR}/build/${target_name}${CMAKE_EXECUTABLE_SUFFIX} > ${CMAKE_CURRENT_SOURCE_DIR}/build/${target_name}.asm
+            COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR}/build && xxd -i ./${target_name}${CMAKE_EXECUTABLE_SUFFIX} > ${CMAKE_CURRENT_SOURCE_DIR}/build/src_${target_name}.h
+            WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+    ELSE()
+        ADD_CUSTOM_COMMAND(
+            TARGET ${target_name} POST_BUILD
+            COMMAND ${CMAKE_OBJCOPY} ${CMAKE_CURRENT_SOURCE_DIR}/build/${target_name}${CMAKE_EXECUTABLE_SUFFIX} -O binary ${CMAKE_CURRENT_SOURCE_DIR}/build/${target_name}.bin
+            COMMAND ${CMAKE_OBJDUMP} -l -S -D ${CMAKE_CURRENT_SOURCE_DIR}/build/${target_name}${CMAKE_EXECUTABLE_SUFFIX} > ${CMAKE_CURRENT_SOURCE_DIR}/build/${target_name}.asm
+            COMMAND xxd -i ${CMAKE_CURRENT_SOURCE_DIR}/build/${target_name}${CMAKE_EXECUTABLE_SUFFIX} > ${CMAKE_CURRENT_SOURCE_DIR}/build/src_${target_name}.h
+            WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+    ENDIF()
 
-	IF(COMPLETE_BUILD)
-	    ADD_DEPENDENCIES(kernel ${target_name})
-	ENDIF()
+    IF(COMPLETE_BUILD)
+        ADD_DEPENDENCIES(kernel ${target_name})
+    ENDIF()
 ENDFUNCTION(ADD_USERSPACE_EXECUTABLE)
 
 # init task - systemovy task, musi byt pritomen

@@ -3,8 +3,7 @@
 #include <hal/peripherals.h>
 
 // handler pro auxiliary periferie a registry
-class CAUX
-{
+class CAUX {
     private:
         // bazova adresa AUX registru
         unsigned int* const mAUX_Reg;

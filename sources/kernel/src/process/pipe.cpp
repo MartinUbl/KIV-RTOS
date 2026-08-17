@@ -4,39 +4,32 @@
 #include <process/resource_manager.h>
 
 CPipe::CPipe()
-    : IFile(NFile_Type_Major::Pipe)
-{
+    : IFile(NFile_Type_Major::Pipe) {
     //
 }
 
-CPipe::~CPipe()
-{
+CPipe::~CPipe() {
     //
 }
 
-void CPipe::Reset(uint32_t size)
-{
-    if (mSem_Free)
-    {
+void CPipe::Reset(uint32_t size) {
+    if (mSem_Free) {
         delete mSem_Free;
         mSem_Free = nullptr;
     }
 
-    if (mSem_Busy)
-    {
+    if (mSem_Busy) {
         delete mSem_Busy;
         mSem_Busy = nullptr;
     }
 
-    if (mBuffer)
-    {
+    if (mBuffer) {
         sKernelMem.Free(mBuffer);
         mBuffer = nullptr;
     }
 
     // pokud jsme prave alokovani, alokujeme semafory a buffer
-    if (size > 0)
-    {
+    if (size > 0) {
         mSem_Free = new CSemaphore;
         mSem_Free->Reset(size, size);
 
@@ -49,8 +42,7 @@ void CPipe::Reset(uint32_t size)
     }
 }
 
-uint32_t CPipe::Read(char* buffer, uint32_t num)
-{
+uint32_t CPipe::Read(char* buffer, uint32_t num) {
     spinlock_lock(&mBuffer_Lock);
 
     num = (num > mSem_Busy->Get_Current_Count()) ? mSem_Busy->Get_Current_Count() : num;
@@ -63,12 +55,12 @@ uint32_t CPipe::Read(char* buffer, uint32_t num)
     // kriticka sekce
     spinlock_lock(&mBuffer_Lock);
 
-    for (uint32_t i = 0; i < num; i++)
-    {
+    for (uint32_t i = 0; i < num; i++) {
         buffer[i] = mBuffer[mRead_Cur++];
 
-        if (mRead_Cur >= mSem_Busy->Get_Max_Count())
+        if (mRead_Cur >= mSem_Busy->Get_Max_Count()) {
             mRead_Cur = 0;
+        }
     }
 
     spinlock_unlock(&mBuffer_Lock);
@@ -79,20 +71,19 @@ uint32_t CPipe::Read(char* buffer, uint32_t num)
     return num;
 }
 
-uint32_t CPipe::Write(const char* buffer, uint32_t num)
-{
+uint32_t CPipe::Write(const char* buffer, uint32_t num) {
     // pockame az bude tolik mista k dispozici
     mSem_Free->Wait(num);
 
     // kriticka sekce
     spinlock_lock(&mBuffer_Lock);
 
-    for (uint32_t i = 0; i < num; i++)
-    {
+    for (uint32_t i = 0; i < num; i++) {
         mBuffer[mWrite_Cur++] = buffer[i];
 
-        if (mWrite_Cur >= mSem_Busy->Get_Max_Count())
+        if (mWrite_Cur >= mSem_Busy->Get_Max_Count()) {
             mWrite_Cur = 0;
+        }
     }
 
     spinlock_unlock(&mBuffer_Lock);
@@ -105,19 +96,16 @@ uint32_t CPipe::Write(const char* buffer, uint32_t num)
     return num;
 }
 
-bool CPipe::Close()
-{
+bool CPipe::Close() {
     sProcess_Resource_Manager.Free_Pipe(this);
 
     return true;
 }
 
-bool CPipe::Wait(uint32_t count)
-{
+bool CPipe::Wait(uint32_t count) {
     spinlock_lock(&mBuffer_Lock);
 
-    if (mSem_Busy->Get_Current_Count() >= count)
-    {
+    if (mSem_Busy->Get_Current_Count() >= count) {
         spinlock_unlock(&mBuffer_Lock);
         return true;
     }
@@ -144,8 +132,6 @@ bool CPipe::TryWaitAllReserve(uint32_t count) {
     return false;
 }
 
-
-uint32_t CPipe::Notify(uint32_t count)
-{
+uint32_t CPipe::Notify(uint32_t count) {
     return IFile::Notify(count);
 }

@@ -1,0 +1,3 @@
+[submodule "misc/flasher"]
+	path = misc/flasher
+	url = https://github.com/MartinUbl/SREC-UART-Loader.git

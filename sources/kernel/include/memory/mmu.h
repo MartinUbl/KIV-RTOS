@@ -4,8 +4,7 @@
 #include <hal/intdef.h>
 
 // symboly definovane v link.ld
-extern "C"
-{
+extern "C" {
     // virtualni adresa zacatku kodove sekce (0xF0000000)
     extern const uint32_t _virt_code_start;
     // virtualni adresa zacatku datove sekce (0xC0000000)
@@ -29,10 +28,8 @@ constexpr uint32_t PT_Region_Size = 0x100000;
 
 // priznaky pro dolni bity TTBR registru (TTBR0 a TTBR1)
 // https://developer.arm.com/documentation/ddi0301/h/system-control-coprocessor/system-control-processor-registers/c2--translation-table-base-register-0?lang=en
-namespace TTBR_Flags
-{
-    enum : unsigned int
-    {
+namespace TTBR_Flags {
+    enum : unsigned int {
         Inner_Cacheable         = 1U << 0, // cachovatele v L1
         Shared                  = 1U << 1, // sdilene mezi procesorovymi jednotkami
         ECC_Enable              = 1U << 2, // error-checking-code (oprava pripadnych chyb) zapnuta
@@ -43,10 +40,8 @@ namespace TTBR_Flags
 
 // priznaky pro dolni bity TTBC registru
 // https://developer.arm.com/documentation/ddi0301/h/system-control-coprocessor/system-control-processor-registers/c2--translation-table-base-control-register?lang=en
-namespace TTBC_Flags
-{
-    enum : unsigned int
-    {
+namespace TTBC_Flags {
+    enum : unsigned int {
         Boundary_16k            = 0b000U,
         Boundary_8k             = 0b001U,
         Boundary_4k             = 0b010U,
@@ -63,10 +58,8 @@ namespace TTBC_Flags
 
 // priznaky domain access control registru
 // https://developer.arm.com/documentation/ddi0301/h/system-control-coprocessor/system-control-processor-registers/c3--domain-access-control-register?lang=en
-namespace DACR_Flags
-{
-    enum : unsigned int
-    {
+namespace DACR_Flags {
+    enum : unsigned int {
         No_Access   = 0b00, // domena se nepouziva => pri pristupu vznikne abort
         Client      = 0b01, // domena se pouziva v klientskem rezimu
         Manager     = 0b11, // domena se pouziva v rezimu manazera ("supervizor", muze vse)
@@ -75,10 +68,8 @@ namespace DACR_Flags
 
 // priznaky AUX control registru
 // https://developer.arm.com/documentation/ddi0301/h/system-control-coprocessor/system-control-processor-registers/c1--auxiliary-control-register?lang=en
-namespace AUXCtl_Flags
-{
-    enum : unsigned int
-    {
+namespace AUXCtl_Flags {
+    enum : unsigned int {
         Return_Stack_Enable                 = 1U << 0, // optimalizace navratu z funkci - predikce
         Dynamic_Branch_Prediction_Enable    = 1U << 1, // povoleni dynamicke predikce skoku
         Static_Branch_Prediction_Enable     = 1U << 2, // povoleni staticke predikce skoku
@@ -95,8 +86,7 @@ namespace AUXCtl_Flags
 
 // priznaky MMU control registru
 // https://developer.arm.com/documentation/ddi0301/h/system-control-coprocessor/system-control-processor-registers/c1--control-register?lang=en
-namespace MMUCR_Flags
-{
+namespace MMUCR_Flags {
     enum : unsigned int
     {
         MMU_Enable                                  = 1U << 0, // povoli MMU (a lookup virtualnich adres)
@@ -125,10 +115,8 @@ namespace MMUCR_Flags
 }
 
 // descriptor level 1 priznaky
-namespace DL1_Flags
-{
-    enum : unsigned int
-    {
+namespace DL1_Flags {
+    enum : unsigned int {
         Access_Type_Translation_Fault       = 0b00U, // zaznam v tabulce chybi - pristup vygeneruje abort (data nebo prefetch, podle typu pristupu)
         Access_Type_Page_Table_Base_Address = 0b01U, // zaznam odkazuje na zanorenou tabulku stranek
         Access_Type_Section_Address         = 0b10U, // zaznam odkazuje uz na ramec pameti

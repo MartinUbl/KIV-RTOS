@@ -14,8 +14,7 @@
 #include <drivers/timer.h>
 
 // "importovane" funkce z asm
-extern "C"
-{
+extern "C" {
     void user_process_bootstrap();
     void system_process_bootstrap();
     void context_switch(TCPU_Context* ctx_to, TCPU_Context* ctx_from);
@@ -25,24 +24,21 @@ extern "C"
 CProcess_Manager sProcessMgr;
 
 CProcess_Manager::CProcess_Manager()
-    : mLast_PID(0), mProcess_List_Head(nullptr), mCurrent_Task_Node(nullptr)
-{
+    : mLast_PID(0), mProcess_List_Head(nullptr), mCurrent_Task_Node(nullptr) {
     //mSchedule_Fnc = &CProcess_Manager::Schedule_RR;
     mSchedule_Fnc = &CProcess_Manager::Schedule_EDF;
 }
 
-TTask_Struct* CProcess_Manager::Get_Current_Process() const
-{
+TTask_Struct* CProcess_Manager::Get_Current_Process() const {
     return mCurrent_Task_Node ? mCurrent_Task_Node->task : nullptr;
 }
 
-TTask_Struct* CProcess_Manager::Get_Process_By_PID(uint32_t pid) const
-{
+TTask_Struct* CProcess_Manager::Get_Process_By_PID(uint32_t pid) const {
     CProcess_List_Node* node = mProcess_List_Head;
-    while (node != nullptr)
-    {
-        if (node->task->pid == pid)
+    while (node != nullptr) {
+        if (node->task->pid == pid) {
             return node->task;
+        }
 
         node = node->next;
     }
@@ -50,8 +46,7 @@ TTask_Struct* CProcess_Manager::Get_Process_By_PID(uint32_t pid) const
     return nullptr;
 }
 
-void CProcess_Manager::Block_Current_Process()
-{
+void CProcess_Manager::Block_Current_Process() {
     TTask_Struct* cur = Get_Current_Process();
 
     cur->state = NTask_State::Blocked;
@@ -63,11 +58,11 @@ void CProcess_Manager::Block_Current_Process()
     Schedule();
 }
 
-bool CProcess_Manager::Notify_Process(uint32_t pid, IFile* notifier_file)
-{
+bool CProcess_Manager::Notify_Process(uint32_t pid, IFile* notifier_file) {
     TTask_Struct* task = Get_Process_By_PID(pid);
-    if (!task || task->state != NTask_State::Blocked)
+    if (!task || task->state != NTask_State::Blocked) {
         return false;
+    }
 
     // pokud task ceka pomoci WaitAll na vice souboru, je treba ulozit, ze ktereho souboru prisla notifikace
     if (task->is_multi_file_wait) {
@@ -82,25 +77,25 @@ bool CProcess_Manager::Notify_Process(uint32_t pid, IFile* notifier_file)
     return Notify_Process(task);
 }
 
-bool CProcess_Manager::Notify_Process(TTask_Struct* proc)
-{
-    if (!proc)
+bool CProcess_Manager::Notify_Process(TTask_Struct* proc) {
+    if (!proc) {
         return false;
+    }
 
     // ve slozitejsich planovacich by tady mohl byt treba i presun do jine fronty procesu, apod.
     proc->state = NTask_State::Runnable;
 
     // pokud byla nastavena "budouci" deadline, nastavime skutecnou deadline
-    if (proc->notified_deadline != Deadline_Unchanged)
+    if (proc->notified_deadline != Deadline_Unchanged) {
         proc->deadline = sTimer.Get_Tick_Count() + proc->notified_deadline;
+    }
     // pozor: tady nesmime mazat budouci deadline - co kdyby byl proces probuzen falesne? (stolen wakeup)
     //        v kernelu by se to sice stavat uplne nemelo, ale co kdybychom se nekde upsali
 
     return true;
 }
 
-uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned int elf_file_length, bool is_system)
-{
+uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned int elf_file_length, bool is_system) {
     CProcess_List_Node* procnode = sKernelMem.Alloc<CProcess_List_Node>();
 
     procnode->next = mProcess_List_Head;
@@ -108,8 +103,9 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
     mProcess_List_Head->prev = procnode;
     mProcess_List_Head = procnode;
 
-    if (!mCurrent_Task_Node)
+    if (!mCurrent_Task_Node) {
         mCurrent_Task_Node = procnode;
+    }
 
     procnode->task = sKernelMem.Alloc<TTask_Struct>();
 
@@ -121,6 +117,7 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
     task->state = NTask_State::New;
     task->deadline = Indefinite; // task si zatim nestanovil deadline, udela to az to bude aktualni v deadline syscallu
     task->notified_deadline = Indefinite;
+    task->page_count = 0;
 
     // lr = co zacit vykonavat po bootstrapu, 0x8000 je misto, kam je relokovany v kazde nasi binarce symbol _start, tedy vstupni bod programu
     //task->cpu_context.lr = 0x8000;
@@ -136,6 +133,7 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
     // alokujeme stranku pro kod a pro zasobnik
     uint32_t code_page_phys = static_cast<unsigned long>(sPage_Manager.Alloc_Page()) - mem::MemoryVirtualBase;
     uint32_t stack_page_phys = static_cast<unsigned long>(sPage_Manager.Alloc_Page()) - mem::MemoryVirtualBase;
+    task->page_count += 2;
     
     // alokujeme tabulku stranek procesu z poolu
     uint32_t* pt = sPT_Alloc.Alloc();
@@ -153,8 +151,7 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
 
     // nakopirujeme kod do kodove stranky, vysledkem nacitani je i PC vstupniho bodu procesu
     const uint32_t elf_pc = CELF_Loader::Load_ELF32_Image(elf_file_data, reinterpret_cast<unsigned char*>(code_page_phys) + mem::MemoryVirtualBase, mem::PageSize);
-    if (elf_pc == CELF_Loader::Invalid_Entry_Point)
-    {
+    if (elf_pc == CELF_Loader::Invalid_Entry_Point) {
         // pokud se nepodarilo nacteni, uvolnime alokovane zdroje a vratime chybu
         sPT_Alloc.Free(pt);
         sPage_Manager.Free_Page(code_page_phys + mem::MemoryVirtualBase);
@@ -172,23 +169,23 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
         | TTBR_Flags::Inner_Cacheable
         | TTBR_Flags::Shared;
 
-    for (uint32_t i = 0; i < Max_Process_Opened_Files; i++)
+    for (uint32_t i = 0; i < Max_Process_Opened_Files; i++) {
         task->opened_files[i] = nullptr;
+    }
 
     return task->pid;
 }
 
-void CProcess_Manager::Schedule()
-{
+void CProcess_Manager::Schedule() {
+
     // projdeme vsechny uspane (sleep) procesy, zda je na case je vzbudit
     {
         CProcess_List_Node* node = mProcess_List_Head;
-        while (node)
-        {
-            if (node->task->state == NTask_State::Interruptable_Sleep)
-            {
-                if (node->task->sleep_timer != Indefinite && node->task->sleep_timer <= sTimer.Get_Tick_Count())
+        while (node) {
+            if (node->task->state == NTask_State::Interruptable_Sleep) {
+                if (node->task->sleep_timer != Indefinite && node->task->sleep_timer <= sTimer.Get_Tick_Count()) {
                     Notify_Process(node->task);
+                }
             }
 
             node = node->next;
@@ -197,25 +194,27 @@ void CProcess_Manager::Schedule()
 
     // invokujeme skutecny planovac
     CProcess_List_Node* next = (this->*mSchedule_Fnc)();
-    if (!next)
+    if (!next) {
         return;
+    }
 
     // tady bychom jeste meli osetrit nejakou hranicni situaci, kdy by nebylo co naplanovat - to se sice nesmi stat a byla by to chyba programatora kernelu,
     // ale kdyby k tomu doslo, obtizne by se to diagnostikovalo
 
     // planovac usoudil, ze ma byt naplanovany proces, ktery zrovna ma CPU pro sebe - nemusime nic menit
-    if (next == mCurrent_Task_Node)
+    if (next == mCurrent_Task_Node) {
         return;
+    }
 
     Switch_To(next);
 }
 
-void CProcess_Manager::Switch_To(CProcess_List_Node* node)
-{
+void CProcess_Manager::Switch_To(CProcess_List_Node* node) {
     // pokud je stavajici proces ve stavu Running (muze teoreticky byt jeste Blocked), vratime ho do stavu Runnable
     // Blocked prehazovat nebudeme ze zjevnych duvodu
-    if (mCurrent_Task_Node->task->state == NTask_State::Running)
+    if (mCurrent_Task_Node->task->state == NTask_State::Running) {
         mCurrent_Task_Node->task->state = NTask_State::Runnable;
+    }
 
     // projistotu vynulujeme prideleny pocet casovych kvant
     mCurrent_Task_Node->task->sched_counter = 0;
@@ -229,26 +228,25 @@ void CProcess_Manager::Switch_To(CProcess_List_Node* node)
     mCurrent_Task_Node->task->state = NTask_State::Running;
 
     // pokud je to poprve, co je proces planovany, musime to vzit jeste pres malou odbocku ("bootstrap")
-    if (is_first_time)
+    if (is_first_time) {
         context_switch_first(&node->task->cpu_context, old);
-    else
+    } else {
         context_switch(&node->task->cpu_context, old);
+    }
 }
 
-uint32_t CProcess_Manager::Map_File_To_Current(IFile* file)
-{
+uint32_t CProcess_Manager::Map_File_To_Current(IFile* file) {
     // TODO: zamek
 
     TTask_Struct* current = Get_Current_Process();
-    if (!current)
+    if (!current) {
         return Invalid_Handle;
+    }
 
     // najdeme volny slot, pokud je
-    for (uint32_t i = 0; i < Max_Process_Opened_Files; i++)
-    {
+    for (uint32_t i = 0; i < Max_Process_Opened_Files; i++) {
         // volny slot - namapujeme soubor a vracime handle (index do tabulky)
-        if (current->opened_files[i] == nullptr)
-        {
+        if (current->opened_files[i] == nullptr) {
             current->opened_files[i] = file;
             return i;
         }
@@ -258,27 +256,41 @@ uint32_t CProcess_Manager::Map_File_To_Current(IFile* file)
     return Invalid_Handle;
 }
 
-bool CProcess_Manager::Unmap_File_Current(uint32_t handle)
-{
+bool CProcess_Manager::Unmap_File_Current(uint32_t handle) {
     TTask_Struct* current = Get_Current_Process();
-    if (!current || handle >= Max_Process_Opened_Files)
+    if (!current || handle >= Max_Process_Opened_Files) {
         return false;
+    }
 
-    if (!current->opened_files[handle])
+    if (!current->opened_files[handle]) {
         return false;
+    }
 
     current->opened_files[handle] = nullptr;
     return true;
 }
 
-void CProcess_Manager::Handle_Process_SWI(NSWI_Process_Service svc_idx, uint32_t r0, uint32_t r1, uint32_t r2, TSWI_Result& target)
-{
-    // TODO: signalizace chyby
-    if (!mCurrent_Task_Node)
+void CProcess_Manager::Close_All_Files(TTask_Struct* task) {
+    if (!task) {
         return;
+    }
 
-    switch (svc_idx)
-    {
+    for (uint32_t i = 0; i < Max_Process_Opened_Files; i++) {
+        if (task->opened_files[i]) {
+            task->opened_files[i]->Close();
+            task->opened_files[i] = nullptr;
+        }
+    }
+}
+
+void CProcess_Manager::Handle_Process_SWI(NSWI_Process_Service svc_idx, uint32_t r0, uint32_t r1, uint32_t r2, TSWI_Result& target) {
+
+    // TODO: signalizace chyby
+    if (!mCurrent_Task_Node) {
+        return;
+    }
+
+    switch (svc_idx) {
         case NSWI_Process_Service::Get_PID:
             target.r0 = mCurrent_Task_Node->task->pid;
             break;
@@ -286,6 +298,7 @@ void CProcess_Manager::Handle_Process_SWI(NSWI_Process_Service svc_idx, uint32_t
             mCurrent_Task_Node->task->sched_counter = 1;
             mCurrent_Task_Node->task->state = NTask_State::Zombie;
             mCurrent_Task_Node->task->exit_code = r0;
+            Close_All_Files(mCurrent_Task_Node->task);
             Schedule();
             break;
         case NSWI_Process_Service::Yield:
@@ -301,12 +314,10 @@ void CProcess_Manager::Handle_Process_SWI(NSWI_Process_Service svc_idx, uint32_t
         case NSWI_Process_Service::Get_Sched_Info:
             Get_Scheduler_Info(static_cast<NGet_Sched_Info_Type>(r0), reinterpret_cast<void*>(r1));
             break;
-        case NSWI_Process_Service::Deadline:
-        {
+        case NSWI_Process_Service::Deadline: {
             NDeadline_Subservice dtype = static_cast<NDeadline_Subservice>(r0);
             uint32_t* r1ptr = reinterpret_cast<uint32_t*>(r1);
-            switch (dtype)
-            {
+            switch (dtype) {
                 case NDeadline_Subservice::Set_Relative:
                     mCurrent_Task_Node->task->deadline = ((*r1ptr == Indefinite) ? Indefinite : (sTimer.Get_Tick_Count() + *r1ptr));
                     mCurrent_Task_Node->task->notified_deadline = Indefinite;
@@ -321,88 +332,88 @@ void CProcess_Manager::Handle_Process_SWI(NSWI_Process_Service svc_idx, uint32_t
     }
 }
 
-void CProcess_Manager::Handle_Filesystem_SWI(NSWI_Filesystem_Service svc_idx, uint32_t r0, uint32_t r1, uint32_t r2, TSWI_Result& target)
-{
-    // TODO: signalizace chyby
-    if (!mCurrent_Task_Node)
-        return;
+void CProcess_Manager::Handle_Filesystem_SWI(NSWI_Filesystem_Service svc_idx, uint32_t r0, uint32_t r1, uint32_t r2, TSWI_Result& target) {
 
-    switch (svc_idx)
-    {
-        case NSWI_Filesystem_Service::Open:
-        {
+    // TODO: signalizace chyby
+    if (!mCurrent_Task_Node) {
+        return;
+    }
+
+    switch (svc_idx) {
+        case NSWI_Filesystem_Service::Open: {
             target.r0 = Invalid_Handle;
 
             IFile* f = sFilesystem.Open(reinterpret_cast<const char*>(r0), static_cast<NFile_Open_Mode>(r1));
-            if (!f)
+            if (!f) {
                 return;
+            }
 
             target.r0 = Map_File_To_Current(f);
 
             // nepodarilo se namapovat, napr. proto, ze jsme dosahli limitu otevrenych souboru
-            if (target.r0 == Invalid_Handle)
-            {
+            if (target.r0 == Invalid_Handle) {
                 f->Close();
                 delete f;
             }
             break;
         }
-        case NSWI_Filesystem_Service::Read:
-        {
+        case NSWI_Filesystem_Service::Read: {
             target.r0 = 0;
 
-            if (r0 > Max_Process_Opened_Files || !mCurrent_Task_Node->task->opened_files[r0])
+            if (r0 > Max_Process_Opened_Files || !mCurrent_Task_Node->task->opened_files[r0]) {
                 return;
+            }
 
             target.r0 = mCurrent_Task_Node->task->opened_files[r0]->Read(reinterpret_cast<char*>(r1), r2);
             break;
         }
-        case NSWI_Filesystem_Service::Write:
-        {
+        case NSWI_Filesystem_Service::Write: {
             target.r0 = 0;
 
-            if (r0 > Max_Process_Opened_Files || !mCurrent_Task_Node->task->opened_files[r0])
+            if (r0 > Max_Process_Opened_Files || !mCurrent_Task_Node->task->opened_files[r0]) {
                 return;
+            }
 
             target.r0 = mCurrent_Task_Node->task->opened_files[r0]->Write(reinterpret_cast<const char*>(r1), r2);
             break;
         }
-        case NSWI_Filesystem_Service::Close:
-        {
-            if (r0 > Max_Process_Opened_Files || !mCurrent_Task_Node->task->opened_files[r0])
+        case NSWI_Filesystem_Service::Close: {
+            if (r0 > Max_Process_Opened_Files || !mCurrent_Task_Node->task->opened_files[r0]) {
                 return;
+            }
 
             target.r0 = mCurrent_Task_Node->task->opened_files[r0]->Close();
             Unmap_File_Current(r0);
 
             break;
         }
-        case NSWI_Filesystem_Service::IOCtl:
-        {
-            if (r0 > Max_Process_Opened_Files || !mCurrent_Task_Node->task->opened_files[r0])
+        case NSWI_Filesystem_Service::IOCtl: {
+            if (r0 > Max_Process_Opened_Files || !mCurrent_Task_Node->task->opened_files[r0]) {
                 return;
+            }
 
             target.r0 = mCurrent_Task_Node->task->opened_files[r0]->IOCtl(static_cast<NIOCtl_Operation>(r1), reinterpret_cast<void*>(r2));
             break;
         }
-        case NSWI_Filesystem_Service::Notify:
-        {
-            if (r0 > Max_Process_Opened_Files || !mCurrent_Task_Node->task->opened_files[r0])
+        case NSWI_Filesystem_Service::Notify: {
+            if (r0 > Max_Process_Opened_Files || !mCurrent_Task_Node->task->opened_files[r0]) {
                 return;
+            }
 
             target.r0 = mCurrent_Task_Node->task->opened_files[r0]->Notify(r1);
             break;
         }
-        case NSWI_Filesystem_Service::Wait:
-        {
-            if (r0 > Max_Process_Opened_Files || !mCurrent_Task_Node->task->opened_files[r0])
+        case NSWI_Filesystem_Service::Wait: {
+            if (r0 > Max_Process_Opened_Files || !mCurrent_Task_Node->task->opened_files[r0]) {
                 return;
+            }
 
             mCurrent_Task_Node->task->notified_deadline = r2;
 
             // nastavme deadline, kdyby Wait nahodou neblokoval
-            if (r2 != Deadline_Unchanged)
+            if (r2 != Deadline_Unchanged) {
                 mCurrent_Task_Node->task->deadline = r2;
+            }
 
             target.r0 = mCurrent_Task_Node->task->opened_files[r0]->Wait(r1);
 
@@ -489,22 +500,19 @@ void CProcess_Manager::Handle_WaitAll_SWI(uint32_t r0, uint32_t r1, uint32_t r2,
     task->notified_deadline = Deadline_Unchanged;
 }
 
-
-bool CProcess_Manager::Get_Scheduler_Info(NGet_Sched_Info_Type type, void* target)
-{
-    if (!target)
+bool CProcess_Manager::Get_Scheduler_Info(NGet_Sched_Info_Type type, void* target) {
+    if (!target) {
         return false;
+    }
 
-    switch (type)
-    {
-        case NGet_Sched_Info_Type::Active_Process_Count:
-        {
+    switch (type) {
+        case NGet_Sched_Info_Type::Active_Process_Count: {
             CProcess_List_Node* node = mProcess_List_Head;
             uint32_t procCnt = 0;
-            while (node)
-            {
-                if (node->task->state == NTask_State::Running || node->task->state == NTask_State::Runnable)
+            while (node) {
+                if (node->task->state == NTask_State::Running || node->task->state == NTask_State::Runnable) {
                     procCnt++;
+                }
 
                 node = node->next;
             }
@@ -512,9 +520,37 @@ bool CProcess_Manager::Get_Scheduler_Info(NGet_Sched_Info_Type type, void* targe
             *reinterpret_cast<uint32_t*>(target) = procCnt;
             break;
         }
-        case NGet_Sched_Info_Type::Tick_Count:
-        {
+        case NGet_Sched_Info_Type::Tick_Count: {
             *reinterpret_cast<uint32_t*>(target) = sTimer.Get_Tick_Count();
+            break;
+        }
+        case NGet_Sched_Info_Type::Process_Summary: {
+            CProcess_List_Node* node = mProcess_List_Head;
+            uint32_t procCnt = 0;
+
+            CProcess_Summary_Info *sum = reinterpret_cast<CProcess_Summary_Info*>(target);
+            bzero(sum, sizeof(CProcess_Summary_Info));
+
+            while (node) {
+                switch (node->task->state) {
+                    case NTask_State::Running:
+                    case NTask_State::Runnable:
+                        sum->running++;
+                        break;
+                    case NTask_State::Blocked:
+                    case NTask_State::Interruptable_Sleep:
+                        sum->blocked++;
+                        break;
+                    case NTask_State::Zombie:
+                        sum->zombie++;
+                        break;
+                    default:
+                        break;
+                }
+
+                sum->total++;
+                node = node->next;
+            }
             break;
         }
         default:
@@ -522,4 +558,28 @@ bool CProcess_Manager::Get_Scheduler_Info(NGet_Sched_Info_Type type, void* targe
     }
 
     return true;
+}
+
+uint32_t CProcess_Manager::Get_Page_Count() {
+    CProcess_List_Node* node = mProcess_List_Head;
+    uint32_t c = 0;
+    while (node != nullptr) {
+        c += node->task->page_count;
+        node = node->next;
+    }
+
+    return c;
+}
+
+uint32_t CProcess_Manager::Get_File_Count() {
+    CProcess_List_Node* node = mProcess_List_Head;
+    uint32_t c = 0;
+    while (node != nullptr) {
+        for (int i = 0; i < Max_Process_Opened_Files; i++) {
+            if (node->task->opened_files[i] != nullptr) c++;
+        }
+        node = node->next;
+    }
+
+    return c;
 }

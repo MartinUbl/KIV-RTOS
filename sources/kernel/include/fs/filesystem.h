@@ -14,18 +14,17 @@ constexpr const uint32_t NoFilesystemDriver = static_cast<uint32_t>(-1);
 
 constexpr const uint32_t NotifyAll = static_cast<uint32_t>(-1);
 
-enum class NFile_Type_Major
-{
+enum class NFile_Type_Major {
     Unspecified     = 0, // unspecified by implementor
     Character       = 1, // memory-only character file
     Mutex           = 2, // mutex virtual file
     Semaphore       = 3, // semaphore virtual file
     Condition_Var   = 4, // podminkova promenna
     Pipe            = 5, // roura
+    Broadcast       = 6, // broadcast channel
 };
 
-enum class NFile_Open_Mode
-{
+enum class NFile_Open_Mode {
     Read_Only,              // jen pro cteni
     Write_Only,             // jen pro zapis
     Read_Write,             // cteni i zapis
@@ -44,13 +43,11 @@ enum class NFile_Open_Mode
  * priklad: DEV:gpio/12, DEV:uart0, MNT:sd/config.txt
  */
 
-class IFile
-{
+class IFile {
     private:
         const NFile_Type_Major mType;
 
-        struct TWaiting_Task
-        {
+        struct TWaiting_Task {
             uint32_t pid;
             TWaiting_Task* next;
             TWaiting_Task* prev;
@@ -61,7 +58,9 @@ class IFile
         spinlock_t mWait_Lock;
 
     public:
-        IFile(NFile_Type_Major type) : mType(type) { spinlock_init(&mWait_Lock); };
+        IFile(NFile_Type_Major type) : mType(type) {
+            spinlock_init(&mWait_Lock);
+        };
         virtual ~IFile() = default;
 
         // cte ze souboru do bufferu, num je velikost bufferu (maximalni pocet bytu k precteni); vraci skutecne precteny pocet znaku
@@ -88,12 +87,11 @@ class IFile
 
     // zjisti typ souboru
         NFile_Type_Major Get_File_Type() const { return mType; };
-        
+
         // TODO: seek, atd...
 };
 
-class IFilesystem_Driver
-{
+class IFilesystem_Driver {
     public:
         // vola se v momente, kdy se inicializuje souborovy system
         virtual void On_Register() = 0;
@@ -101,12 +99,10 @@ class IFilesystem_Driver
         virtual IFile* Open_File(const char* path, NFile_Open_Mode mode) = 0;
 };
 
-class CFilesystem
-{
+class CFilesystem {
     private:
         // uzel filesystemu, ktery neni spravovan zadnym FS driverem
-        struct TFS_Tree_Node
-        {
+        struct TFS_Tree_Node {
             char name[MaxFilenameLength];
 
             bool isDirectory = false;
@@ -125,8 +121,7 @@ class CFilesystem
         };
 
         // struktura FS driveru
-        struct TFS_Driver
-        {
+        struct TFS_Driver {
             // nazev driveru (pro interni ucely)
             char name[MaxFSDriverNameLength];
             // mountpoint - delame trochu hybrid fstab/mtab, vsechno budeme mountovat predem
@@ -147,6 +142,7 @@ class CFilesystem
         TFS_Tree_Node mRoot_Dev;
         TFS_Tree_Node mRoot_Sys;
         TFS_Tree_Node mRoot_Mnt;
+        TFS_Tree_Node mRoot_Proc;
 
     public:
         CFilesystem();

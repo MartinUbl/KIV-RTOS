@@ -1,7 +1,110 @@
 #include "peripherals.h"
 
-int loader_main(void)
-{
+#define BINCMD_SET_CURSOR  0x01
+#define BINCMD_WRITE       0x02
+#define BINCMD_WRITE_ZERO  0x03
+#define BINCMD_SET_ENTRY   0x04
+#define BINCMD_GO          0x05
+#define BINCMD_SET_BAUD    0x06
+#define BINARY_ACK         'K'
+#define AUX_MU_BAUD_REG    0x20215068
+
+static unsigned int uart_recv_u16be(void) {
+    unsigned int v;
+
+    v = uart_recv() & 0xFF;
+    v <<= 8;
+    v |= uart_recv() & 0xFF;
+
+    return v;
+}
+
+static unsigned int uart_recv_u32be(void) {
+    unsigned int v;
+
+    v = uart_recv() & 0xFF;
+    v <<= 8;
+    v |= uart_recv() & 0xFF;
+    v <<= 8;
+    v |= uart_recv() & 0xFF;
+    v <<= 8;
+    v |= uart_recv() & 0xFF;
+
+    return v;
+}
+
+static int uart_recv_binary_upgrade(void) {
+    if (uart_recv() != 'B') {
+        return 0;
+    }
+    if (uart_recv() != 'I') {
+        return 0;
+    }
+    if (uart_recv() != 'N') {
+        return 0;
+    }
+    if (uart_recv() != '1') {
+        return 0;
+    }
+
+    return 1;
+}
+
+static void uart_set_baud_divisor(unsigned int divisor) {
+    PUT32(AUX_MU_BAUD_REG, divisor);
+}
+
+static unsigned int write_uart_data(unsigned int addr, unsigned int count) {
+    unsigned int data;
+
+    while ((addr & 3) && count > 0) {
+        PUT8(addr, uart_recv());
+        addr++;
+        count--;
+    }
+
+    while (count >= 4) {
+        data = uart_recv() & 0xFF;
+        data |= (uart_recv() & 0xFF) << 8;
+        data |= (uart_recv() & 0xFF) << 16;
+        data |= (uart_recv() & 0xFF) << 24;
+        PUT32(addr, data);
+        addr += 4;
+        count -= 4;
+    }
+
+    while (count > 0) {
+        PUT8(addr, uart_recv());
+        addr++;
+        count--;
+    }
+
+    return addr;
+}
+
+static unsigned int write_zeroes(unsigned int addr, unsigned int count) {
+    while ((addr & 3) && count > 0) {
+        PUT8(addr, 0);
+        addr++;
+        count--;
+    }
+
+    while (count >= 4) {
+        PUT32(addr, 0);
+        addr += 4;
+        count -= 4;
+    }
+
+    while (count > 0) {
+        PUT8(addr, 0);
+        addr++;
+        count--;
+    }
+
+    return addr;
+}
+
+int loader_main(void) {
     unsigned int state;
     unsigned int ra;
     unsigned int type;
@@ -16,6 +119,10 @@ int loader_main(void)
     uart_send('R');
     uart_send('E');
     uart_send('C');
+    uart_send('-');
+    uart_send('2');
+    uart_send('0');
+    uart_send('0');
     uart_send(0x0D);
     uart_send(0x0A);
 
@@ -28,74 +135,121 @@ int loader_main(void)
 
     entry = 0x00008000;
 
-    while (1)
-    {
+    while (1) {
         ra = uart_recv();
-        switch (state)
-        {
-            case 0:
-            {
+        switch (state) {
+            case 0: {
                 // S = ridici kod formatu SREC - nasleduje zbytek prikazu
-                if (ra == 'S')
-                {
+                if (ra == 'S') {
                     short_blink();
                     sum = 0;
                     state++;
                 }
                 // G = ridici kod protokolu - nastartuje nahravany program
-                else if (ra == 'g' || ra == 'G')
-                {
+                else if (ra == 'g' || ra == 'G') {
                     uart_flush();
                     BRANCHTO(entry);
                 }
                 // P = ridici kod protokolu, overuje, zda se bootloader nacetl, zablika ACT LEDkou
-                else if (ra == 'p' || ra == 'P')
-                {
+                else if (ra == 'p' || ra == 'P') {
                     blink();
+                }
+                // U = ridici kod protokolu - prepnuti do binarniho rezimu prenosu
+                else if (ra == 'U') {
+                    if (!uart_recv_binary_upgrade()) {
+                        failstring(3);
+                        return 1;
+                    }
+                    state = 100;
+                    uart_send(BINARY_ACK);
                 }
                 break;
             }
-            case 1:
-            {
-                switch (ra)
-                {
-                    case '0':           // S0 = inicializacni retezec - ignorujeme vse co nasleduje
-                    {
+            case 100: {
+                switch (ra) {
+                    case BINCMD_SET_CURSOR: {
+                        addr = uart_recv_u32be();
+                        short_blink();
+                        uart_send(BINARY_ACK);
+                        break;
+                    }
+                    case BINCMD_WRITE: {
+                        count = uart_recv_u16be();
+                        addr = write_uart_data(addr, count);
+                        short_blink();
+                        uart_send(BINARY_ACK);
+                        break;
+                    }
+                    case BINCMD_WRITE_ZERO: {
+                        count = uart_recv_u16be();
+                        addr = write_zeroes(addr, count);
+                        short_blink();
+                        uart_send(BINARY_ACK);
+                        break;
+                    }
+                    case BINCMD_SET_ENTRY: {
+                        entry = uart_recv_u32be();
+                        uart_send(BINARY_ACK);
+                        break;
+                    }
+                    case BINCMD_GO:
+                    case 'g':
+                    case 'G': {
+                        uart_flush();
+                        BRANCHTO(entry);
+                        break;
+                    }
+                    case BINCMD_SET_BAUD: {
+                        data = uart_recv_u16be();
+                        uart_send(BINARY_ACK);
+                        uart_flush();
+                        uart_set_baud_divisor(data);
+                        break;
+                    }
+                    case 'p':
+                    case 'P': {
+                        blink();
+                        break;
+                    }
+                    default: {
+                        failstring(4);
+                        return 1;
+                    }
+                }
+                break;
+            }
+            case 1: {
+                switch (ra) {
+                    case '0': {         // S0 = inicializacni retezec - ignorujeme vse co nasleduje
                         state = 0;
                         break;
                     }
-                    case '3':           // S3 = datova zprava - prijmeme a zapiseme do pameti
-                    {
+                    case '3': {         // S3 = datova zprava - prijmeme a zapiseme do pameti
                         type = 3;
                         state++;
                         break;
                     }
-                    case '7':           // S7 = ukonceni nahravani, spusteni nove nahraneho programu
-                    {
+                    case '7': {         // S7 = ukonceni nahravani, spusteni nove nahraneho programu
                         type = 7;
                         state++;
                         break;
                     }
-                    default:            // neznamy S-kod
-                    {
+                    default: {          // neznamy S-kod
                         failstring(0);
                         return 1;
                     }
                 }
                 break;
             }
-            case 2:
-            {
+            case 2: {
                 count = ctonib(ra);
                 state++;
                 break;
             }
-            case 3:
-            {
+            case 3: {
                 count <<= 4;
                 count |= ctonib(ra);
-                if (count < 5)
-                {
+                if (count < 5) {
                     failstring(1);
                     return 1;
                 }
@@ -108,8 +262,7 @@ int loader_main(void)
             case  4:
             case  6:
             case  8:
-            case 10:
-            {
+            case 10: {
                 addr <<= 4;
                 addr |= ctonib(ra);
                 state++;
@@ -117,8 +270,7 @@ int loader_main(void)
             }
             case  5:
             case  7:
-            case  9:
-            {
+            case  9: {
                 count--;
                 addr <<= 4;
                 addr |= ctonib(ra);
@@ -126,8 +278,7 @@ int loader_main(void)
                 state++;
                 break;
             }
-            case 11:
-            {
+            case 11: {
                 count--;
                 addr <<= 4;
                 addr |= ctonib(ra);
@@ -135,33 +286,28 @@ int loader_main(void)
                 state++;
                 break;
             }
-            case 12:
-            {
+            case 12: {
                 data = ctonib(ra);
                 state++;
                 break;
             }
-            case 13:
-            {
+            case 13: {
                 data <<= 4;
                 data |= ctonib(ra);
                 sum += data&0xFF;
                 count--;
-                if (count == 0)
-                {
-                    if (type == 7)
+                if (count == 0) {
+                    if (type == 7) {
                         entry = addr;
+                    }
 
                     sum &= 0xFF;
-                    if (sum != 0xFF)
-                    {
+                    if (sum != 0xFF) {
                         failstring(2);
                         return 1;
                     }
                     state = 0;
-                }
-                else
-                {
+                } else {
                     PUT8(addr,data);
                     addr++;
                     state = 12;

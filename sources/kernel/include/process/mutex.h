@@ -5,8 +5,7 @@
 
 #include "spinlock.h"
 
-class CMutex : public IFile
-{
+class CMutex : public IFile {
     private:
         // kdo aktualne drzi mutex?
         unsigned int mHolder_PID = 0;

@@ -2,8 +2,7 @@
 
 #include <hal/peripherals.h>
 
-class CInterrupt_Controller
-{
+class CInterrupt_Controller {
     private:
         // baze pro registry radice preruseni
         volatile unsigned int* mInterrupt_Regs;
@@ -28,8 +27,7 @@ class CInterrupt_Controller
         void Set_Mask_IRQ(bool state);
 };
 
-class CIRQ_Mask_Guard
-{
+class CIRQ_Mask_Guard {
     private:
         static unsigned int gMask_Counter;
 

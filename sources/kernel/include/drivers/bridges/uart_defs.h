@@ -1,13 +1,11 @@
 #pragma once
 
-enum class NUART_Char_Length
-{
+enum class NUART_Char_Length {
     Char_7 = 0,
     Char_8 = 1,
 };
 
-enum class NUART_Baud_Rate
-{
+enum class NUART_Baud_Rate {
     BR_1200     = 1200,
     BR_2400     = 2400,
     BR_4800     = 4800,
@@ -18,9 +16,14 @@ enum class NUART_Baud_Rate
     BR_115200   = 115200,
 };
 
+enum class NUART_Blocking_State {
+    Blocking     = 0,
+    Non_Blocking = 1,
+};
+
 // parametry UARTu pro prenos skrz IOCTL rozhrani
-struct TUART_IOCtl_Params
-{
+struct TUART_IOCtl_Params {
     NUART_Char_Length char_length;
     NUART_Baud_Rate baud_rate;
+    NUART_Blocking_State blocking_state;
 };

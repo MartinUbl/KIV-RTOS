@@ -6,7 +6,7 @@ CSegment_Display sSegment_Display;
  * znaky jsou definovany sekvenci bitu, ktere reprezentuji, zda ma dany segment svitit (1) nebo ne (0)
  * ve skutecnosti maji segmenty na headeru spolecnou katodu, takze je to fyzicky obracene, ale to zajima az kod ktery to tam posila
  * 
- * Indexy bitu:
+ * Indexy bitu (KIV-DPP-01):
  * 
  *       7
  *      ---- 
@@ -16,6 +16,17 @@ CSegment_Display sSegment_Display;
  *   6 |    | 2
  *     | 3  |
  *      ----   . 5
+ * 
+ * Indexy bitu (KIV-DPP-02):
+ * 
+ *       0
+ *      ---- 
+ *   3 |    | 7
+ *     | 2  |
+ *      ---- 
+ *   4 |    | 6
+ *     | 5  |
+ *      ----   . 1
  */
 const uint8_t CSegment_Display::mCharacter_Map[128 - 32] = {
     0b11111111, // mezera
@@ -34,6 +45,18 @@ const uint8_t CSegment_Display::mCharacter_Map[128 - 32] = {
     0, // -
     0, // .
     0, // /
+#if USE_EXPANSION_BOARD == KIVDPP02 // KIV-DPP-02 - spolecna katoda
+    0b00000110, // 0
+    0b00111111, // 1
+    0b01001010, // 2
+    0b00011010, // 3
+    0b00110011, // 4
+    0b10010010, // 5
+    0b10000010, // 6
+    0b00111110, // 7
+    0b00000010, // 8
+    0b00010010, // 9
+#elif USE_EXPANSION_BOARD == KIVDPP01 // KIV-DPP-01 - spolecna anoda
     0b11011110, // 0
     0b00010100, // 1
     0b11011001, // 2
@@ -44,6 +67,18 @@ const uint8_t CSegment_Display::mCharacter_Map[128 - 32] = {
     0b10010100, // 7
     0b11011111, // 8
     0b10011111, // 9
+#else
+    0, // 0
+    0, // 1
+    0, // 2
+    0, // 3
+    0, // 4
+    0, // 5
+    0, // 6
+    0, // 7
+    0, // 8
+    0, // 9
+#endif
     0, // :
     0, // ;
     0, // <
@@ -121,58 +156,59 @@ const uint8_t CSegment_Display::mCharacter_Map[128 - 32] = {
 };
 
 CSegment_Display::CSegment_Display()
-    : mOpened(false), mOutput('\0')
-{
+    : mOpened(false), mOutput('\0') {
     //
 }
 
-bool CSegment_Display::Open()
-{
-    if (mOpened)
+bool CSegment_Display::Open() {
+    if (mOpened) {
         return false;
+    }
 
-    if (!sShift_Register.Open())
+    if (!sShift_Register.Open()) {
         return false;
+    }
 
     mOpened = true;
 
     return true;
 }
 
-void CSegment_Display::Close()
-{
-    if (!mOpened)
+void CSegment_Display::Close() {
+    if (!mOpened) {
         return;
+    }
 
     sShift_Register.Close();
 
     mOpened = false;
 }
 
-bool CSegment_Display::Is_Opened() const
-{
+bool CSegment_Display::Is_Opened() const {
     return mOpened;
 }
 
-void CSegment_Display::Write(char c)
-{
-    if (!mOpened)
+void CSegment_Display::Write(char c) {
+    if (!mOpened) {
         return;
+    }
 
     uint8_t idx = static_cast<uint8_t>(c);
 
     // jen tisknutelne zakladni znaky
-    if (idx < 32 || idx >= 128)
+    if (idx < 32 || idx >= 128) {
         return;
+    }
 
     // segmenty jsou invertovane (spolecna katoda), takze tam kde je 0 bude segment svitit
+    // to ale neni problem posuvneho registru, takze invertujeme zde
     sShift_Register.Shift_In(static_cast<uint8_t>(~(mCharacter_Map[idx - 32])));
 }
 
-char CSegment_Display::Read() const
-{
-    if (!mOpened)
+char CSegment_Display::Read() const {
+    if (!mOpened) {
         return '\0';
+    }
 
     return mOutput;
 }

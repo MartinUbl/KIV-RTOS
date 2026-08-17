@@ -3,15 +3,13 @@
 #include <hal/intdef.h>
 
 // tohle budeme vracet z kernelovskych handleru preruseni - asm kod to pak prekopiruje do registru
-struct TSWI_Result
-{
+struct TSWI_Result {
     uint32_t r0;
     uint32_t r1;
 };
 
 // genericke navratove kody, specificke si resi kazda facility po svem
-enum class NSWI_Result_Code
-{
+enum class NSWI_Result_Code {
     OK      = 0,
     Fail    = 1,
 };
@@ -19,16 +17,14 @@ enum class NSWI_Result_Code
 // instrukce SWI ma 1B parametr (v rozsahu 0-255)
 
 // parametr volani SWI - horni 2 bity
-enum class NSWI_Facility
-{
+enum class NSWI_Facility {
     Process         = 0b00,
     Filesystem      = 0b01,
 };
 
 // zbyva dolnich 6 bitu, tzn. 2^6 (64) moznych sluzeb v ramci faciity
 
-enum class NSWI_Process_Service
-{
+enum class NSWI_Process_Service {
     // Vraci PID procesu
     // IN:  -
     // OUT: r0 = PID procesu
@@ -60,8 +56,7 @@ enum class NSWI_Process_Service
     Deadline        = 5,
 };
 
-enum class NSWI_Filesystem_Service
-{
+enum class NSWI_Filesystem_Service {
     // Otevre soubor
     // IN:  r0 = ukazatel na retezec identifikujici soubor, r1 = rezim otevreni souboru
     // OUT: r0 = handle otevreneho souboru nebo Invalid_Handle
@@ -104,10 +99,9 @@ enum class NSWI_Filesystem_Service
 };
 
 // mozne IOCtl operace nad souborem
-enum class NIOCtl_Operation
-{
-    Get_Params      = 0,        // zjisti parametry (nakopiruje do poskytnute prepravky)
-    Set_Params      = 1,        // nastavi parametry (z poskytnute prepravky)
+enum class NIOCtl_Operation {
+    Get_Params      = 0,            // zjisti parametry (nakopiruje do poskytnute prepravky)
+    Set_Params      = 1,            // nastavi parametry (z poskytnute prepravky)
     Enable_Event_Detection  = 2,    // povoli detekci udalosti (specifikovanych v r2)
     Disable_Event_Detection = 3,    // zakaze detekci udalosti (specifikovanych v r2)
 };

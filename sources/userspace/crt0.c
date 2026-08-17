@@ -6,14 +6,13 @@ extern int main(int argc, char** argv);
 extern unsigned int __bss_start;
 extern unsigned int __bss_end;
 
-void __crt0_init_bss()
-{
-    for (unsigned int* cur = &__bss_start; cur < &__bss_end; cur++)
+void __crt0_init_bss() {
+    for (unsigned int* cur = &__bss_start; cur < &__bss_end; cur++) {
         *cur = 0;
+    }
 }
 
-void __crt0_run()
-{
+void __crt0_run() {
     // inicializace .bss sekce (vynulovani)
     __crt0_init_bss();
 

@@ -3,8 +3,7 @@
 #include <hal/intdef.h>
 #include "memmap.h"
 
-class CPage_Manager
-{
+class CPage_Manager {
     private:
         uint8_t mPage_Bitmap[mem::PageCount / 8];
 

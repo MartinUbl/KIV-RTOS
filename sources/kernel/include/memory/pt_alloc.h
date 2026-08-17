@@ -6,8 +6,7 @@
 // alokator tabulek stranek pro procesy - udrzuje pool tabulek stranek, ktere prideluje procesum na pozadani
 // spravuje alokaci pomoci bitmapy
 
-class CPage_Table_Allocator
-{
+class CPage_Table_Allocator {
     private:
         // velikost tabulky stranek v bytech
         static constexpr uint32_t PT_Size_Bytes = (PT_Size * sizeof(uint32_t));

@@ -4,8 +4,7 @@
 #include <drivers/gpio.h>
 
 // driver pro posuvny registr 74HC595N (a kupu jinych kompatibilnich)
-class CShift_Register
-{
+class CShift_Register {
     private:
         // pin pro flip interni pameti registru
         uint32_t mLatch_Pin;
