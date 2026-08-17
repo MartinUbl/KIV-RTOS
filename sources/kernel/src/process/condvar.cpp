@@ -29,6 +29,16 @@ bool CCondition_Variable::Wait(uint32_t count) {
     return true;
 }
 
+bool CCondition_Variable::TryWaitAllReserve(uint32_t count) {
+    mMutex->Unlock();
+    return false;
+}
+
+bool CCondition_Variable::WaitAllAcquire(uint32_t count) {
+    mMutex->Lock();
+    return true;
+}
+
 uint32_t CCondition_Variable::Notify(uint32_t count) {
     return IFile::Notify(count);
 }

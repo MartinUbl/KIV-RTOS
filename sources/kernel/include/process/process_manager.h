@@ -80,7 +80,7 @@ class CProcess_Manager {
         // blokuje soucasny proces (zatim v generickem stavu "Blocked"), preplanuje na jiny proces
         void Block_Current_Process();
         // notifikuje blokovany proces (napr. spici nad mutexem, souborem, ...)
-        bool Notify_Process(uint32_t pid);
+        bool Notify_Process(uint32_t pid, IFile* notifier_file);
 
         // namapuje otevreny soubor na handle
         uint32_t Map_File_To_Current(IFile* file);
@@ -98,6 +98,10 @@ class CProcess_Manager {
 
         // ziska info z planovace
         bool Get_Scheduler_Info(NGet_Sched_Info_Type type, void* target);
+
+        // zpracuje WaitAll syscall
+        void Handle_WaitAll_SWI(uint32_t r0, uint32_t r1, uint32_t r2, TSWI_Result &target);
+
         // ziska celkovy pocet alokovanch stranek tasky
         uint32_t Get_Page_Count();
         // ziska celkovy pocet otevrenyh souboru

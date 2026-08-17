@@ -58,10 +58,20 @@ void CProcess_Manager::Block_Current_Process() {
     Schedule();
 }
 
-bool CProcess_Manager::Notify_Process(uint32_t pid) {
+bool CProcess_Manager::Notify_Process(uint32_t pid, IFile* notifier_file) {
     TTask_Struct* task = Get_Process_By_PID(pid);
     if (!task || task->state != NTask_State::Blocked) {
         return false;
+    }
+
+    // pokud task ceka pomoci WaitAll na vice souboru, je treba ulozit, ze ktereho souboru prisla notifikace
+    if (task->is_multi_file_wait) {
+        for (uint32_t i = 0; i < Max_Process_Opened_Files; i++) {
+            if (task->opened_files[i] == notifier_file) {
+                task->multi_wait_ready_fd = i;
+                break;
+            }
+        }
     }
 
     return Notify_Process(task);
@@ -411,7 +421,83 @@ void CProcess_Manager::Handle_Filesystem_SWI(NSWI_Filesystem_Service svc_idx, ui
             mCurrent_Task_Node->task->notified_deadline = Deadline_Unchanged;
             break;
         }
+        case NSWI_Filesystem_Service::WaitAll:
+        {
+            Handle_WaitAll_SWI(r0, r1, r2, target);
+            break;
+        }
     }
+}
+
+void CProcess_Manager::Handle_WaitAll_SWI(uint32_t r0, uint32_t r1, uint32_t r2, TSWI_Result &target)
+{
+    target.r0 = Invalid_Handle;
+
+    uint32_t *handles = reinterpret_cast<uint32_t *>(r0);
+    uint32_t handle_count = r1;
+
+    if (handle_count == 0 || handles == nullptr)
+        return;
+
+    TTask_Struct *task = mCurrent_Task_Node->task;
+
+    for (uint32_t i = 0; i < handle_count; i++) {
+        if (handles[i] >= Max_Process_Opened_Files || !task->opened_files[handles[i]])
+            return;
+    }
+
+    // nastaveni deadline, kdyby nahodou nejaky soubor už byl ready
+    task->notified_deadline = r2;
+    if (r2 != Deadline_Unchanged)
+        task->deadline = r2;
+
+    // nejprve zkusime, zda neni nektery ze souboru jiz pripraven - pokud ano, vratime hned jeho handle a nebudeme blokovat process
+    for (uint32_t i = 0; i < handle_count; i++) {
+        if (task->opened_files[handles[i]]->TryWaitAllReserve(1)) {
+            target.r0 = handles[i];
+            task->multi_wait_ready_fd = handles[i];
+            return;
+        }
+    }
+
+    // Pokud dosud nebyl zadny soubor pripraven, aktualni process se ke vsem souborum zaregistruje do seznamu cekajicich procesu, a proces se zablokuje
+    task->is_multi_file_wait = true;
+    task->multi_wait_ready_fd = Invalid_Handle;
+    task->multi_wait_fd_bitmap = 0;
+
+    for (uint32_t i = 0; i < handle_count; i++) {
+        task->multi_wait_fd_bitmap |= (1 << handles[i]);
+        task->opened_files[handles[i]]->Wait_Enqueue_Current();
+    }
+
+    bool file_ready = false;
+    while (!file_ready) {
+        Block_Current_Process();
+
+        // pokusime se po probuzeni ziskat resource od probouzejiciho souboru, a pokud se to povede, smycka skonci
+        if (task->multi_wait_ready_fd != Invalid_Handle &&
+            task->opened_files[task->multi_wait_ready_fd]->WaitAllAcquire(1)) {
+            // do navratove hodnoty dame handle soubor ktery proces uspesne probudil
+            target.r0 = task->multi_wait_ready_fd;
+            file_ready = true;
+
+            // Dequeue ze vsech souboru, aby proces nebyl notifikovan znovu
+            for (uint32_t i = 0; i < handle_count; i++) {
+                task->opened_files[handles[i]]->Wait_Dequeue_Process(task->pid);
+            }
+        } else {
+            // resource jsme neziskali - mozna doslo k falesnemu probuzeni, nebo nas nekdo jiny probudil
+            task->multi_wait_ready_fd = Invalid_Handle;
+        }
+        //  pokud resource nebyl po probuzeni ziskan - zablokuj se znovu
+    }
+
+    // cleanup
+    task->is_multi_file_wait = false;
+    task->multi_wait_fd_bitmap = 0;
+
+    // v tento moment uz lze "budouci" deadline vymazat, uz je nastavena ve skutecne deadline bud shora nebo z notify kodu
+    task->notified_deadline = Deadline_Unchanged;
 }
 
 bool CProcess_Manager::Get_Scheduler_Info(NGet_Sched_Info_Type type, void* target) {

@@ -190,7 +190,38 @@ void IFile::Wait_Enqueue_Current() {
     spinlock_unlock(&mWait_Lock);
 }
 
+bool IFile::Wait_Dequeue_Process(uint32_t pid) {
+    spinlock_lock(&mWait_Lock);
+
+    TWaiting_Task* itr = mWaiting_Tasks;
+    bool found = false;
+
+    while (itr) {
+        if (itr->pid == pid) {
+            found = true;
+
+            if (itr->prev) {
+                itr->prev->next = itr->next;
+            } else {
+                mWaiting_Tasks = itr->next;
+            }
+
+            if (itr->next) {
+                itr->next->prev = itr->prev;
+            }
+
+            delete itr;
+            break;
+        }
+        itr = itr->next;
+    }
+
+    spinlock_unlock(&mWait_Lock);
+    return found;
+}
+
 uint32_t IFile::Notify(uint32_t count) {
+
     spinlock_lock(&mWait_Lock);
 
     TWaiting_Task* tmp;
@@ -201,7 +232,7 @@ uint32_t IFile::Notify(uint32_t count) {
 
     uint32_t notified_count = 0;
     while (itr && notified_count < count) {
-        sProcessMgr.Notify_Process(itr->pid);
+        sProcessMgr.Notify_Process(itr->pid, this);
 
         tmp = itr;
 
