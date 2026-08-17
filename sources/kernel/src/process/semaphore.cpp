@@ -54,12 +54,11 @@ bool CSemaphore::Wait(uint32_t count) {
     return true;
 }
 
-bool CSemaphore::TryWaitAllReserve(uint32_t count) {
+bool CSemaphore::Try_Wait_All_Reserve(uint32_t count) {
 
     spinlock_lock(&mLock);
 
-    if (mSemaphore_Count < count)
-    {
+    if (mSemaphore_Count < count) {
         spinlock_unlock(&mLock);
         return false;
     }
@@ -71,8 +70,8 @@ bool CSemaphore::TryWaitAllReserve(uint32_t count) {
     return true;
 }
 
-bool CSemaphore::WaitAllAcquire(uint32_t count) {
-    return TryWaitAllReserve(count);
+bool CSemaphore::Wait_All_Acquire(uint32_t count) {
+    return Try_Wait_All_Reserve(count);
 }
 
 uint32_t CSemaphore::Notify(uint32_t count) {

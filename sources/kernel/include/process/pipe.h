@@ -28,6 +28,6 @@ class CPipe final : public IFile {
         virtual uint32_t Write(const char* buffer, uint32_t num) override;
         virtual bool Close() override;
         virtual bool Wait(uint32_t count) override;
-        virtual bool TryWaitAllReserve(uint32_t count) override;
+        virtual bool Try_Wait_All_Reserve(uint32_t count) override;
         virtual uint32_t Notify(uint32_t count) override;
 };

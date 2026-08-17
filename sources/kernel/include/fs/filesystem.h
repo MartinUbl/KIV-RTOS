@@ -73,10 +73,10 @@ class IFile {
         virtual bool IOCtl(NIOCtl_Operation dir, void* ctlptr) { return false; };
         // vycka na udalost nad timto souborem (specificke pro danou implementaci)
         virtual bool Wait(uint32_t count) { return true; };
-        // pokusí se získat resource bez blokování; vrací true pokud se podařilo získat resource, false s přípravou na čekání pokud ne
-        virtual bool TryWaitAllReserve(uint32_t count) { return false; };
-        // získá resource po notifikaci (je použito po notikaci z WaitAll volani)
-        virtual bool WaitAllAcquire(uint32_t count) { return true; };
+        // pokusi se ziskat resource bez blokovani; vraci true pokud se podarilo ziskat resource, false s pripravou na cekani pokud ne
+        virtual bool Try_Wait_All_Reserve(uint32_t count) { return false; };
+        // ziska resource po notifikaci (je pouzito po notikaci z Wait_All volani)
+        virtual bool Wait_All_Acquire(uint32_t count) { return true; };
 
         // notifikuje <count> cekajici nad timto souborem (pokud nejaky cekajici je)
         virtual uint32_t Notify(uint32_t count);
@@ -85,7 +85,7 @@ class IFile {
         // odstraneni zadaneho procesu ze seznamu cekajicich bez probouzeni
         virtual bool Wait_Dequeue_Process(uint32_t pid);
 
-    // zjisti typ souboru
+        // zjisti typ souboru
         NFile_Type_Major Get_File_Type() const { return mType; };
 
         // TODO: seek, atd...

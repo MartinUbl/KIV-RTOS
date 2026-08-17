@@ -436,24 +436,27 @@ void CProcess_Manager::Handle_WaitAll_SWI(uint32_t r0, uint32_t r1, uint32_t r2,
     uint32_t *handles = reinterpret_cast<uint32_t *>(r0);
     uint32_t handle_count = r1;
 
-    if (handle_count == 0 || handles == nullptr)
+    if (handle_count == 0 || handles == nullptr) {
         return;
+    }
 
     TTask_Struct *task = mCurrent_Task_Node->task;
 
     for (uint32_t i = 0; i < handle_count; i++) {
-        if (handles[i] >= Max_Process_Opened_Files || !task->opened_files[handles[i]])
+        if (handles[i] >= Max_Process_Opened_Files || !task->opened_files[handles[i]]) {
             return;
+        }
     }
 
     // nastaveni deadline, kdyby nahodou nejaky soubor už byl ready
     task->notified_deadline = r2;
-    if (r2 != Deadline_Unchanged)
+    if (r2 != Deadline_Unchanged) {
         task->deadline = r2;
+    }
 
     // nejprve zkusime, zda neni nektery ze souboru jiz pripraven - pokud ano, vratime hned jeho handle a nebudeme blokovat process
     for (uint32_t i = 0; i < handle_count; i++) {
-        if (task->opened_files[handles[i]]->TryWaitAllReserve(1)) {
+        if (task->opened_files[handles[i]]->Try_Wait_All_Reserve(1)) {
             target.r0 = handles[i];
             task->multi_wait_ready_fd = handles[i];
             return;
@@ -475,8 +478,7 @@ void CProcess_Manager::Handle_WaitAll_SWI(uint32_t r0, uint32_t r1, uint32_t r2,
         Block_Current_Process();
 
         // pokusime se po probuzeni ziskat resource od probouzejiciho souboru, a pokud se to povede, smycka skonci
-        if (task->multi_wait_ready_fd != Invalid_Handle &&
-            task->opened_files[task->multi_wait_ready_fd]->WaitAllAcquire(1)) {
+        if (task->multi_wait_ready_fd != Invalid_Handle && task->opened_files[task->multi_wait_ready_fd]->Wait_All_Acquire(1)) {
             // do navratove hodnoty dame handle soubor ktery proces uspesne probudil
             target.r0 = task->multi_wait_ready_fd;
             file_ready = true;

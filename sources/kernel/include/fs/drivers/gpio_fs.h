@@ -73,14 +73,12 @@ class CGPIO_File final : public IFile {
             return false;
         }
 
-        virtual void Wait_Enqueue_Current() override
-        {
+        virtual void Wait_Enqueue_Current() override {
             IFile::Wait_Enqueue_Current();
             sGPIO.Wait_For_Event(this, mPinNo);
         }
 
-        virtual bool Wait_Dequeue_Process(uint32_t pid) override
-        {
+        virtual bool Wait_Dequeue_Process(uint32_t pid) override {
             // je treba odregistrovat i u GPIO handleru, pokud je tam zaregistrovan
             sGPIO.Cancel_Wait_For_Event(this, mPinNo);
             return IFile::Wait_Dequeue_Process(pid);

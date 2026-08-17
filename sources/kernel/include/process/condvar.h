@@ -27,7 +27,7 @@ class CCondition_Variable : public IFile {
         virtual bool IOCtl(NIOCtl_Operation dir, void* ctlptr) override { return false; };
 
         virtual bool Wait(uint32_t count) override;
-        virtual bool TryWaitAllReserve(uint32_t count) override;
-        virtual bool WaitAllAcquire(uint32_t count) override;
+        virtual bool Try_Wait_All_Reserve(uint32_t count) override;
+        virtual bool Wait_All_Acquire(uint32_t count) override;
         virtual uint32_t Notify(uint32_t count);
 };

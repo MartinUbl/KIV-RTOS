@@ -119,11 +119,10 @@ bool CPipe::Wait(uint32_t count) {
     return true;
 }
 
-bool CPipe::TryWaitAllReserve(uint32_t count) {
+bool CPipe::Try_Wait_All_Reserve(uint32_t count) {
     spinlock_lock(&mBuffer_Lock);
 
-    if (mSem_Busy->Get_Current_Count() >= count)
-    {
+    if (mSem_Busy->Get_Current_Count() >= count) {
         spinlock_unlock(&mBuffer_Lock);
         return true;
     }

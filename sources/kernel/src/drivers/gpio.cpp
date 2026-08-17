@@ -271,15 +271,18 @@ void CGPIO_Handler::Cancel_Wait_For_Event(IFile* file, uint32_t pin) {
 
     while (wf != nullptr) {
         if (wf->file == file && wf->pin_idx == pin) {
-            if (wf->prev)
+            if (wf->prev) {
                 wf->prev->next = wf->next;
-            if (wf->next)
+            }
+            if (wf->next) {
                 wf->next->prev = wf->prev;
+            }
 
             tmpwf = wf;
 
-            if (mWaiting_Files == wf)
+            if (mWaiting_Files == wf) {
                 mWaiting_Files = wf->next;
+            }
 
             wf = wf->next;
 

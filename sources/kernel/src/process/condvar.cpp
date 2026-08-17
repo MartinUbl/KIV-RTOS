@@ -29,12 +29,12 @@ bool CCondition_Variable::Wait(uint32_t count) {
     return true;
 }
 
-bool CCondition_Variable::TryWaitAllReserve(uint32_t count) {
+bool CCondition_Variable::Try_Wait_All_Reserve(uint32_t count) {
     mMutex->Unlock();
     return false;
 }
 
-bool CCondition_Variable::WaitAllAcquire(uint32_t count) {
+bool CCondition_Variable::Wait_All_Acquire(uint32_t count) {
     mMutex->Lock();
     return true;
 }

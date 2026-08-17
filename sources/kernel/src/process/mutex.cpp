@@ -31,24 +31,26 @@ bool CMutex::Lock() {
     return true;
 }
 
-bool CMutex::TryWaitAllReserve(uint32_t count) {
+bool CMutex::Try_Wait_All_Reserve(uint32_t count) {
     auto* cur = sProcessMgr.Get_Current_Process();
     const unsigned int cpid = cur->pid;
 
-    // tady vracím true, protože proces už mutex drží
-    if (mHolder_PID == cpid)
+    // tady vracime true, protoze proces uz mutex drzi
+    if (mHolder_PID == cpid) {
         return true;
+    }
 
-    if (spinlock_try_lock(&mLock_State) == Lock_Locked)
+    if (spinlock_try_lock(&mLock_State) == Lock_Locked) {
         return false;
+    }
 
     mHolder_PID = cpid;
     return true;
 }
 
-bool CMutex::WaitAllAcquire(uint32_t count)  {
-    // udela to same jako TryWaitAllReserve, pokusi se zamknout mutex
-    return TryWaitAllReserve(count);
+bool CMutex::Wait_All_Acquire(uint32_t count)  {
+    // udela to same jako Try_Wait_All_Reserve, pokusi se zamknout mutex
+    return Try_Wait_All_Reserve(count);
 }
 
 bool CMutex::Try_Lock() {
