@@ -43,19 +43,19 @@ void CPipe::Reset(uint32_t size) {
 }
 
 uint32_t CPipe::Read(char* buffer, uint32_t num) {
-    spinlock_lock(&mBuffer_Lock);
-
-    num = (num > mSem_Busy->Get_Current_Count()) ? mSem_Busy->Get_Current_Count() : num;
-
-    spinlock_unlock(&mBuffer_Lock);
-
-    // pockame az bude tolik prostredku k dispozici
-    mSem_Busy->Wait(num);
+    // pockame az bude k dispozici alespon jeden prostredek (num je maximalni pocet, ktery chceme cist)
+    mSem_Busy->Wait(1);
 
     // kriticka sekce
     spinlock_lock(&mBuffer_Lock);
 
-    for (uint32_t i = 0; i < num; i++) {
+    const uint32_t available = mSem_Busy->Get_Current_Count() + 1; // +1 protoze jsme uz jeden prostredek ziskali vyse
+    const uint32_t requesting = (num > available) ? available : num; // vyzadame si jen tolik, kolik je skutecne k dispozici
+
+    // -1 protoze jsme uz jeden prostredek ziskali vyse - vime, ze tam tyto prostredky jsou, toto volani tedy neblokuje
+    mSem_Busy->Wait(requesting - 1);
+
+    for (uint32_t i = 0; i < requesting; i++) {
         buffer[i] = mBuffer[mRead_Cur++];
 
         if (mRead_Cur >= mSem_Busy->Get_Max_Count()) {
@@ -66,9 +66,9 @@ uint32_t CPipe::Read(char* buffer, uint32_t num) {
     spinlock_unlock(&mBuffer_Lock);
 
     // notifikujeme producenty
-    mSem_Free->Notify(num);
+    mSem_Free->Notify(requesting);
 
-    return num;
+    return requesting;
 }
 
 uint32_t CPipe::Write(const char* buffer, uint32_t num) {
