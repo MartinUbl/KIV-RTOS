@@ -100,7 +100,9 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
 
     procnode->next = mProcess_List_Head;
     procnode->prev = nullptr;
-    mProcess_List_Head->prev = procnode;
+    if (mProcess_List_Head) {
+        mProcess_List_Head->prev = procnode;
+    }
     mProcess_List_Head = procnode;
 
     if (!mCurrent_Task_Node) {
